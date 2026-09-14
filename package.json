@@ -1,0 +1,28 @@
+{
+  "name": "nexus-hospitality-one",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite --host localhost",
+    "server": "node server/index.js",
+    "build": "vite build --base=/",
+    "desktop": "electron .",
+    "check": "node --check server/index.js && node --check server/transaction-engine.js && node --check server/operational-v1.js"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.0.4",
+    "better-sqlite3": "^12.4.1",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "vite": "^7.1.7"
+  },
+  "devDependencies": {
+    "electron": "^38.1.2",
+    "electron-builder": "^26.0.12"
+  }
+}

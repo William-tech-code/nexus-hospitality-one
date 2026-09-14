@@ -1,0 +1,89 @@
+import express from 'express';import cors from 'cors';import helmet from 'helmet';import path from 'node:path';import fs from 'node:fs';
+import {db,initDb,setting} from './db.js';import {dashboardSnapshot,closingPlan,growthBrief,performanceSnapshot} from './intelligence.js';import {verifyPassword,hashPassword,sessionToken,tokenHash} from './security.js';import {registerOperations} from './operations.js';import {registerRecipeEngine,consumeProduct} from './recipe-engine.js';import {registerPremiumV05} from './premium-v05.js';import {initSuiteV06,registerSuiteV06,smartSalePrice,smartUnitCost} from './suite-v06.js';import {registerOperationalV1} from './operational-v1.js';
+initDb();initSuiteV06();
+const app=express();
+const IS_HOSTED=Boolean(process.env.RAILWAY_ENVIRONMENT||process.env.RAILWAY_PROJECT_ID||process.env.NODE_ENV==='production');
+const PORT=Number(process.env.HOSPITALITY_PORT||(IS_HOSTED?process.env.PORT:8989)||8989);
+const SESSION_HOURS=12;
+app.use(helmet({contentSecurityPolicy:false}));app.use(cors());app.use(express.json({limit:'12mb'}));
+
+function audit(userId,action,entity,entityId=null,details=null){try{db.prepare('INSERT INTO audit_log(user_id,action,entity,entity_id,details) VALUES(?,?,?,?,?)').run(userId||null,action,entity,entityId==null?null:String(entityId),details?JSON.stringify(details):null)}catch{}}
+function auth(req,res,next){const raw=String(req.headers.authorization||'');const token=raw.startsWith('Bearer ')?raw.slice(7):'';if(!token)return res.status(401).json({error:'AUTH_REQUIRED'});const row=db.prepare(`SELECT s.id session_id,s.expires_at,u.id,u.name,u.email,u.role,u.active,u.force_password_change FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.revoked_at IS NULL AND datetime(s.expires_at)>datetime('now')`).get(tokenHash(token));if(!row||!row.active)return res.status(401).json({error:'SESSION_INVALID'});req.user=row;req.sessionToken=token;next()}
+const roles={OWNER:100,MANAGER:80,FINANCE:70,EVENTS:60,STOCK:55,CASHIER:50,WAITER:40,KITCHEN:30};
+function minRole(level){return (req,res,next)=>roles[req.user.role]>=level?next():res.status(403).json({error:'FORBIDDEN'})}
+
+app.get('/api/health',(_req,res)=>res.json({ok:true,service:'NEXUS HOSPITALITY ONE API',version:'1.0.0',codename:'COMPLETE OPERATION SYSTEM',time:new Date().toISOString()}));
+app.post('/api/auth/login',(req,res)=>{const {email,password}=req.body||{};const user=db.prepare('SELECT * FROM users WHERE lower(email)=lower(?) AND active=1').get(String(email||'').trim());if(!user||!verifyPassword(password,user.password_hash)){audit(user?.id,'LOGIN_FAILED','AUTH',null,{email});return res.status(401).json({error:'INVALID_CREDENTIALS',message:'E-mail ou senha inválidos.'})}const token=sessionToken(),hash=tokenHash(token);db.prepare("DELETE FROM sessions WHERE datetime(expires_at)<=datetime('now') OR revoked_at IS NOT NULL").run();db.prepare(`INSERT INTO sessions(user_id,token_hash,expires_at) VALUES(?,?,datetime('now',?))`).run(user.id,hash,`+${SESSION_HOURS} hours`);db.prepare('UPDATE users SET last_login_at=CURRENT_TIMESTAMP WHERE id=?').run(user.id);audit(user.id,'LOGIN_SUCCESS','AUTH');res.json({token,user:{id:user.id,name:user.name,email:user.email,role:user.role,force_password_change:!!user.force_password_change},expires_in_hours:SESSION_HOURS})});
+app.post('/api/auth/logout',auth,(req,res)=>{db.prepare('UPDATE sessions SET revoked_at=CURRENT_TIMESTAMP WHERE token_hash=?').run(tokenHash(req.sessionToken));audit(req.user.id,'LOGOUT','AUTH');res.json({ok:true})});
+app.get('/api/auth/me',auth,(req,res)=>res.json({user:{id:req.user.id,name:req.user.name,email:req.user.email,role:req.user.role,force_password_change:!!req.user.force_password_change}}));
+app.post('/api/auth/change-password',auth,(req,res)=>{const {current_password,new_password}=req.body||{};if(String(new_password||'').length<10)return res.status(400).json({error:'WEAK_PASSWORD',message:'Use pelo menos 10 caracteres.'});const u=db.prepare('SELECT * FROM users WHERE id=?').get(req.user.id);if(!verifyPassword(current_password,u.password_hash))return res.status(400).json({error:'CURRENT_PASSWORD_INVALID'});db.prepare('UPDATE users SET password_hash=?,force_password_change=0 WHERE id=?').run(hashPassword(new_password),u.id);audit(u.id,'PASSWORD_CHANGED','USER',u.id);res.json({ok:true})});
+app.get('/api/auth/capabilities',auth,(_req,res)=>res.json({passkeys:{prepared:true,registration_enabled:false,message:'Base preparada. Registro WebAuthn será habilitado em camada dedicada.'}}));
+
+app.use('/api',auth);
+app.get('/api/dashboard',(_req,res)=>res.json({businessName:setting('business_name','Meu Bar & Restaurante'),snapshot:dashboardSnapshot(),growth:growthBrief(),performance:performanceSnapshot()}));
+app.get('/api/products',(_req,res)=>res.json(db.prepare(`SELECT p.*,ip.base_unit smart_base_unit,ip.content_base smart_content_base,ip.closed_units smart_closed_units,ip.open_base smart_open_base,ip.dose_size smart_dose_size,ip.sale_dose_price smart_dose_price,ip.sale_package_price smart_package_price,ip.sell_dose smart_sell_dose,ip.sell_package smart_sell_package FROM products p LEFT JOIN inventory_profiles ip ON ip.product_id=p.id WHERE p.active=1 ORDER BY p.category,p.name`).all()));
+app.post('/api/products',minRole(55),(req,res)=>{const {name,category='Outros',barcode=null,image_url=null,description='',unit_type='UNIT',package_ml=null,dose_ml=null,price=0,cost=0,stock=0,minimum_stock=0}=req.body||{};if(!String(name||'').trim())return res.status(400).json({error:'NAME_REQUIRED'});const info=db.prepare('INSERT INTO products(name,category,barcode,image_url,description,unit_type,package_ml,dose_ml,price,cost,stock,minimum_stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(String(name).trim(),category,barcode,image_url,description,unit_type,package_ml?Number(package_ml):null,dose_ml?Number(dose_ml):null,Number(price),Number(cost),Number(stock),Number(minimum_stock));audit(req.user.id,'CREATE','PRODUCT',info.lastInsertRowid,{name});res.status(201).json(db.prepare('SELECT * FROM products WHERE id=?').get(info.lastInsertRowid))});
+
+app.get('/api/cash-sessions/current',(req,res)=>res.json(db.prepare("SELECT cs.*,u.name user_name FROM cash_sessions cs JOIN users u ON u.id=cs.user_id WHERE cs.status='OPEN' ORDER BY cs.id DESC LIMIT 1").get()||null));
+app.post('/api/cash-sessions/open',minRole(50),(req,res)=>{const existing=db.prepare("SELECT id FROM cash_sessions WHERE status='OPEN'").get();if(existing)return res.status(409).json({error:'CASH_ALREADY_OPEN'});const info=db.prepare("INSERT INTO cash_sessions(user_id,opening_amount,status,notes) VALUES(?,?,'OPEN',?)").run(req.user.id,Number(req.body?.opening_amount||0),String(req.body?.notes||''));audit(req.user.id,'OPEN','CASH_SESSION',info.lastInsertRowid,{opening_amount:req.body?.opening_amount||0});res.status(201).json(db.prepare('SELECT * FROM cash_sessions WHERE id=?').get(info.lastInsertRowid))});
+app.post('/api/cash-sessions/:id/close',minRole(50),(req,res)=>{const id=Number(req.params.id);const cs=db.prepare("SELECT * FROM cash_sessions WHERE id=? AND status='OPEN'").get(id);if(!cs)return res.status(404).json({error:'CASH_NOT_OPEN'});const sales=db.prepare("SELECT COALESCE(SUM(total+tip_amount),0) total FROM sales WHERE cash_session_id=? AND status='PAID'").get(id).total;const expected=Number(cs.opening_amount)+Number(sales);const closing=Number(req.body?.closing_amount||0);db.prepare("UPDATE cash_sessions SET status='CLOSED',closing_amount=?,expected_amount=?,closed_at=CURRENT_TIMESTAMP,notes=COALESCE(?,notes) WHERE id=?").run(closing,expected,String(req.body?.notes||''),id);audit(req.user.id,'CLOSE','CASH_SESSION',id,{expected,closing,difference:closing-expected});res.json({...db.prepare('SELECT * FROM cash_sessions WHERE id=?').get(id),difference:closing-expected})});
+
+app.post('/api/sales',minRole(40),(req,res)=>{
+  const {items=[],payment_method='DINHEIRO',table_label=null,customer_name=null,employee_id=null,tip_amount=0}=req.body||{};
+  if(!Array.isArray(items)||!items.length)return res.status(400).json({error:'ITEMS_REQUIRED'});
+  const cs=db.prepare("SELECT * FROM cash_sessions WHERE status='OPEN' ORDER BY id DESC LIMIT 1").get();
+  if(!cs)return res.status(409).json({error:'CASH_SESSION_REQUIRED',message:'Abra o caixa antes de registrar vendas.'});
+  const productStmt=db.prepare('SELECT * FROM products WHERE id=? AND active=1');
+  try{
+    const sale=db.transaction(()=>{
+      const resolved=items.map(i=>{
+        const p=productStmt.get(Number(i.product_id));if(!p)throw new Error(`Produto inválido: ${i.product_id}`);
+        const qty=Math.max(.01,Number(i.qty||1));const mode=String(i.mode||'UNIT').toUpperCase();
+        const price=smartSalePrice(p.id,mode,p.price);const unitCost=smartUnitCost(p.id,mode,p.cost);
+        return{p,qty,mode,price,unitCost};
+      });
+      const total=resolved.reduce((sum,x)=>sum+x.price*x.qty,0);
+      const emp=employee_id?Number(employee_id):(db.prepare('SELECT id FROM employees WHERE user_id=?').get(req.user.id)?.id||null);
+      const s=db.prepare("INSERT INTO sales(total,payment_method,status,table_label,customer_name,cash_session_id,user_id,employee_id,tip_amount) VALUES(?,?,'PAID',?,?,?,?,?,?)").run(total,String(payment_method),table_label,customer_name,cs.id,req.user.id,emp,Number(tip_amount||0));
+      for(const x of resolved){
+        db.prepare('INSERT INTO sale_items(sale_id,product_id,qty,unit_price,unit_cost,sale_mode) VALUES(?,?,?,?,?,?)').run(s.lastInsertRowid,x.p.id,x.qty,x.price,x.unitCost,x.mode);
+        consumeProduct(x.p.id,x.qty,req.user.id,'SALE',s.lastInsertRowid,x.mode);
+        if(emp){
+          const rules=db.prepare(`SELECT * FROM incentive_rules WHERE active=1 AND (start_date IS NULL OR date(start_date)<=date('now')) AND (end_date IS NULL OR date(end_date)>=date('now')) AND (scope='ANY' OR (scope='PRODUCT' AND scope_value=?) OR (scope='CATEGORY' AND scope_value=?))`).all(String(x.p.id),x.p.category);
+          for(const r of rules){let amount=0;if(r.reward_type==='FIXED_PER_UNIT')amount=Number(r.reward_value)*x.qty;if(r.reward_type==='PERCENT_SALE')amount=x.price*x.qty*(Number(r.reward_value)/100);if(amount>0)db.prepare("INSERT INTO employee_rewards(employee_id,sale_id,rule_id,type,amount,description) VALUES(?,?,?,'COMMISSION',?,?)").run(emp,s.lastInsertRowid,r.id,amount,r.title)}
+        }
+      }
+      if(emp&&Number(tip_amount)>0)db.prepare("INSERT INTO tips(sale_id,employee_id,amount,method,status) VALUES(?,?,?,'SALE','PENDING')").run(s.lastInsertRowid,emp,Number(tip_amount));
+      return db.prepare('SELECT * FROM sales WHERE id=?').get(s.lastInsertRowid)
+    })();
+    audit(req.user.id,'CREATE','SALE',sale.id,{total:sale.total,payment_method});
+    res.status(201).json({sale,dashboard:dashboardSnapshot(),closing:closingPlan(sale.total)})
+  }catch(err){res.status(400).json({error:'SALE_ERROR',message:err.message})}
+});
+
+app.get('/api/employees',(_req,res)=>res.json(db.prepare('SELECT * FROM employees WHERE active=1 ORDER BY name').all()));
+app.post('/api/employees',minRole(80),(req,res)=>{const {name,role_label='Atendimento',phone=''}=req.body||{};if(!String(name||'').trim())return res.status(400).json({error:'NAME_REQUIRED'});const info=db.prepare('INSERT INTO employees(name,role_label,phone) VALUES(?,?,?)').run(String(name).trim(),role_label,phone);audit(req.user.id,'CREATE','EMPLOYEE',info.lastInsertRowid,{name});res.status(201).json(db.prepare('SELECT * FROM employees WHERE id=?').get(info.lastInsertRowid))});
+app.get('/api/users',minRole(80),(req,res)=>res.json(db.prepare('SELECT id,name,email,role,active,force_password_change,last_login_at,created_at FROM users ORDER BY name').all()));
+app.post('/api/users',minRole(100),(req,res)=>{const {name,email,password,role='CASHIER'}=req.body||{};if(!name||!email||String(password||'').length<10)return res.status(400).json({error:'INVALID_USER_DATA'});try{const info=db.prepare('INSERT INTO users(name,email,password_hash,role,force_password_change) VALUES(?,?,?,?,1)').run(name,String(email).toLowerCase(),hashPassword(password),role);db.prepare('INSERT INTO employees(user_id,name,role_label) VALUES(?,?,?)').run(info.lastInsertRowid,name,role);audit(req.user.id,'CREATE','USER',info.lastInsertRowid,{email,role});res.status(201).json({id:info.lastInsertRowid,name,email,role})}catch(e){res.status(400).json({error:'USER_CREATE_ERROR',message:e.message})}});
+app.get('/api/audit',minRole(80),(_req,res)=>res.json(db.prepare(`SELECT a.*,u.name user_name FROM audit_log a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.id DESC LIMIT 150`).all()));
+
+app.get('/api/performance',(_req,res)=>res.json({employees:performanceSnapshot(),rules:db.prepare('SELECT * FROM incentive_rules WHERE active=1 ORDER BY id DESC').all(),pendingTips:db.prepare("SELECT COALESCE(SUM(amount),0) total FROM tips WHERE status='PENDING'").get().total,pendingRewards:db.prepare("SELECT COALESCE(SUM(amount),0) total FROM employee_rewards WHERE status='PENDING'").get().total}));
+app.post('/api/incentive-rules',minRole(80),(req,res)=>{const {title,scope='ANY',scope_value=null,reward_type='FIXED_PER_UNIT',reward_value=0,start_date=null,end_date=null}=req.body||{};if(!String(title||'').trim())return res.status(400).json({error:'TITLE_REQUIRED'});const info=db.prepare('INSERT INTO incentive_rules(title,scope,scope_value,reward_type,reward_value,start_date,end_date) VALUES(?,?,?,?,?,?,?)').run(title,scope,scope_value,reward_type,Number(reward_value),start_date,end_date);audit(req.user.id,'CREATE','INCENTIVE_RULE',info.lastInsertRowid,{title});res.status(201).json(db.prepare('SELECT * FROM incentive_rules WHERE id=?').get(info.lastInsertRowid))});
+app.post('/api/tips',minRole(50),(req,res)=>{const {employee_id,amount,method='MANUAL'}=req.body||{};if(!employee_id||Number(amount)<=0)return res.status(400).json({error:'INVALID_TIP'});const info=db.prepare("INSERT INTO tips(employee_id,amount,method,status) VALUES(?,?,?,'PENDING')").run(Number(employee_id),Number(amount),method);audit(req.user.id,'CREATE','TIP',info.lastInsertRowid,{employee_id,amount});res.status(201).json({id:info.lastInsertRowid})});
+
+app.get('/api/orders',(_req,res)=>res.json(db.prepare("SELECT * FROM orders WHERE status='OPEN' ORDER BY updated_at DESC").all()));
+app.post('/api/orders',(req,res)=>{const {label,customer_name='',employee_id=null}=req.body||{};if(!String(label||'').trim())return res.status(400).json({error:'LABEL_REQUIRED'});const info=db.prepare("INSERT INTO orders(label,customer_name,status,subtotal,employee_id) VALUES(?,?,'OPEN',0,?)").run(String(label).trim(),String(customer_name||''),employee_id?Number(employee_id):null);audit(req.user.id,'CREATE','ORDER',info.lastInsertRowid,{label});res.status(201).json(db.prepare('SELECT * FROM orders WHERE id=?').get(info.lastInsertRowid))});
+app.get('/api/expenses',(_req,res)=>res.json(db.prepare('SELECT * FROM expenses ORDER BY paid ASC,COALESCE(due_date,created_at) ASC').all()));
+app.post('/api/expenses',minRole(70),(req,res)=>{const {description,category='Geral',amount=0,due_date=null,paid=0,recurring=0}=req.body||{};if(!String(description||'').trim())return res.status(400).json({error:'DESCRIPTION_REQUIRED'});const info=db.prepare('INSERT INTO expenses(description,category,amount,due_date,paid,paid_at,recurring) VALUES(?,?,?,?,?,CASE WHEN ?=1 THEN CURRENT_TIMESTAMP ELSE NULL END,?)').run(String(description).trim(),category,Number(amount),due_date,paid?1:0,paid?1:0,recurring?1:0);audit(req.user.id,'CREATE','EXPENSE',info.lastInsertRowid,{description,amount});res.status(201).json(db.prepare('SELECT * FROM expenses WHERE id=?').get(info.lastInsertRowid))});
+app.get('/api/goals',(_req,res)=>res.json(db.prepare('SELECT * FROM goals WHERE active=1 ORDER BY created_at DESC').all()));
+app.post('/api/goals',(req,res)=>{const {title,type='BUSINESS',target_value=0,current_value=0,deadline=null,employee_id=null}=req.body||{};if(!String(title||'').trim())return res.status(400).json({error:'TITLE_REQUIRED'});const info=db.prepare('INSERT INTO goals(title,type,target_value,current_value,deadline,employee_id) VALUES(?,?,?,?,?,?)').run(title,type,Number(target_value),Number(current_value),deadline,employee_id?Number(employee_id):null);audit(req.user.id,'CREATE','GOAL',info.lastInsertRowid,{title});res.status(201).json(db.prepare('SELECT * FROM goals WHERE id=?').get(info.lastInsertRowid))});
+app.get('/api/closing-plan',(req,res)=>res.json(closingPlan(Number(req.query.revenue||dashboardSnapshot().todayRevenue||0))));
+app.get('/api/settings',(_req,res)=>{const rows=db.prepare('SELECT key,value FROM settings ORDER BY key').all();res.json(Object.fromEntries(rows.map(r=>[r.key,r.value]))) });
+app.put('/api/settings',minRole(80),(req,res)=>{const allowed=new Set(['business_name','reserve_percent','tax_percent','salary_percent','owner_percent','reinvest_percent','daily_goal']);const upsert=db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value');db.transaction(()=>{for(const [k,v] of Object.entries(req.body||{}))if(allowed.has(k))upsert.run(k,String(v))})();audit(req.user.id,'UPDATE','SETTINGS');res.json({ok:true})});
+
+registerOperations(app,{minRole,audit});registerRecipeEngine(app,minRole,audit);registerPremiumV05(app,minRole,audit);registerSuiteV06(app,minRole,audit);registerOperationalV1(app,{minRole,audit});
+
+app.use('/api',(req,res)=>res.status(404).json({error:'API_ROUTE_NOT_FOUND',message:`Rota API não encontrada: ${req.method} ${req.originalUrl}`,version:'1.0.0'}));
+
+const dist=path.resolve(process.cwd(),'dist');if(fs.existsSync(dist)){app.use(express.static(dist));app.get(/.*/,(_req,res)=>res.sendFile(path.join(dist,'index.html')))}
+app.listen(PORT,'0.0.0.0',()=>console.log(`NEXUS HOSPITALITY ONE | API em 0.0.0.0:${PORT}`));
