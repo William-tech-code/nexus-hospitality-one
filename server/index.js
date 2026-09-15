@@ -1,6 +1,6 @@
 import express from 'express';import cors from 'cors';import helmet from 'helmet';import path from 'node:path';import fs from 'node:fs';
-import {db,initDb,setting} from './db.js';import {dashboardSnapshot,closingPlan,growthBrief,performanceSnapshot} from './intelligence.js';import {verifyPassword,hashPassword,sessionToken,tokenHash} from './security.js';import {registerOperations} from './operations.js';import {registerRecipeEngine,consumeProduct} from './recipe-engine.js';import {registerPremiumV05} from './premium-v05.js';import {initSuiteV06,registerSuiteV06,smartSalePrice,smartUnitCost} from './suite-v06.js';import {registerOperationalV1} from './operational-v1.js';
-initDb();initSuiteV06();
+import {db,initDb,setting} from './db.js';import {dashboardSnapshot,closingPlan,growthBrief,performanceSnapshot} from './intelligence.js';import {verifyPassword,hashPassword,sessionToken,tokenHash} from './security.js';import {registerOperations} from './operations.js';import {registerRecipeEngine,consumeProduct} from './recipe-engine.js';import {registerPremiumV05} from './premium-v05.js';import {initSuiteV06,registerSuiteV06,smartSalePrice,smartUnitCost} from './suite-v06.js';import {registerOperationalV1} from './operational-v1.js';import {initOperationsV11,registerPublicV11,registerOperationsV11} from './operations-v11.js';
+initDb();initSuiteV06();initOperationsV11();
 const app=express();
 const IS_HOSTED=Boolean(process.env.RAILWAY_ENVIRONMENT||process.env.RAILWAY_PROJECT_ID||process.env.NODE_ENV==='production');
 const PORT=Number(process.env.HOSPITALITY_PORT||(IS_HOSTED?process.env.PORT:8989)||8989);
@@ -12,7 +12,7 @@ function auth(req,res,next){const raw=String(req.headers.authorization||'');cons
 const roles={OWNER:100,MANAGER:80,FINANCE:70,EVENTS:60,STOCK:55,CASHIER:50,WAITER:40,KITCHEN:30};
 function minRole(level){return (req,res,next)=>roles[req.user.role]>=level?next():res.status(403).json({error:'FORBIDDEN'})}
 
-app.get('/api/health',(_req,res)=>res.json({ok:true,service:'NEXUS HOSPITALITY ONE API',version:'1.0.0',codename:'COMPLETE OPERATION SYSTEM',time:new Date().toISOString()}));
+app.get('/api/health',(_req,res)=>res.json({ok:true,service:'NEXUS HOSPITALITY ONE API',version:'1.1.1',codename:'PUBLIC EXPERIENCE',time:new Date().toISOString()}));registerPublicV11(app);
 app.post('/api/auth/login',(req,res)=>{const {email,password}=req.body||{};const user=db.prepare('SELECT * FROM users WHERE lower(email)=lower(?) AND active=1').get(String(email||'').trim());if(!user||!verifyPassword(password,user.password_hash)){audit(user?.id,'LOGIN_FAILED','AUTH',null,{email});return res.status(401).json({error:'INVALID_CREDENTIALS',message:'E-mail ou senha inválidos.'})}const token=sessionToken(),hash=tokenHash(token);db.prepare("DELETE FROM sessions WHERE datetime(expires_at)<=datetime('now') OR revoked_at IS NOT NULL").run();db.prepare(`INSERT INTO sessions(user_id,token_hash,expires_at) VALUES(?,?,datetime('now',?))`).run(user.id,hash,`+${SESSION_HOURS} hours`);db.prepare('UPDATE users SET last_login_at=CURRENT_TIMESTAMP WHERE id=?').run(user.id);audit(user.id,'LOGIN_SUCCESS','AUTH');res.json({token,user:{id:user.id,name:user.name,email:user.email,role:user.role,force_password_change:!!user.force_password_change},expires_in_hours:SESSION_HOURS})});
 app.post('/api/auth/logout',auth,(req,res)=>{db.prepare('UPDATE sessions SET revoked_at=CURRENT_TIMESTAMP WHERE token_hash=?').run(tokenHash(req.sessionToken));audit(req.user.id,'LOGOUT','AUTH');res.json({ok:true})});
 app.get('/api/auth/me',auth,(req,res)=>res.json({user:{id:req.user.id,name:req.user.name,email:req.user.email,role:req.user.role,force_password_change:!!req.user.force_password_change}}));
@@ -81,9 +81,9 @@ app.get('/api/closing-plan',(req,res)=>res.json(closingPlan(Number(req.query.rev
 app.get('/api/settings',(_req,res)=>{const rows=db.prepare('SELECT key,value FROM settings ORDER BY key').all();res.json(Object.fromEntries(rows.map(r=>[r.key,r.value]))) });
 app.put('/api/settings',minRole(80),(req,res)=>{const allowed=new Set(['business_name','reserve_percent','tax_percent','salary_percent','owner_percent','reinvest_percent','daily_goal']);const upsert=db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value');db.transaction(()=>{for(const [k,v] of Object.entries(req.body||{}))if(allowed.has(k))upsert.run(k,String(v))})();audit(req.user.id,'UPDATE','SETTINGS');res.json({ok:true})});
 
-registerOperations(app,{minRole,audit});registerRecipeEngine(app,minRole,audit);registerPremiumV05(app,minRole,audit);registerSuiteV06(app,minRole,audit);registerOperationalV1(app,{minRole,audit});
+registerOperations(app,{minRole,audit});registerRecipeEngine(app,minRole,audit);registerPremiumV05(app,minRole,audit);registerSuiteV06(app,minRole,audit);registerOperationalV1(app,{minRole,audit});registerOperationsV11(app,{minRole,audit});
 
-app.use('/api',(req,res)=>res.status(404).json({error:'API_ROUTE_NOT_FOUND',message:`Rota API não encontrada: ${req.method} ${req.originalUrl}`,version:'1.0.0'}));
+app.use('/api',(req,res)=>res.status(404).json({error:'API_ROUTE_NOT_FOUND',message:`Rota API não encontrada: ${req.method} ${req.originalUrl}`,version:'1.1.0'}));
 
 const dist=path.resolve(process.cwd(),'dist');if(fs.existsSync(dist)){app.use(express.static(dist));app.get(/.*/,(_req,res)=>res.sendFile(path.join(dist,'index.html')))}
 app.listen(PORT,'0.0.0.0',()=>console.log(`NEXUS HOSPITALITY ONE | API em 0.0.0.0:${PORT}`));

@@ -1,6 +1,6 @@
 {
   "name": "nexus-hospitality-one",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -9,7 +9,7 @@
     "server": "node server/index.js",
     "build": "vite build --base=/",
     "desktop": "electron .",
-    "check": "node --check server/index.js && node --check server/transaction-engine.js && node --check server/operational-v1.js"
+    "check": "node --check server/index.js && node --check server/transaction-engine.js && node --check server/operational-v1.js && node --check server/operations-v11.js"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.4",
