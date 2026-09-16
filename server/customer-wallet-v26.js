@@ -1,8 +1,8 @@
 ﻿import crypto from "node:crypto";
-import Database from "better-sqlite3";
+import { db } from "./db.js";
 import QRCode from "qrcode";
 
-const db=new Database("./data/nexus-hospitality.sqlite");
+
 
 function text(v){
  return String(v??"").trim();
@@ -873,6 +873,7 @@ app.post(
 export {
  registerCustomerWallet
 };
+
 
 
 

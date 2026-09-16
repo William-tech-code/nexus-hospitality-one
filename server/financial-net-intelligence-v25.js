@@ -1,8 +1,6 @@
-﻿import Database from "better-sqlite3";
+﻿import { db } from "./db.js";
 
-const db = new Database(
- "./data/nexus-hospitality.sqlite"
-);
+
 
 const n = value => {
  const x = Number(value);
@@ -613,3 +611,5 @@ export function registerNetIntelligenceV25(
   }
  );
 }
+
+
