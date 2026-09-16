@@ -487,19 +487,25 @@ function reservePlan(){
    });
   }
 
+  const reserveRow=db.prepare(`SELECT COALESCE(SUM(reserved_amount),0) reserved_amount FROM financial_intelligence_reserves WHERE obligation_source=? AND obligation_id=?`).get(obligation.source,obligation.id);
+
+  const reservedAmount=round(reserveRow?.reserved_amount);
+  const remainingAmount=round(Math.max(0,n(obligation.amount)-reservedAmount));
+  const coveragePercent=round(n(obligation.amount)>0?Math.min(100,reservedAmount/n(obligation.amount)*100):100);
+
   const todayWeight=
    calendar[0]?.weight||1;
 
   const todayReserve=
    round(
-    n(obligation.amount)*
+    remainingAmount*
     todayWeight/
     Math.max(1,totalWeight)
    );
 
   const simpleDaily=
    round(
-    n(obligation.amount)/days
+    remainingAmount/days
    );
 
   result.push({
@@ -507,15 +513,15 @@ function reservePlan(){
    days_remaining:days,
    simple_daily_reserve:simpleDaily,
    weighted_today_reserve:todayReserve,
-   coverage_percent:0,
-   reserved_amount:0,
-   remaining_amount:
-    round(obligation.amount),
+   coverage_percent:coveragePercent,
+   reserved_amount:reservedAmount,
+   remaining_amount:remainingAmount,
+   reserve_status:remainingAmount<=0?"COVERED":reservedAmount>0?"PARTIAL":"UNRESERVED",
    schedule:
     calendar.map(x=>({
      date:x.date,
      reserve:round(
-      n(obligation.amount)*
+      remainingAmount*
       x.weight/
       Math.max(1,totalWeight)
      )
@@ -662,6 +668,44 @@ function financialSnapshot(){
 
  const reserve=reservePlan();
 
+ const totalReserved=round(
+  reserve.reduce(
+   (s,x)=>s+n(x.reserved_amount),
+   0
+  )
+ );
+
+ const uncoveredCommitments=round(
+  reserve.reduce(
+   (s,x)=>s+n(x.remaining_amount),
+   0
+  )
+ );
+
+ const globalCoveragePercent=
+  openCommitments>0
+   ?round(
+     Math.min(
+      100,
+      totalReserved/openCommitments*100
+     )
+    )
+   :100;
+
+ const coveredCount=
+  reserve.filter(
+   x=>x.reserve_status==="COVERED"
+  ).length;
+
+ const partialCount=
+  reserve.filter(
+   x=>x.reserve_status==="PARTIAL"
+  ).length;
+
+ const unreservedCount=
+  reserve.filter(
+   x=>x.reserve_status==="UNRESERVED"
+  ).length;
  const todayReserve=round(
   reserve.reduce(
    (s,x)=>
@@ -683,7 +727,7 @@ function financialSnapshot(){
 
  const projectedFreeCash=round(
   forecastData.projected_30d-
-  openCommitments-
+  uncoveredCommitments-
   cmv
  );
 
@@ -720,6 +764,12 @@ function financialSnapshot(){
 
   commitments:{
    open_total:openCommitments,
+   reserved_total:totalReserved,
+   uncovered_total:uncoveredCommitments,
+   coverage_percent:globalCoveragePercent,
+   covered_count:coveredCount,
+   partial_count:partialCount,
+   unreserved_count:unreservedCount,
    count:obligationList.length,
    today_reserve_target:
     todayReserve,
@@ -1756,4 +1806,7 @@ export function registerGrowthIntelligenceV25(
   }
  );
 }
+
+
+
 

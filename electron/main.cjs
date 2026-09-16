@@ -1,4 +1,4 @@
-const {
+﻿const {
   app,
   BrowserWindow,
   shell,
@@ -21,15 +21,15 @@ const CLOUD_URL =
   SIMULATION
   ----------
   Desenvolve e valida a ponte nativa sem afirmar que houve
-  impressÃ£o fÃ­sica.
+  impressÃƒÂ£o fÃƒÂ­sica.
 
   DESKTOP
   -------
-  SerÃ¡ habilitado depois da homologaÃ§Ã£o da impressora tÃ©rmica.
+  SerÃƒÂ¡ habilitado depois da homologaÃƒÂ§ÃƒÂ£o da impressora tÃƒÂ©rmica.
 
   IMPORTANTE:
-  O modo SIMULATION NÃƒO grava print_log no backend e NÃƒO
-  representa confirmaÃ§Ã£o fÃ­sica de impressÃ£o.
+  O modo SIMULATION NÃƒÆ’O grava print_log no backend e NÃƒÆ’O
+  representa confirmaÃƒÂ§ÃƒÂ£o fÃƒÂ­sica de impressÃƒÂ£o.
 */
 
 const PRINT_MODE =
@@ -126,7 +126,7 @@ function nexusPrinterThermalScore(printer = {}) {
   if(
     text.includes('THERMAL') ||
     text.includes('TERMICA') ||
-    text.includes('TÃ‰RMICA')
+    text.includes('TÃƒâ€°RMICA')
   ){
     score += 800;
   }
@@ -454,17 +454,17 @@ function registerPrinterIPC() {
         normalizeDocument(input);
 
       /*
-        NÃƒO usar webContents.print({silent:true})
+        NÃƒÆ’O usar webContents.print({silent:true})
         nesta fase.
 
-        NÃƒO declarar PRINTED.
+        NÃƒÆ’O declarar PRINTED.
 
-        NÃƒO chamar backend.
+        NÃƒÆ’O chamar backend.
 
-        NÃƒO liberar produto.
+        NÃƒÆ’O liberar produto.
 
         Apenas comprovamos que Renderer -> Preload -> Main
-        estÃ¡ funcionando.
+        estÃƒÂ¡ funcionando.
       */
 
       console.log('');
@@ -555,32 +555,35 @@ async function resolveFrontendURL() {
     procurar Vite local antes da Cloud.
   */
 
-  const localCandidates = [
-    'http://127.0.0.1:5180/',
-    'http://127.0.0.1:5181/',
-    'http://127.0.0.1:5173/',
-    'http://127.0.0.1:5174/',
-    'http://127.0.0.1:5175/',
-    'http://127.0.0.1:5182/'
-  ];
+  if (!app.isPackaged) {
 
-  for (const candidate of localCandidates) {
+    const localCandidates = [
+      'http://127.0.0.1:5180/',
+      'http://127.0.0.1:5181/',
+      'http://127.0.0.1:5173/',
+      'http://127.0.0.1:5174/',
+      'http://127.0.0.1:5175/',
+      'http://127.0.0.1:5182/'
+    ];
 
-    const online =
-      await probeURL(candidate);
+    for (const candidate of localCandidates) {
 
-    if (online) {
+      const online =
+        await probeURL(candidate);
 
-      console.log(
-        `[NEXUS DESKTOP] Frontend local: ${candidate}`
-      );
+      if (online) {
 
-      return candidate;
+        console.log(
+          `[NEXUS DESKTOP] Frontend local: ${candidate}`
+        );
+
+        return candidate;
+      }
     }
   }
 
   /*
-    Se nÃ£o houver Vite local, usa Cloud.
+    Se nÃƒÂ£o houver Vite local, usa Cloud.
   */
 
   const cloudOnline =
@@ -668,12 +671,12 @@ function loadFailurePage(window) {
           </div>
 
           <h1>
-            Frontend nÃ£o localizado
+            Frontend nÃƒÂ£o localizado
           </h1>
 
           <p>
-            O aplicativo desktop estÃ¡ funcionando,
-            porÃ©m nenhum frontend local ou Cloud
+            O aplicativo desktop estÃƒÂ¡ funcionando,
+            porÃƒÂ©m nenhum frontend local ou Cloud
             respondeu.
           </p>
 
@@ -730,7 +733,7 @@ async function createWindow() {
 
         /*
           sandbox permanece ativo.
-          A ponte exposta pelo preload Ã© mÃ­nima
+          A ponte exposta pelo preload ÃƒÂ© mÃƒÂ­nima
           e controlada.
         */
         sandbox: true
@@ -746,10 +749,11 @@ async function createWindow() {
       mainWindow.show();
       mainWindow.focus();
 
-/* NEXUS_PRINT_TEST_DEVTOOLS */
-mainWindow.webContents.openDevTools({
-  mode: 'detach'
-});
+      if (!app.isPackaged) {
+        mainWindow.webContents.openDevTools({
+          mode: 'detach'
+        });
+      }
     }
   );
 
@@ -792,7 +796,7 @@ mainWindow.webContents.openDevTools({
   } else {
 
     console.error(
-      '[NEXUS DESKTOP] Nenhum frontend disponÃ­vel.'
+      '[NEXUS DESKTOP] Nenhum frontend disponÃƒÂ­vel.'
     );
 
     loadFailurePage(
@@ -847,5 +851,6 @@ app.on(
     }
   }
 );
+
 
 
