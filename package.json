@@ -1,6 +1,6 @@
 {
   "name": "nexus-hospitality-one",
-  "version": "1.1.1",
+  "version": "1.5.3",
   "private": true,
   "type": "module",
   "main": "electron/main.cjs",
@@ -9,7 +9,9 @@
     "server": "node server/index.js",
     "build": "vite build --base=/",
     "desktop": "electron .",
-    "check": "node --check server/index.js && node --check server/transaction-engine.js && node --check server/operational-v1.js && node --check server/operations-v11.js"
+    "check": "node --check server/index.js && node --check server/transaction-engine.js && node --check server/operational-v1.js && node --check server/operations-v11.js && node --check server/growth-v12.js && node --check server/business-v13.js && node --check server/operation-v14.js && node --check server/payments-v15.js",
+    "dist:win": "electron-builder --win nsis",
+    "dist:dir": "electron-builder --dir"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^5.0.4",
@@ -19,10 +21,43 @@
     "helmet": "^8.1.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
-    "vite": "^7.1.7"
+    "vite": "^7.1.7",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "electron": "^38.1.2",
     "electron-builder": "^26.0.12"
-  }
+  },
+  "build": {
+    "appId": "com.nexora.nexushospitalityone",
+    "productName": "NEXUS Hospitality One",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "NEXUS-HOSPITALITY-ONE-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "NEXUS Hospitality One",
+      "uninstallDisplayName": "NEXUS Hospitality One"
+    }
+  },
+  "description": "NEXUS Hospitality One V1.5.1 | Premium POS Stability",
+  "author": "NEXORA — Gestão & Compliance"
 }

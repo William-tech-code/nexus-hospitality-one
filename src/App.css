@@ -1,0 +1,9 @@
+/* V1.5.3 — Ticket Commerce Refinement */
+.ticket-checkout-premium .tcp-hero{height:min(48vh,520px);min-height:390px}
+.ticket-checkout-premium .tcp-hero-content{padding-bottom:28px}
+.ticket-checkout-premium .tcp-hero h1{font-size:clamp(44px,6.5vw,78px);max-width:1000px}
+.ticket-checkout-premium .tcp-main{padding-top:28px;align-items:start}
+.ticket-checkout-premium .tcp-lots>button:not(:disabled){box-shadow:inset 0 0 0 1px rgba(229,189,103,.08)}
+.ticket-checkout-premium .tcp-lots>button.selected{box-shadow:0 14px 42px rgba(180,125,45,.16),inset 0 0 0 1px rgba(240,207,130,.2)}
+.ticket-checkout-premium .tcp-buy{font-size:18px;letter-spacing:.01em}
+@media(max-width:900px){.ticket-checkout-premium .tcp-hero{height:auto;min-height:430px}.ticket-checkout-premium .tcp-main{padding-top:16px}}

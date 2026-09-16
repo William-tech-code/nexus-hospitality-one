@@ -1,0 +1,593 @@
+﻿import React,{
+ useEffect,
+ useMemo,
+ useState
+}from"react";
+
+import{
+ customerMeV26,
+ customerWalletV26,
+ customerOrdersV26,
+ customerEventsV26,
+ updateCustomerProfileV26,
+ logoutCustomerV26,
+ customerBuyTicketV26
+}from"./api.js";
+
+import"./CustomerWalletV26.css";
+
+const money=v=>
+ Number(v||0).toLocaleString(
+  "pt-BR",
+  {
+   style:"currency",
+   currency:"BRL"
+  }
+ );
+
+const date=v=>{
+ if(!v)return"-";
+
+ const d=new Date(
+  String(v).replace(" ","T")+"Z"
+ );
+
+ return d.toLocaleString(
+  "pt-BR",
+  {
+   timeZone:"America/Sao_Paulo"
+  }
+ );
+};
+
+export default function CustomerWalletV26(){
+
+ const[tabs,setTabs]=useState("tickets");
+ const[customer,setCustomer]=useState(null);
+ const[wallet,setWallet]=useState(null);
+ const[orders,setOrders]=useState([]);
+ const[events,setEvents]=useState([]);
+ const[loading,setLoading]=useState(true);
+ const[error,setError]=useState("");
+ const[busy,setBusy]=useState(false);
+
+ const load=async()=>{
+  setLoading(true);
+  setError("");
+
+  try{
+   const[
+    me,
+    walletData,
+    orderData,
+    eventData
+   ]=await Promise.all([
+    customerMeV26(),
+    customerWalletV26(),
+    customerOrdersV26(),
+    customerEventsV26()
+   ]);
+
+   setCustomer(me.customer);
+   setWallet(walletData);
+   setOrders(orderData.orders||[]);
+   setEvents(eventData.events||[]);
+  }catch(e){
+   setError(e.message);
+  }finally{
+   setLoading(false);
+  }
+ };
+
+ useEffect(()=>{
+  load();
+ },[]);
+
+ const tickets=useMemo(
+  ()=>wallet?.tickets||[],
+  [wallet]
+ );
+
+ if(loading){
+  return(
+   <main className="cw-shell">
+    <section className="cw-loading">
+     Carregando sua carteira NEXUS...
+    </section>
+   </main>
+  );
+ }
+
+ if(error){
+  return(
+   <main className="cw-shell">
+    <section className="cw-panel">
+     <h1>NEXUS Ticket Wallet</h1>
+     <p>
+      Sua sessão precisa ser renovada.
+     </p>
+     <button
+      onClick={()=>{
+       window.location.href="/";
+      }}
+     >
+      Voltar
+     </button>
+    </section>
+   </main>
+  );
+ }
+
+ const saveProfile=async e=>{
+  e.preventDefault();
+
+  const form=
+   new FormData(e.currentTarget);
+
+  setBusy(true);
+
+  try{
+   const result=
+    await updateCustomerProfileV26({
+     full_name:form.get("full_name"),
+     email:form.get("email"),
+     phone:form.get("phone"),
+     document:form.get("document"),
+     birth_date:form.get("birth_date")
+    });
+
+   setCustomer(result.customer);
+   await load();
+  }catch(e){
+   alert(
+    "Não foi possível atualizar: "+
+    e.message
+   );
+  }finally{
+   setBusy(false);
+  }
+ };
+
+ const buy=async(event,lot)=>{
+  const quantityRaw=prompt(
+   `Quantos ingressos para ${event.title}?`,
+   "1"
+  );
+
+  if(quantityRaw===null)return;
+
+  const quantity=Math.max(
+   1,
+   Math.min(
+    10,
+    Number(quantityRaw)||1
+   )
+  );
+
+  setBusy(true);
+
+  try{
+   const order=
+    await customerBuyTicketV26(
+     event.id,
+     {
+      lot_id:lot.id,
+      quantity
+     }
+    );
+
+   if(order.invoice_url){
+    window.open(
+     order.invoice_url,
+     "_blank",
+     "noopener,noreferrer"
+    );
+   }
+
+   alert(
+    "Pedido criado com sucesso: "+
+    order.order_code
+   );
+
+   setTabs("orders");
+   await load();
+
+  }catch(e){
+   alert(
+    "Compra não concluída: "+
+    e.message
+   );
+  }finally{
+   setBusy(false);
+  }
+ };
+
+ return(
+  <main className="cw-shell">
+
+   <header className="cw-hero">
+
+    <div>
+     <small>
+      NEXUS HOSPITALITY ONE
+     </small>
+
+     <h1>
+      Minha Carteira
+     </h1>
+
+     <p>
+      Olá, {customer?.full_name}.
+      Seus ingressos, pedidos e
+      novas experiências em um só lugar.
+     </p>
+    </div>
+
+    <button
+     className="cw-logout"
+     onClick={async()=>{
+      await logoutCustomerV26();
+      window.location.href="/";
+     }}
+    >
+     Sair
+    </button>
+
+   </header>
+
+   <nav className="cw-nav">
+
+    <button
+     className={
+      tabs==="tickets"?"active":""
+     }
+     onClick={()=>setTabs("tickets")}
+    >
+     Meus Ingressos
+    </button>
+
+    <button
+     className={
+      tabs==="buy"?"active":""
+     }
+     onClick={()=>setTabs("buy")}
+    >
+     Comprar
+    </button>
+
+    <button
+     className={
+      tabs==="orders"?"active":""
+     }
+     onClick={()=>setTabs("orders")}
+    >
+     Pedidos
+    </button>
+
+    <button
+     className={
+      tabs==="account"?"active":""
+     }
+     onClick={()=>setTabs("account")}
+    >
+     Minha Conta
+    </button>
+
+   </nav>
+
+   {tabs==="tickets"&&(
+    <section className="cw-section">
+
+     <div className="cw-section-title">
+      <div>
+       <small>CARTEIRA DIGITAL</small>
+       <h2>Meus Ingressos</h2>
+      </div>
+
+      <strong>
+       {tickets.length}
+      </strong>
+     </div>
+
+     {!tickets.length&&(
+      <div className="cw-empty">
+       Nenhum ingresso vinculado.
+      </div>
+     )}
+
+     <div className="cw-ticket-grid">
+
+      {tickets.map(ticket=>(
+
+       <article
+        className="cw-ticket"
+        key={ticket.id||ticket.ticket_code}
+       >
+
+        <div className="cw-ticket-top">
+         <div>
+          <small>
+           {ticket.ticket_type||
+            ticket.lot_name||
+            "Ingresso"}
+          </small>
+
+          <h3>
+           {ticket.event_title||
+            ticket.title||
+            "Evento"}
+          </h3>
+         </div>
+
+         <span
+          className={
+           ticket.checkin_at
+            ?"used"
+            :"valid"
+          }
+         >
+          {ticket.checkin_at
+           ?"UTILIZADO"
+           :"VÁLIDO"}
+         </span>
+        </div>
+
+        {ticket.qr_image&&(
+         <div className="cw-qr">
+          <img
+           src={ticket.qr_image}
+           alt="QR Code do ingresso"
+          />
+         </div>
+        )}
+
+        <div className="cw-code">
+         {ticket.ticket_code}
+        </div>
+
+        <div className="cw-ticket-info">
+         <span>
+          Data
+          <strong>
+           {date(
+            ticket.event_starts_at||
+            ticket.starts_at
+           )}
+          </strong>
+         </span>
+
+         <span>
+          Valor
+          <strong>
+           {money(ticket.price)}
+          </strong>
+         </span>
+        </div>
+
+       </article>
+
+      ))}
+
+     </div>
+    </section>
+   )}
+
+   {tabs==="buy"&&(
+    <section className="cw-section">
+
+     <div className="cw-section-title">
+      <div>
+       <small>PRÓXIMOS EVENTOS</small>
+       <h2>Comprar Ingressos</h2>
+      </div>
+     </div>
+
+     <div className="cw-event-grid">
+
+      {events.map(event=>(
+
+       <article
+        className="cw-event"
+        key={event.id}
+       >
+
+        <div>
+         <small>
+          {date(event.starts_at)}
+         </small>
+
+         <h3>{event.title}</h3>
+
+         <p>
+          {event.venue_name||""}
+         </p>
+        </div>
+
+        <div className="cw-lots">
+
+         {(event.lots||[]).map(lot=>(
+
+          <div
+           className="cw-lot"
+           key={lot.id}
+          >
+           <div>
+            <strong>
+             {lot.name}
+            </strong>
+
+            <span>
+             {money(lot.price)}
+            </span>
+           </div>
+
+           <button
+            disabled={busy}
+            onClick={()=>
+             buy(event,lot)
+            }
+           >
+            Comprar
+           </button>
+          </div>
+
+         ))}
+
+        </div>
+
+       </article>
+
+      ))}
+
+     </div>
+    </section>
+   )}
+
+   {tabs==="orders"&&(
+    <section className="cw-section">
+
+     <div className="cw-section-title">
+      <div>
+       <small>HISTÓRICO</small>
+       <h2>Meus Pedidos</h2>
+      </div>
+     </div>
+
+     <div className="cw-orders">
+
+      {orders.map(order=>(
+
+       <article
+        className="cw-order"
+        key={order.id}
+       >
+
+        <div>
+         <small>
+          {order.order_code}
+         </small>
+
+         <h3>
+          {order.event_title}
+         </h3>
+
+         <p>
+          {order.lot_name} •
+          {" "}
+          {order.quantity}
+          {" "}
+          ingresso(s)
+         </p>
+        </div>
+
+        <div className="cw-order-right">
+
+         <strong>
+          {money(order.total)}
+         </strong>
+
+         <span
+          className={
+           String(
+            order.payment_status
+           ).toLowerCase()
+          }
+         >
+          {order.payment_status}
+         </span>
+
+        </div>
+
+       </article>
+
+      ))}
+
+     </div>
+    </section>
+   )}
+
+   {tabs==="account"&&(
+    <section className="cw-section">
+
+     <div className="cw-section-title">
+      <div>
+       <small>PERFIL</small>
+       <h2>Minha Conta</h2>
+      </div>
+     </div>
+
+     <form
+      className="cw-form"
+      onSubmit={saveProfile}
+     >
+
+      <label>
+       Nome completo
+       <input
+        name="full_name"
+        defaultValue={
+         customer?.full_name||""
+        }
+        required
+       />
+      </label>
+
+      <label>
+       E-mail
+       <input
+        name="email"
+        type="email"
+        defaultValue={
+         customer?.email||""
+        }
+       />
+      </label>
+
+      <label>
+       Telefone
+       <input
+        name="phone"
+        defaultValue={
+         customer?.phone||""
+        }
+       />
+      </label>
+
+      <label>
+       CPF / Documento
+       <input
+        name="document"
+        defaultValue={
+         customer?.document||""
+        }
+       />
+      </label>
+
+      <label>
+       Data de nascimento
+       <input
+        name="birth_date"
+        type="date"
+        defaultValue={
+         customer?.birth_date||""
+        }
+        required
+       />
+      </label>
+
+      <button
+       type="submit"
+       disabled={busy}
+      >
+       {busy
+        ?"Salvando..."
+        :"Salvar dados"}
+      </button>
+
+     </form>
+    </section>
+   )}
+
+  </main>
+ );
+}

@@ -1,6 +1,22 @@
+﻿import { registerCustomerWallet } from "./customer-wallet-v26.js";
+import {initializeAsaasSecureRuntime} from './asaas-config.js';
 import express from 'express';import cors from 'cors';import helmet from 'helmet';import path from 'node:path';import fs from 'node:fs';
 import {db,initDb,setting} from './db.js';import {dashboardSnapshot,closingPlan,growthBrief,performanceSnapshot} from './intelligence.js';import {verifyPassword,hashPassword,sessionToken,tokenHash} from './security.js';import {registerOperations} from './operations.js';import {registerRecipeEngine,consumeProduct} from './recipe-engine.js';import {registerPremiumV05} from './premium-v05.js';import {initSuiteV06,registerSuiteV06,smartSalePrice,smartUnitCost} from './suite-v06.js';import {registerOperationalV1} from './operational-v1.js';import {initOperationsV11,registerPublicV11,registerOperationsV11} from './operations-v11.js';
-initDb();initSuiteV06();initOperationsV11();
+import {registerTicketsV25} from './tickets-v25.js';
+import {initGrowthV12,registerGrowthV12} from './growth-v12.js';
+import {initBusinessV13,registerBusinessV13} from './business-v13.js';
+import {initFinancialIntelligence,registerFinancialIntelligence,registerGrowthIntelligenceV25} from './financial-intelligence-v25.js';
+import {initOperationV14,registerOperationV14} from './operation-v14.js';
+import {registerPaymentsV15} from './payments-v15.js';
+import {initOperationV16,registerOperationV16} from './operation-v16.js';
+import './transaction-engine.js';
+import {createPrintJobsEngine} from './print-jobs-engine.js';
+import { initReturnRoutesV16, registerReturnRoutesV16 } from './return-routes-v16.js';
+import {registerNetIntelligenceV25} from "./financial-net-intelligence-v25.js";
+await initializeAsaasSecureRuntime();
+initDb();initSuiteV06();initOperationsV11();initFinancialIntelligence();
+initGrowthV12();initBusinessV13();initOperationV14();initOperationV16();
+initReturnRoutesV16();
 const app=express();
 const IS_HOSTED=Boolean(process.env.RAILWAY_ENVIRONMENT||process.env.RAILWAY_PROJECT_ID||process.env.NODE_ENV==='production');
 const PORT=Number(process.env.HOSPITALITY_PORT||(IS_HOSTED?process.env.PORT:8989)||8989);
@@ -12,12 +28,393 @@ function auth(req,res,next){const raw=String(req.headers.authorization||'');cons
 const roles={OWNER:100,MANAGER:80,FINANCE:70,EVENTS:60,STOCK:55,CASHIER:50,WAITER:40,KITCHEN:30};
 function minRole(level){return (req,res,next)=>roles[req.user.role]>=level?next():res.status(403).json({error:'FORBIDDEN'})}
 
-app.get('/api/health',(_req,res)=>res.json({ok:true,service:'NEXUS HOSPITALITY ONE API',version:'1.1.1',codename:'PUBLIC EXPERIENCE',time:new Date().toISOString()}));registerPublicV11(app);
-app.post('/api/auth/login',(req,res)=>{const {email,password}=req.body||{};const user=db.prepare('SELECT * FROM users WHERE lower(email)=lower(?) AND active=1').get(String(email||'').trim());if(!user||!verifyPassword(password,user.password_hash)){audit(user?.id,'LOGIN_FAILED','AUTH',null,{email});return res.status(401).json({error:'INVALID_CREDENTIALS',message:'E-mail ou senha inválidos.'})}const token=sessionToken(),hash=tokenHash(token);db.prepare("DELETE FROM sessions WHERE datetime(expires_at)<=datetime('now') OR revoked_at IS NOT NULL").run();db.prepare(`INSERT INTO sessions(user_id,token_hash,expires_at) VALUES(?,?,datetime('now',?))`).run(user.id,hash,`+${SESSION_HOURS} hours`);db.prepare('UPDATE users SET last_login_at=CURRENT_TIMESTAMP WHERE id=?').run(user.id);audit(user.id,'LOGIN_SUCCESS','AUTH');res.json({token,user:{id:user.id,name:user.name,email:user.email,role:user.role,force_password_change:!!user.force_password_change},expires_in_hours:SESSION_HOURS})});
+app.get('/api/health',(_req,res)=>res.json({ok:true,service:'NEXUS HOSPITALITY ONE API',version:'1.5.0',codename:'PREMIUM POS & TICKETING PAYMENT ENGINE',time:new Date().toISOString()}));registerPublicV11(app);
+registerGrowthV12(app,{auth,minRole,audit});
+registerBusinessV13(app,{auth,minRole,audit});
+registerFinancialIntelligence(app,{auth,minRole,audit});
+registerGrowthIntelligenceV25(app,{auth,minRole,audit});
+registerNetIntelligenceV25(app,{auth,minRole});
+registerOperationV14(app,{auth,minRole,audit});registerPaymentsV15(app,{auth,minRole,audit});registerOperationV16(app,{auth,minRole,audit});
+registerReturnRoutesV16(app,{auth,minRole,audit});
+
+/*
+  NEXUS HOSPITALITY ONE V2.1.6
+  Nova fila documental do PDV.
+
+  Esta rota NAO marca retirada/liberacao.
+  Ela somente registra os documentos operacionais
+  no print_jobs.
+*/
+const printJobsEngine =
+  createPrintJobsEngine({db});
+
+app.post(
+  '/api/v16/sales/:id/documents',
+  auth,
+  minRole(40),
+  (req,res)=>{
+
+    try{
+
+      const saleId =
+        Number(req.params.id);
+
+      if(
+        !Number.isInteger(saleId) ||
+        saleId <= 0
+      ){
+        return res.status(400).json({
+          error:'VENDA_INVALIDA'
+        });
+      }
+
+      const sale =
+        printJobsEngine.getSale(
+          saleId
+        );
+
+      if(
+        String(sale.status || '')
+          .toUpperCase() !== 'PAID'
+      ){
+        return res.status(409).json({
+          error:'VENDA_NAO_PAGA'
+        });
+      }
+
+      const mode =
+        String(
+          req.body?.mode ||
+          'SIMULATION'
+        )
+        .trim()
+        .toUpperCase();
+
+      const documents =
+        printJobsEngine.queueSaleDocuments({
+          saleId,
+          requestedBy:req.user.id,
+          mode
+        });
+
+      const jobs =
+        printJobsEngine.listJobsForSale(
+          saleId
+        );
+
+      audit(
+        req.user.id,
+        'SALE_DOCUMENTS_QUEUED',
+        'SALE',
+        saleId,
+        {
+          mode,
+          documents:[
+            'PICKUP_CUSTOMER',
+            'PRODUCTION',
+            'RECEIPT'
+          ],
+          engine:'V2.1.6'
+        }
+      );
+
+      return res.json({
+        ok:true,
+        sale_id:saleId,
+        mode,
+        documents,
+        jobs
+      });
+
+    }catch(error){
+
+      console.error(
+        '[NEXUS][PRINT_JOBS]',
+        error
+      );
+
+      return res.status(500).json({
+        error:
+          error?.message ||
+          'PRINT_QUEUE_ERROR'
+      });
+    }
+  }
+);
+
+/*
+  NEXUS_DESKTOP_PRINT_API_V218G2R2
+
+  SAFE DESKTOP PRINT CONTRACT
+
+  Nenhuma impressao fisica ocorre nesta camada.
+  Venda, estoque, caixa e checkout sao independentes da impressao.
+*/
+
+app.get(
+  '/api/v16/print-jobs/desktop/pending',
+  auth,
+  minRole(40),
+  (req,res)=>{
+    try{
+      const limit = Math.max(
+        1,
+        Math.min(Number(req.query?.limit) || 50,200)
+      );
+
+      const jobs =
+        printJobsEngine.listDesktopPendingJobs({limit});
+
+      return res.json({
+        ok:true,
+        physical_printing_enabled:false,
+        mode:'SAFE_DESKTOP_QUEUE',
+        jobs
+      });
+
+    }catch(error){
+      return res.status(500).json({
+        error:error?.message || 'DESKTOP_PRINT_PENDING_ERROR'
+      });
+    }
+  }
+);
+
+app.get(
+  '/api/v16/print-jobs/:id',
+  auth,
+  minRole(40),
+  (req,res)=>{
+    try{
+      const id = Number(req.params.id);
+
+      if(!Number.isInteger(id) || id <= 0){
+        return res.status(400).json({
+          error:'PRINT_JOB_ID_INVALID'
+        });
+      }
+
+      const job = printJobsEngine.getJob(id);
+
+      if(!job){
+        return res.status(404).json({
+          error:'PRINT_JOB_NOT_FOUND'
+        });
+      }
+
+      return res.json({ok:true,job});
+
+    }catch(error){
+      return res.status(500).json({
+        error:error?.message || 'PRINT_JOB_READ_ERROR'
+      });
+    }
+  }
+);
+
+app.post(
+  '/api/v16/print-jobs/:id/desktop/begin',
+  auth,
+  minRole(40),
+  (req,res)=>{
+    try{
+      const id = Number(req.params.id);
+
+      if(!Number.isInteger(id) || id <= 0){
+        return res.status(400).json({
+          error:'PRINT_JOB_ID_INVALID'
+        });
+      }
+
+      const printerName =
+        String(req.body?.printer_name || '').trim() || null;
+
+      const job =
+        printJobsEngine.beginDesktopAttempt(
+          id,
+          {printerName}
+        );
+
+      audit(
+        req.user.id,
+        'PRINT_JOB_DESKTOP_BEGIN',
+        'PRINT_JOB',
+        id,
+        {
+          printer_name:printerName,
+          document_type:job?.document_type || null,
+          sale_id:job?.sale_id || null
+        }
+      );
+
+      return res.json({
+        ok:true,
+        physical_printing_enabled:false,
+        job
+      });
+
+    }catch(error){
+      const message =
+        error?.message || 'DESKTOP_PRINT_BEGIN_ERROR';
+
+      return res.status(
+        message === 'PRINT_JOB_NOT_FOUND' ? 404 : 409
+      ).json({error:message});
+    }
+  }
+);
+
+app.post(
+  '/api/v16/print-jobs/:id/desktop/printed',
+  auth,
+  minRole(40),
+  (req,res)=>{
+    try{
+      const id = Number(req.params.id);
+
+      if(!Number.isInteger(id) || id <= 0){
+        return res.status(400).json({
+          error:'PRINT_JOB_ID_INVALID'
+        });
+      }
+
+      const printerName =
+        String(req.body?.printer_name || '').trim() || null;
+
+      const job =
+        printJobsEngine.markDesktopPrinted(
+          id,
+          {printerName}
+        );
+
+      audit(
+        req.user.id,
+        'PRINT_JOB_DESKTOP_PRINTED',
+        'PRINT_JOB',
+        id,
+        {
+          printer_name:printerName,
+          document_type:job?.document_type || null,
+          sale_id:job?.sale_id || null
+        }
+      );
+
+      return res.json({ok:true,job});
+
+    }catch(error){
+      const message =
+        error?.message || 'DESKTOP_PRINT_CONFIRM_ERROR';
+
+      return res.status(
+        message === 'PRINT_JOB_NOT_FOUND' ? 404 : 409
+      ).json({error:message});
+    }
+  }
+);
+
+app.post(
+  '/api/v16/print-jobs/:id/desktop/failed',
+  auth,
+  minRole(40),
+  (req,res)=>{
+    try{
+      const id = Number(req.params.id);
+
+      if(!Number.isInteger(id) || id <= 0){
+        return res.status(400).json({
+          error:'PRINT_JOB_ID_INVALID'
+        });
+      }
+
+      const printerName =
+        String(req.body?.printer_name || '').trim() || null;
+
+      const errorMessage =
+        String(
+          req.body?.error || 'DESKTOP_PRINT_FAILED'
+        ).trim().slice(0,1000);
+
+      const job =
+        printJobsEngine.markDesktopFailed(
+          id,
+          errorMessage,
+          {printerName}
+        );
+
+      audit(
+        req.user.id,
+        'PRINT_JOB_DESKTOP_FAILED',
+        'PRINT_JOB',
+        id,
+        {
+          printer_name:printerName,
+          error:errorMessage,
+          document_type:job?.document_type || null,
+          sale_id:job?.sale_id || null
+        }
+      );
+
+      return res.json({ok:true,job});
+
+    }catch(error){
+      const message =
+        error?.message || 'DESKTOP_PRINT_FAIL_ERROR';
+
+      return res.status(
+        message === 'PRINT_JOB_NOT_FOUND' ? 404 : 409
+      ).json({error:message});
+    }
+  }
+);
+
+app.post(
+  '/api/v16/print-jobs/:id/desktop/retry',
+  auth,
+  minRole(40),
+  (req,res)=>{
+    try{
+      const id = Number(req.params.id);
+
+      if(!Number.isInteger(id) || id <= 0){
+        return res.status(400).json({
+          error:'PRINT_JOB_ID_INVALID'
+        });
+      }
+
+      const job =
+        printJobsEngine.retryDesktopJob(id);
+
+      audit(
+        req.user.id,
+        'PRINT_JOB_DESKTOP_RETRY',
+        'PRINT_JOB',
+        id,
+        {
+          document_type:job?.document_type || null,
+          sale_id:job?.sale_id || null
+        }
+      );
+
+      return res.json({ok:true,job});
+
+    }catch(error){
+      const message =
+        error?.message || 'DESKTOP_PRINT_RETRY_ERROR';
+
+      return res.status(
+        message === 'PRINT_JOB_NOT_FOUND' ? 404 : 409
+      ).json({error:message});
+    }
+  }
+);
+app.post('/api/auth/login',(req,res)=>{const {email,password}=req.body||{};const user=db.prepare('SELECT * FROM users WHERE lower(email)=lower(?) AND active=1').get(String(email||'').trim());if(!user||!verifyPassword(password,user.password_hash)){audit(user?.id,'LOGIN_FAILED','AUTH',null,{email});return res.status(401).json({error:'INVALID_CREDENTIALS',message:'E-mail ou senha invÃƒÂ¡lidos.'})}const token=sessionToken(),hash=tokenHash(token);db.prepare("DELETE FROM sessions WHERE datetime(expires_at)<=datetime('now') OR revoked_at IS NOT NULL").run();db.prepare(`INSERT INTO sessions(user_id,token_hash,expires_at) VALUES(?,?,datetime('now',?))`).run(user.id,hash,`+${SESSION_HOURS} hours`);db.prepare('UPDATE users SET last_login_at=CURRENT_TIMESTAMP WHERE id=?').run(user.id);audit(user.id,'LOGIN_SUCCESS','AUTH');res.json({token,user:{id:user.id,name:user.name,email:user.email,role:user.role,force_password_change:!!user.force_password_change},expires_in_hours:SESSION_HOURS})});
 app.post('/api/auth/logout',auth,(req,res)=>{db.prepare('UPDATE sessions SET revoked_at=CURRENT_TIMESTAMP WHERE token_hash=?').run(tokenHash(req.sessionToken));audit(req.user.id,'LOGOUT','AUTH');res.json({ok:true})});
 app.get('/api/auth/me',auth,(req,res)=>res.json({user:{id:req.user.id,name:req.user.name,email:req.user.email,role:req.user.role,force_password_change:!!req.user.force_password_change}}));
 app.post('/api/auth/change-password',auth,(req,res)=>{const {current_password,new_password}=req.body||{};if(String(new_password||'').length<10)return res.status(400).json({error:'WEAK_PASSWORD',message:'Use pelo menos 10 caracteres.'});const u=db.prepare('SELECT * FROM users WHERE id=?').get(req.user.id);if(!verifyPassword(current_password,u.password_hash))return res.status(400).json({error:'CURRENT_PASSWORD_INVALID'});db.prepare('UPDATE users SET password_hash=?,force_password_change=0 WHERE id=?').run(hashPassword(new_password),u.id);audit(u.id,'PASSWORD_CHANGED','USER',u.id);res.json({ok:true})});
-app.get('/api/auth/capabilities',auth,(_req,res)=>res.json({passkeys:{prepared:true,registration_enabled:false,message:'Base preparada. Registro WebAuthn será habilitado em camada dedicada.'}}));
+app.get('/api/auth/capabilities',auth,(_req,res)=>res.json({passkeys:{prepared:true,registration_enabled:false,message:'Base preparada. Registro WebAuthn serÃƒÂ¡ habilitado em camada dedicada.'}}));
+
+/* NEXUS_CUSTOMER_WALLET_V26_PUBLIC_BEFORE_GLOBAL_AUTH */
+registerCustomerWallet(app);
 
 app.use('/api',auth);
 app.get('/api/dashboard',(_req,res)=>res.json({businessName:setting('business_name','Meu Bar & Restaurante'),snapshot:dashboardSnapshot(),growth:growthBrief(),performance:performanceSnapshot()}));
@@ -37,7 +434,7 @@ app.post('/api/sales',minRole(40),(req,res)=>{
   try{
     const sale=db.transaction(()=>{
       const resolved=items.map(i=>{
-        const p=productStmt.get(Number(i.product_id));if(!p)throw new Error(`Produto inválido: ${i.product_id}`);
+        const p=productStmt.get(Number(i.product_id));if(!p)throw new Error(`Produto invÃƒÂ¡lido: ${i.product_id}`);
         const qty=Math.max(.01,Number(i.qty||1));const mode=String(i.mode||'UNIT').toUpperCase();
         const price=smartSalePrice(p.id,mode,p.price);const unitCost=smartUnitCost(p.id,mode,p.cost);
         return{p,qty,mode,price,unitCost};
@@ -82,8 +479,18 @@ app.get('/api/settings',(_req,res)=>{const rows=db.prepare('SELECT key,value FRO
 app.put('/api/settings',minRole(80),(req,res)=>{const allowed=new Set(['business_name','reserve_percent','tax_percent','salary_percent','owner_percent','reinvest_percent','daily_goal']);const upsert=db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value');db.transaction(()=>{for(const [k,v] of Object.entries(req.body||{}))if(allowed.has(k))upsert.run(k,String(v))})();audit(req.user.id,'UPDATE','SETTINGS');res.json({ok:true})});
 
 registerOperations(app,{minRole,audit});registerRecipeEngine(app,minRole,audit);registerPremiumV05(app,minRole,audit);registerSuiteV06(app,minRole,audit);registerOperationalV1(app,{minRole,audit});registerOperationsV11(app,{minRole,audit});
+registerTicketsV25(app,{minRole,audit});
 
-app.use('/api',(req,res)=>res.status(404).json({error:'API_ROUTE_NOT_FOUND',message:`Rota API não encontrada: ${req.method} ${req.originalUrl}`,version:'1.1.0'}));
+app.use('/api',(req,res)=>res.status(404).json({error:'API_ROUTE_NOT_FOUND',message:`Rota API nÃƒÂ£o encontrada: ${req.method} ${req.originalUrl}`,version:'1.5.0'}));
 
 const dist=path.resolve(process.cwd(),'dist');if(fs.existsSync(dist)){app.use(express.static(dist));app.get(/.*/,(_req,res)=>res.sendFile(path.join(dist,'index.html')))}
+
+
 app.listen(PORT,'0.0.0.0',()=>console.log(`NEXUS HOSPITALITY ONE | API em 0.0.0.0:${PORT}`));
+
+
+
+
+
+
+
