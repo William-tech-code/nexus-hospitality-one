@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { api } from './api.js';
 
 const brl = value =>
@@ -52,8 +52,14 @@ export default function RecentSalesV16({ user, refreshKey = 0 }) {
 
       const rows =
         Array.isArray(response)
-           response
-          : response?.sales || [];
+          ? response
+          : Array.isArray(response?.sales)
+            ? response.sales
+            : Array.isArray(response?.data)
+              ? response.data
+              : Array.isArray(response?.items)
+                ? response.items
+                : [];
 
       setSales(rows);
     } catch (err) {

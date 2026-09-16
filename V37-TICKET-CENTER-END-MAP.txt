@@ -1,0 +1,416 @@
+﻿NEXUS EVENT EXPERIENCE V3.7
+TICKET CENTER JSX REPAIR MAP
+
+FILE = .\src\TicketOrderCenterV25.jsx
+LINES = 795
+
+============================================================
+IMPORTS
+============================================================
+L0001: import React,{
+L0002:   useEffect,
+L0003:   useMemo,
+L0004:   useState
+L0005: } from 'react';
+L0006: 
+L0007: import {api} from './api.js';
+L0008: import './TicketsV25.css';
+L0009: 
+L0010: const money=value=>
+L0011:   Number(value||0)
+L0012:     .toLocaleString(
+L0013:       'pt-BR',
+L0014:       {
+L0015:         style:'currency',
+L0016:         currency:'BRL'
+L0017:       }
+L0018:     );
+L0019: 
+L0020: const dt=value=>{
+L0021:   if(!value)return '\u2014';
+L0022: 
+L0023:   const date=new Date(value);
+L0024: 
+L0025:   return Number.isNaN(
+L0026:     date.getTime()
+L0027:   )
+L0028:     ? value
+L0029:     : date.toLocaleString(
+L0030:         'pt-BR',
+L0031:         {
+L0032:           timeZone:'America/Sao_Paulo',
+L0033:           year:'numeric',
+L0034:           month:'2-digit',
+L0035:           day:'2-digit',
+L0036:           hour:'2-digit',
+L0037:           minute:'2-digit',
+L0038:           second:'2-digit',
+L0039:           hour12:false
+L0040:         }
+
+============================================================
+EVENT ID REFERENCES
+============================================================
+L0045: 
+L0046:   const [events,setEvents]=useState([]);
+L0047:   const [eventId,setEventId]=useState('');
+L0048:   const [dashboard,setDashboard]=useState(null);
+L0049:   const [orders,setOrders]=useState([]);
+L0050:   const [history,setHistory]=useState([]);
+---
+L0073: 
+L0074:     if(
+L0075:       !eventId &&
+L0076:       rows.length
+L0077:     ){
+L0078:       setEventId(
+---
+L0076:       rows.length
+L0077:     ){
+L0078:       setEventId(
+L0079:         String(rows[0].id)
+L0080:       );
+L0081:     }
+---
+L0084:   async function load(){
+L0085: 
+L0086:     if(!eventId){
+L0087:       return;
+L0088:     }
+L0089: 
+---
+L0097:         lotRows
+L0098:       ]=await Promise.all([
+L0099:         api.ticketDashboardV25(eventId),
+L0100:         api.ticketOrdersV25(eventId),
+L0101:         api.ticketAccessV25(eventId),
+L0102:         api.tickets(eventId),
+---
+L0098:       ]=await Promise.all([
+L0099:         api.ticketDashboardV25(eventId),
+L0100:         api.ticketOrdersV25(eventId),
+L0101:         api.ticketAccessV25(eventId),
+L0102:         api.tickets(eventId),
+L0103:         api.ticketLots(eventId)
+---
+L0099:         api.ticketDashboardV25(eventId),
+L0100:         api.ticketOrdersV25(eventId),
+L0101:         api.ticketAccessV25(eventId),
+L0102:         api.tickets(eventId),
+L0103:         api.ticketLots(eventId)
+L0104:       ]);
+---
+L0100:         api.ticketOrdersV25(eventId),
+L0101:         api.ticketAccessV25(eventId),
+L0102:         api.tickets(eventId),
+L0103:         api.ticketLots(eventId)
+L0104:       ]);
+L0105: 
+---
+L0101:         api.ticketAccessV25(eventId),
+L0102:         api.tickets(eventId),
+L0103:         api.ticketLots(eventId)
+L0104:       ]);
+L0105: 
+L0106:       setDashboard(
+---
+L0150:       load();
+L0151:     },
+L0152:     [eventId]
+L0153:   );
+L0154: 
+L0155:   useEffect(
+---
+L0171:       };
+L0172:     },
+L0173:     [eventId]
+L0174:   );
+L0175: 
+L0176:   async function runSearch(){
+---
+L0185:       const rows=
+L0186:         await api.ticketSearchV25(
+L0187:           eventId,
+L0188:           query.trim()
+L0189:         );
+L0190: 
+---
+L0202: 
+L0203:     if(
+L0204:       !eventId ||
+L0205:       !form.attendee_name.trim()
+L0206:     ){
+L0207: 
+---
+L0217:       const response=
+L0218:         await api.createPresentialTicketV25({
+L0219:           event_id:Number(eventId),
+L0220:           lot_id:
+L0221:             form.lot_id
+L0222:               ? Number(form.lot_id)
+---
+L0271:       : tickets;
+L0272: 
+L0273:   const activeEvent=
+L0274:     useMemo(
+L0275:       ()=>
+L0276:         events.find(
+---
+L0277:           row=>
+L0278:             String(row.id)===
+L0279:             String(eventId)
+L0280:         ),
+L0281:       [events,eventId]
+L0282:     );
+---
+L0279:             String(eventId)
+L0280:         ),
+L0281:       [events,eventId]
+L0282:     );
+L0283: 
+L0284:   return (
+---
+L0303: 
+L0304:         <select
+L0305:           value={eventId}
+L0306:           onChange={
+L0307:             event=>
+L0308:               setEventId(
+---
+L0306:           onChange={
+L0307:             event=>
+L0308:               setEventId(
+L0309:                 event.target.value
+L0310:               )
+L0311:           }
+---
+L0333:       )}
+L0334: 
+L0335:       {activeEvent&&(
+L0336:         <div className="ticket-v25-event">
+L0337:           <b>
+L0338:             {activeEvent.title}
+---
+L0336:         <div className="ticket-v25-event">
+L0337:           <b>
+L0338:             {activeEvent.title}
+L0339:           </b>
+L0340: 
+L0341:           <span>
+---
+L0341:           <span>
+L0342:             {dt(
+L0343:               activeEvent.starts_at
+L0344:             )}
+L0345:           </span>
+L0346:         </div>
+---
+
+============================================================
+RETURN / ROOT REFERENCES
+============================================================
+L0623:         </section>
+L0627:       <section className="ticket-v25-card">
+L0732:       </section>
+L0734:       <section className="ticket-v25-card">
+L0791:       </section>
+L0793:     </section>
+
+============================================================
+FINAL 180 LINES
+============================================================
+L0616: 
+L0617:                 </article>
+L0618:               ))
+L0619:             }
+L0620: 
+L0621:           </div>
+L0622: 
+L0623:         </section>
+L0624: 
+L0625:       </div>
+L0626: 
+L0627:       <section className="ticket-v25-card">
+L0628: 
+L0629:         <div className="ticket-v25-title">
+L0630:           <span>BUSCA INTELIGENTE</span>
+L0631:           <h3>
+L0632:             Ingressos emitidos
+L0633:           </h3>
+L0634:         </div>
+L0635: 
+L0636:         <div className="ticket-v25-search">
+L0637: 
+L0638:           <input
+L0639:             value={query}
+L0640:             onChange={
+L0641:               event=>
+L0642:                 setQuery(
+L0643:                   event.target.value
+L0644:                 )
+L0645:             }
+L0646:             onKeyDown={
+L0647:               event=>{
+L0648:                 if(event.key==='Enter'){
+L0649:                   runSearch();
+L0650:                 }
+L0651:               }
+L0652:             }
+L0653:             placeholder="Nome, telefone, e-mail ou codigo"
+L0654:           />
+L0655: 
+L0656:           <button
+L0657:             onClick={runSearch}
+L0658:           >
+L0659:             BUSCAR
+L0660:           </button>
+L0661: 
+L0662:           {query&&(
+L0663:             <button
+L0664:               className="secondary"
+L0665:               onClick={()=>{
+L0666:                 setQuery('');
+L0667:                 setSearch([]);
+L0668:               }}
+L0669:             >
+L0670:               LIMPAR
+L0671:             </button>
+L0672:           )}
+L0673: 
+L0674:         </div>
+L0675: 
+L0676:         <div className="ticket-v25-table-wrap">
+L0677: 
+L0678:           <table>
+L0679:             <thead>
+L0680:               <tr>
+L0681:                 <th>Codigo</th>
+L0682:                 <th>Participante</th>
+L0683:                 <th>Lote</th>
+L0684:                 <th>Valor</th>
+L0685:                 <th>Pagamento</th>
+L0686:                 <th>Acesso</th>
+L0687:               </tr>
+L0688:             </thead>
+L0689: 
+L0690:             <tbody>
+L0691: 
+L0692:               {visibleTickets.map(row=>(
+L0693:                 <tr key={row.id}>
+L0694:                   <td>
+L0695:                     <b>
+L0696:                       {row.ticket_code}
+L0697:                     </b>
+L0698:                   </td>
+L0699: 
+L0700:                   <td>
+L0701:                     {row.attendee_name||
+L0702:                       '\u2014'}
+L0703:                   </td>
+L0704: 
+L0705:                   <td>
+L0706:                     {row.lot_name||
+L0707:                       row.ticket_type||
+L0708:                       '\u2014'}
+L0709:                   </td>
+L0710: 
+L0711:                   <td>
+L0712:                     {money(row.price)}
+L0713:                   </td>
+L0714: 
+L0715:                   <td>
+L0716:                     {row.payment_status}
+L0717:                   </td>
+L0718: 
+L0719:                   <td>
+L0720:                     {row.checkin_at
+L0721:                       ? 'UTILIZADO'
+L0722:                       : 'DISPONIVEL'}
+L0723:                   </td>
+L0724:                 </tr>
+L0725:               ))}
+L0726: 
+L0727:             </tbody>
+L0728:           </table>
+L0729: 
+L0730:         </div>
+L0731: 
+L0732:       </section>
+L0733: 
+L0734:       <section className="ticket-v25-card">
+L0735: 
+L0736:         <div className="ticket-v25-title">
+L0737:           <span>SEGURANCA</span>
+L0738:           <h3>
+L0739:             Historico da portaria
+L0740:           </h3>
+L0741:         </div>
+L0742: 
+L0743:         <div className="ticket-v25-access">
+L0744: 
+L0745:           {!history.length&&(
+L0746:             <div className="ticket-v25-empty">
+L0747:               Nenhuma tentativa registrada.
+L0748:             </div>
+L0749:           )}
+L0750: 
+L0751:           {history.slice(0,50)
+L0752:             .map(row=>(
+L0753:               <article
+L0754:                 key={row.id}
+L0755:                 className={
+L0756:                   String(
+L0757:                     row.result
+L0758:                   ).toLowerCase()
+L0759:                 }
+L0760:               >
+L0761: 
+L0762:                 <b>
+L0763:                   {row.result}
+L0764:                 </b>
+L0765: 
+L0766:                 <span>
+L0767:                   {row.attendee_name||
+L0768:                     row.code}
+L0769:                 </span>
+L0770: 
+L0771:                 <span>
+L0772:                   {row.lot_name||
+L0773:                     '\u2014'}
+L0774:                 </span>
+L0775: 
+L0776:                 <span>
+L0777:                   {row.operator_name||
+L0778:                     '\u2014'}
+L0779:                 </span>
+L0780: 
+L0781:                 <span>
+L0782:                   {dt(row.created_at)}
+L0783:                 </span>
+L0784: 
+L0785:               </article>
+L0786:             ))
+L0787:           }
+L0788: 
+L0789:         </div>
+L0790: 
+L0791:       </section>
+L0792: 
+L0793:     </section>
+L0794:   );
+L0795: }
+
+============================================================
+CURRENT V3.7 STATE
+============================================================
+IMPORT_OR_COMPONENT_REFERENCE = NOT_FOUND
+COMPONENT_MOUNT = NOT_FOUND
+BACKEND_REGISTER = FOUND
+BACKEND_ENGINE = FOUND
+FRONTEND_ENGINE = FOUND
+FRONTEND_CSS = FOUND
+
+============================================================
+V3.7 JSX REPAIR MAP = PASS
+ZERO NOVAS ALTERACOES
+============================================================

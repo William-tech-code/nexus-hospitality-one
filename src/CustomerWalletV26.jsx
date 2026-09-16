@@ -90,7 +90,7 @@ export default function CustomerWalletV26(){
 
  if(loading){
   return(
-   <main className="cw-shell">
+   <main className="cw-shell cw-premium-v34">
     <section className="cw-loading">
      Carregando sua carteira NEXUS...
     </section>
@@ -100,9 +100,9 @@ export default function CustomerWalletV26(){
 
  if(error){
   return(
-   <main className="cw-shell">
+   <main className="cw-shell cw-premium-v34">
     <section className="cw-panel">
-     <h1>NEXUS Ticket Wallet</h1>
+     <span className="cw-v34-kicker">NEXUS EVENT EXPERIENCE</span><h1>Meus Ingressos</h1><p className="cw-v34-subtitle">Sua carteira digital de experiências.</p>
      <p>
       Sua sessão precisa ser renovada.
      </p>
@@ -203,7 +203,7 @@ export default function CustomerWalletV26(){
  };
 
  return(
-  <main className="cw-shell">
+  <main className="cw-shell cw-premium-v34">
 
    <header className="cw-hero">
 
@@ -217,7 +217,7 @@ export default function CustomerWalletV26(){
      </h1>
 
      <p>
-      Olá, {customer?.full_name}.
+      Olá, {customer?.full_name?.split(" ")[0]||"Cliente"}.
       Seus ingressos, pedidos e
       novas experiências em um só lugar.
      </p>
@@ -591,3 +591,5 @@ export default function CustomerWalletV26(){
   </main>
  );
 }
+
+

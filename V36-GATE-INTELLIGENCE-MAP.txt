@@ -1,0 +1,1469 @@
+﻿NEXUS EVENT EXPERIENCE V3.6 - GATE INTELLIGENCE MAP
+
+============================================================
+.\src\GateScannerV25.jsx
+============================================================
+L0032: };
+L0033: 
+L0034: function tone(result){
+L0035:   if(result==='ALLOWED'){
+L0036:     return 'allowed';
+L0037:   }
+L0038: 
+L0039:   if(result==='DUPLICATE'){
+L0040:     return 'duplicate';
+L0041:   }
+L0042: 
+L0043:   return 'denied';
+L0044: }
+L0045: 
+L0046: export default function GateScannerV25(){
+L0047: 
+L0048:   const [code,setCode]=useState('');
+L0049:   const [result,setResult]=useState(null);
+L0050:   const [busy,setBusy]=useState(false);
+L0051:   const [camera,setCamera]=useState(false);
+L0052: 
+L0053:   const videoRef=useRef(null);
+L0054:   const streamRef=useRef(null);
+L0055:   const scanningRef=useRef(false);
+L0056: 
+L0057:   async function validate(
+L0058:     rawCode
+L0074:     try{
+L0075: 
+L0076:       const response=
+L0077:         await api.checkinV25(
+L0078:           normalized
+L0079:         );
+L0080: 
+L0081:       setResult(response);
+L0082: 
+L0100:     }
+L0101:   }
+L0102: 
+L0103:   function stopCamera(){
+L0104: 
+L0105:     scanningRef.current=false;
+L0106: 
+L0107:     if(streamRef.current){
+L0108: 
+L0115:     }
+L0116: 
+L0117:     streamRef.current=null;
+L0118:     setCamera(false);
+L0119:   }
+L0120: 
+L0121:   async function startCamera(){
+L0122: 
+L0123:     if(
+L0124:       !navigator.mediaDevices?.
+L0125:         getUserMedia
+L0126:     ){
+L0127: 
+L0128:       setResult({
+L0129:         ok:false,
+L0130:         result:'ERROR',
+L0131:         message:
+L0132:           'Camera indisponivel neste dispositivo.'
+L0133:       });
+L0134: 
+L0135:       return;
+L0136:     }
+L0137: 
+L0143:         ok:false,
+L0144:         result:'ERROR',
+L0145:         message:
+L0146:           'Leitor QR automatico indisponivel. Digite o codigo do ingresso.'
+L0147:       });
+L0148: 
+L0149:       return;
+L0150:     }
+L0151: 
+L0152:     try{
+L0153: 
+L0154:       const stream=
+L0155:         await navigator.mediaDevices.
+L0156:           getUserMedia({
+L0157:             video:{
+L0158:               facingMode:{
+L0159:                 ideal:'environment'
+L0160:               }
+L0161:             },
+L0162:             audio:false
+L0163:           });
+L0164: 
+L0165:       streamRef.current=stream;
+L0166: 
+L0167:       setCamera(true);
+L0168: 
+L0169:       await new Promise(
+L0170:         resolve=>
+L0171:           setTimeout(
+L0172:             resolve,
+L0174:           )
+L0175:       );
+L0176: 
+L0177:       if(videoRef.current){
+L0178: 
+L0179:         videoRef.current.srcObject=
+L0180:           stream;
+L0181: 
+L0182:         await videoRef.current.play();
+L0183:       }
+L0184: 
+L0185:       const detector=
+L0186:         new BarcodeDetector({
+L0187:           formats:['qr_code']
+L0188:         });
+L0189: 
+L0190:       scanningRef.current=true;
+L0191: 
+L0192:       const scan=async()=>{
+L0193: 
+L0194:         if(
+L0195:           !scanningRef.current ||
+L0196:           !videoRef.current
+L0197:         ){
+L0198:           return;
+L0199:         }
+L0200: 
+L0201:         try{
+L0202: 
+L0203:           const codes=
+L0204:             await detector.detect(
+L0205:               videoRef.current
+L0206:             );
+L0207: 
+L0208:           if(
+L0209:             codes?.length &&
+L0210:             codes[0]?.rawValue
+L0213:             const value=
+L0214:               codes[0].rawValue;
+L0215: 
+L0216:             stopCamera();
+L0217: 
+L0218:             setCode(value);
+L0219: 
+L0220:             await validate(value);
+L0221: 
+L0223:           }
+L0224: 
+L0225:         }catch{
+L0226:           // keep scanner alive
+L0227:         }
+L0228: 
+L0229:         if(scanningRef.current){
+L0230:           requestAnimationFrame(scan);
+L0231:         }
+L0235: 
+L0236:     }catch(error){
+L0237: 
+L0238:       stopCamera();
+L0239: 
+L0240:       setResult({
+L0241:         ok:false,
+L0242:         result:'ERROR',
+L0243:         message:
+L0244:           error.message||
+L0245:           'Nao foi possivel abrir a camera.'
+L0246:       });
+L0247:     }
+L0248:   }
+L0249: 
+L0250:   useEffect(
+L0251:     ()=>{
+L0252:       return ()=>{
+L0253:         stopCamera();
+L0254:       };
+L0255:     },
+L0256:     []
+L0257:   );
+L0258: 
+L0264:   return (
+L0265:     <section
+L0266:       className={
+L0267:         `nexus-gate-v25 ${state}`
+L0268:       }
+L0269:     >
+L0270: 
+L0271:       <div className="gate-v25-head">
+L0272:         <div>
+L0273:           <span>
+L0274:             NEXUS SMART GATE V2.5
+L0275:           </span>
+L0276: 
+L0277:           <h2>
+L0278:             Portaria Inteligente
+L0279:           </h2>
+L0280: 
+L0281:           <p>
+L0282:             QR unico, validacao imediata e bloqueio
+L0283:             automatico contra reutilizacao.
+L0284:           </p>
+L0285:         </div>
+L0286: 
+L0287:         <div
+L0288:           className={
+L0289:             `gate-v25-light ${state}`
+L0290:           }
+L0291:         />
+L0292:       </div>
+L0293: 
+L0294:       <div className="gate-v25-controls">
+L0295: 
+L0296:         <input
+L0297:           value={code}
+L0298:           onChange={
+L0299:             event=>
+L0321:             : 'VALIDAR INGRESSO'}
+L0322:         </button>
+L0323: 
+L0324:         {!camera
+L0325:           ? (
+L0326:               <button
+L0327:                 className="secondary"
+L0328:                 onClick={startCamera}
+L0329:               >
+L0330:                 LER QR CODE
+L0331:               </button>
+L0332:             )
+L0333:           : (
+L0334:               <button
+L0335:                 className="secondary"
+L0336:                 onClick={stopCamera}
+L0337:               >
+L0338:                 FECHAR CAMERA
+L0339:               </button>
+L0340:             )
+L0341:         }
+L0342: 
+L0343:       </div>
+L0344: 
+L0345:       {camera&&(
+L0346:         <div className="gate-v25-camera">
+L0347:           <video
+L0348:             ref={videoRef}
+L0349:             playsInline
+L0350:             muted
+L0351:           />
+L0352:           <div className="gate-v25-frame"/>
+L0353:         </div>
+L0354:       )}
+L0355: 
+L0356:       {result&&(
+L0357:         <div
+L0358:           className={
+L0359:             `gate-v25-result ${state}`
+L0360:           }
+L0361:         >
+L0362: 
+L0363:           <strong>
+L0364:             {result.result==='ALLOWED'
+L0365:               ? 'ACESSO LIBERADO'
+L0366:               : result.result==='DUPLICATE'
+L0367:                 ? 'INGRESSO JA UTILIZADO'
+L0368:                 : result.result==='PAYMENT_PENDING'
+L0369:                   ? 'PAGAMENTO PENDENTE'
+L0370:                   : 'ACESSO NEGADO'}
+L0371:           </strong>
+L0372: 
+L0373:           <p>
+L0375:           </p>
+L0376: 
+L0377:           {result.ticket&&(
+L0378:             <div className="gate-v25-ticket">
+L0379: 
+L0380:               <div>
+L0381:                 <span>Participante</span>
+L0382:                 <b>
+L0383:                   {result.ticket.attendee_name||
+L0384:                     '\u2014'}
+L0385:                 </b>
+L0386:               </div>
+L0387: 
+L0388:               <div>
+L0417:               </div>
+L0418: 
+L0419:               <div>
+L0420:                 <span>Check-in</span>
+L0421:                 <b>
+L0422:                   {dt(
+L0423:                     result.ticket.checkin_at
+L0424:                   )}
+L0425:                 </b>
+L0426:               </div>
+L0427: 
+L0428:             </div>
+
+============================================================
+.\src\TicketOrderCenterV25.jsx
+============================================================
+L0044: export default function TicketOrderCenterV25(){
+L0045: 
+L0046:   const [events,setEvents]=useState([]);
+L0047:   const [eventId,setEventId]=useState('');
+L0048:   const [dashboard,setDashboard]=useState(null);
+L0049:   const [orders,setOrders]=useState([]);
+L0050:   const [history,setHistory]=useState([]);
+L0051:   const [tickets,setTickets]=useState([]);
+L0052:   const [lots,setLots]=useState([]);
+L0053:   const [query,setQuery]=useState('');
+L0054:   const [search,setSearch]=useState([]);
+L0055:   const [message,setMessage]=useState('');
+L0056: 
+L0057:   const [form,setForm]=useState({
+L0058:     attendee_name:'',
+L0059:     attendee_phone:'',
+L0060:     buyer_email:'',
+L0061:     buyer_document:'',
+L0062:     lot_id:'',
+L0063:     payment_method:'DINHEIRO',
+L0064:     payment_status:'PAID'
+L0065:   });
+L0066: 
+L0072:     setEvents(rows);
+L0073: 
+L0074:     if(
+L0075:       !eventId &&
+L0076:       rows.length
+L0077:     ){
+L0078:       setEventId(
+L0079:         String(rows[0].id)
+L0080:       );
+L0081:     }
+L0082:   }
+L0083: 
+L0084:   async function load(){
+L0085: 
+L0086:     if(!eventId){
+L0087:       return;
+L0088:     }
+L0089: 
+L0090:     try{
+L0091: 
+L0092:       const [
+L0093:         dashboardData,
+L0094:         orderRows,
+L0095:         accessRows,
+L0096:         ticketRows,
+L0097:         lotRows
+L0098:       ]=await Promise.all([
+L0099:         api.ticketDashboardV25(eventId),
+L0100:         api.ticketOrdersV25(eventId),
+L0101:         api.ticketAccessV25(eventId),
+L0102:         api.tickets(eventId),
+L0103:         api.ticketLots(eventId)
+L0104:       ]);
+L0105: 
+L0106:       setDashboard(
+L0107:         dashboardData
+L0108:       );
+L0112:       );
+L0113: 
+L0114:       setHistory(
+L0115:         accessRows
+L0116:       );
+L0117: 
+L0118:       setTickets(
+L0119:         ticketRows
+L0120:       );
+L0149:     ()=>{
+L0150:       load();
+L0151:     },
+L0152:     [eventId]
+L0153:   );
+L0154: 
+L0155:   useEffect(
+L0156:     ()=>{
+L0157:       const handleTicketCheckin=()=>{
+L0158:         load();
+L0159:       };
+L0160: 
+L0161:       window.addEventListener(
+L0162:         'nexus:ticket-checkin',
+L0163:         handleTicketCheckin
+L0164:       );
+L0165: 
+L0166:       return ()=>{
+L0167:         window.removeEventListener(
+L0168:           'nexus:ticket-checkin',
+L0169:           handleTicketCheckin
+L0170:         );
+L0171:       };
+L0172:     },
+L0173:     [eventId]
+L0174:   );
+L0175: 
+L0176:   async function runSearch(){
+L0177: 
+L0178:     if(!query.trim()){
+L0179:       setSearch([]);
+L0180:       return;
+L0181:     }
+L0182: 
+L0183:     try{
+L0184: 
+L0185:       const rows=
+L0186:         await api.ticketSearchV25(
+L0187:           eventId,
+L0188:           query.trim()
+L0189:         );
+L0190: 
+L0191:       setSearch(rows);
+L0192: 
+L0193:     }catch(error){
+L0194: 
+L0195:       setMessage(
+L0196:         error.message
+L0201:   async function createPresential(){
+L0202: 
+L0203:     if(
+L0204:       !eventId ||
+L0205:       !form.attendee_name.trim()
+L0206:     ){
+L0207: 
+L0208:       setMessage(
+L0209:         'Informe o participante.'
+L0210:       );
+L0216: 
+L0217:       const response=
+L0218:         await api.createPresentialTicketV25({
+L0219:           event_id:Number(eventId),
+L0220:           lot_id:
+L0221:             form.lot_id
+L0222:               ? Number(form.lot_id)
+L0223:               : null,
+L0224:           attendee_name:
+L0225:             form.attendee_name,
+L0226:           attendee_phone:
+L0227:             form.attendee_phone,
+L0228:           buyer_email:
+L0229:             form.buyer_email,
+L0230:           buyer_document:
+L0231:             form.buyer_document,
+L0232:           payment_method:
+L0233:             form.payment_method,
+L0234:           payment_status:
+L0235:             form.payment_status
+L0236:         });
+L0242: 
+L0243:       setForm(current=>({
+L0244:         ...current,
+L0245:         attendee_name:'',
+L0246:         attendee_phone:'',
+L0247:         buyer_email:'',
+L0248:         buyer_document:''
+L0249:       }));
+L0250: 
+L0251:       await load();
+L0252: 
+L0253:     }catch(error){
+L0267: 
+L0268:   const visibleTickets=
+L0269:     query.trim()
+L0270:       ? search
+L0271:       : tickets;
+L0272: 
+L0273:   const activeEvent=
+L0274:     useMemo(
+L0275:       ()=>
+L0276:         events.find(
+L0277:           row=>
+L0278:             String(row.id)===
+L0279:             String(eventId)
+L0280:         ),
+L0281:       [events,eventId]
+L0282:     );
+L0283: 
+L0284:   return (
+L0285:     <section className="ticket-center-v25">
+L0286: 
+L0297: 
+L0298:           <p>
+L0299:             Venda, pagamento, emissao,
+L0300:             QR Code e acesso em uma unica operacao.
+L0301:           </p>
+L0302:         </div>
+L0303: 
+L0304:         <select
+L0305:           value={eventId}
+L0306:           onChange={
+L0307:             event=>
+L0308:               setEventId(
+L0309:                 event.target.value
+L0310:               )
+L0311:           }
+L0312:         >
+L0313:           <option value="">
+L0365:         </article>
+L0366: 
+L0367:         <article>
+L0368:           <span>CHECK-INS</span>
+L0369:           <strong>
+L0370:             {metrics.checked_in||0}
+L0371:           </strong>
+L0372:         </article>
+L0373: 
+L0412:             <input
+L0413:               placeholder="Nome do participante"
+L0414:               value={
+L0415:                 form.attendee_name
+L0416:               }
+L0417:               onChange={
+L0418:                 event=>
+L0419:                   setForm({
+L0420:                     ...form,
+L0421:                     attendee_name:
+L0422:                       event.target.value
+L0423:                   })
+L0424:               }
+L0425:             />
+L0426: 
+L0427:             <input
+L0428:               placeholder="WhatsApp"
+L0429:               value={
+L0430:                 form.attendee_phone
+L0431:               }
+L0432:               onChange={
+L0433:                 event=>
+L0434:                   setForm({
+L0435:                     ...form,
+L0436:                     attendee_phone:
+L0437:                       event.target.value
+L0438:                   })
+L0439:               }
+L0440:             />
+L0441: 
+L0442:             <input
+L0443:               placeholder="E-mail"
+L0444:               value={
+L0445:                 form.buyer_email
+L0446:               }
+L0447:               onChange={
+L0448:                 event=>
+L0449:                   setForm({
+L0450:                     ...form,
+L0451:                     buyer_email:
+L0452:                       event.target.value
+L0453:                   })
+L0454:               }
+L0455:             />
+L0456: 
+L0457:             <input
+L0458:               placeholder="CPF / documento"
+L0459:               value={
+L0460:                 form.buyer_document
+L0461:               }
+L0462:               onChange={
+L0463:                 event=>
+L0464:                   setForm({
+L0465:                     ...form,
+L0466:                     buyer_document:
+L0467:                       event.target.value
+L0468:                   })
+L0469:               }
+L0470:             />
+L0471: 
+L0582:                       {row.order_code}
+L0583:                     </b>
+L0584:                     <span>
+L0585:                       {row.buyer_name}
+L0586:                     </span>
+L0587:                   </div>
+L0588: 
+L0589:                   <div>
+L0590:                     <b>
+L0633:           </h3>
+L0634:         </div>
+L0635: 
+L0636:         <div className="ticket-v25-search">
+L0637: 
+L0638:           <input
+L0639:             value={query}
+L0640:             onChange={
+L0641:               event=>
+L0646:             onKeyDown={
+L0647:               event=>{
+L0648:                 if(event.key==='Enter'){
+L0649:                   runSearch();
+L0650:                 }
+L0651:               }
+L0652:             }
+L0653:             placeholder="Nome, telefone, e-mail ou codigo"
+L0654:           />
+L0655: 
+L0656:           <button
+L0657:             onClick={runSearch}
+L0658:           >
+L0659:             BUSCAR
+L0660:           </button>
+L0661: 
+L0662:           {query&&(
+L0664:               className="secondary"
+L0665:               onClick={()=>{
+L0666:                 setQuery('');
+L0667:                 setSearch([]);
+L0668:               }}
+L0669:             >
+L0670:               LIMPAR
+L0671:             </button>
+L0672:           )}
+L0698:                   </td>
+L0699: 
+L0700:                   <td>
+L0701:                     {row.attendee_name||
+L0702:                       '\u2014'}
+L0703:                   </td>
+L0704: 
+L0705:                   <td>
+L0706:                     {row.lot_name||
+L0717:                   </td>
+L0718: 
+L0719:                   <td>
+L0720:                     {row.checkin_at
+L0721:                       ? 'UTILIZADO'
+L0722:                       : 'DISPONIVEL'}
+L0723:                   </td>
+L0724:                 </tr>
+L0725:               ))}
+L0740:           </h3>
+L0741:         </div>
+L0742: 
+L0743:         <div className="ticket-v25-access">
+L0744: 
+L0745:           {!history.length&&(
+L0746:             <div className="ticket-v25-empty">
+L0747:               Nenhuma tentativa registrada.
+L0748:             </div>
+L0764:                 </b>
+L0765: 
+L0766:                 <span>
+L0767:                   {row.attendee_name||
+L0768:                     row.code}
+L0769:                 </span>
+L0770: 
+L0771:                 <span>
+L0772:                   {row.lot_name||
+L0774:                 </span>
+L0775: 
+L0776:                 <span>
+L0777:                   {row.operator_name||
+L0778:                     '\u2014'}
+L0779:                 </span>
+L0780: 
+L0781:                 <span>
+L0782:                   {dt(row.created_at)}
+
+============================================================
+.\src\TicketsV25.css
+============================================================
+L0001: .ticket-center-v25,
+L0002: .nexus-gate-v25{
+L0003:   margin-top:24px;
+L0004:   border:1px solid rgba(202,168,84,.22);
+L0005:   border-radius:24px;
+L0006:   background:
+L0007:     linear-gradient(
+L0015: }
+L0016: 
+L0017: .ticket-center-head,
+L0018: .gate-v25-head{
+L0019:   display:flex;
+L0020:   align-items:center;
+L0021:   justify-content:space-between;
+L0022:   gap:20px;
+L0023:   margin-bottom:20px;
+L0024: }
+L0025: 
+L0026: .ticket-center-head span,
+L0027: .gate-v25-head span,
+L0028: .ticket-v25-title span{
+L0029:   font-size:11px;
+L0030:   letter-spacing:.18em;
+L0031:   color:#caa854;
+L0032:   font-weight:800;
+L0033: }
+L0034: 
+L0035: .ticket-center-head h2,
+L0036: .gate-v25-head h2,
+L0037: .ticket-v25-title h3{
+L0038:   margin:5px 0;
+L0039: }
+L0040: 
+L0041: .ticket-center-head p,
+L0042: .gate-v25-head p{
+L0043:   opacity:.68;
+L0044:   margin:0;
+L0045: }
+L0046: 
+L0047: .ticket-center-head select,
+L0048: .ticket-v25-form input,
+L0049: .ticket-v25-form select,
+L0050: .ticket-v25-search input,
+L0051: .gate-v25-controls input{
+L0052:   background:#111;
+L0053:   color:#fff;
+L0054:   border:1px solid rgba(255,255,255,.12);
+L0055:   border-radius:12px;
+L0056:   padding:13px 14px;
+L0126: }
+L0127: 
+L0128: .ticket-v25-form button,
+L0129: .ticket-v25-search button,
+L0130: .gate-v25-controls button{
+L0131:   border:0;
+L0132:   border-radius:12px;
+L0133:   padding:13px 16px;
+L0134:   font-weight:800;
+L0135:   cursor:pointer;
+L0141:   grid-column:1/-1;
+L0142: }
+L0143: 
+L0144: .ticket-v25-search{
+L0145:   display:flex;
+L0146:   gap:10px;
+L0147:   margin-top:14px;
+L0148: }
+L0149: 
+L0150: .ticket-v25-search input{
+L0151:   flex:1;
+L0152: }
+L0153: 
+L0154: .ticket-v25-search .secondary,
+L0155: .gate-v25-controls .secondary{
+L0156:   background:#222;
+L0157:   color:#fff;
+L0158:   border:1px solid rgba(255,255,255,.12);
+L0159: }
+L0160: 
+L0208:   opacity:.55;
+L0209: }
+L0210: 
+L0211: .ticket-v25-access article{
+L0212:   display:grid;
+L0213:   grid-template-columns:
+L0214:     120px 1.5fr 1fr 1fr 1fr;
+L0215:   gap:10px;
+L0216:   padding:11px 0;
+L0217:   border-bottom:1px solid rgba(255,255,255,.06);
+L0218: }
+L0219: 
+L0220: .ticket-v25-access article.allowed b{
+L0221:   color:#5ee18c;
+L0222: }
+L0223: 
+L0224: .ticket-v25-access article.duplicate b{
+L0225:   color:#ffbd59;
+L0226: }
+L0227: 
+L0228: .ticket-v25-access article.invalid b,
+L0229: .ticket-v25-access article.payment_pending b{
+L0230:   color:#ff6868;
+L0231: }
+L0232: 
+L0233: .ticket-v25-empty{
+L0234:   padding:18px 0;
+L0235:   opacity:.55;
+L0236: }
+L0237: 
+L0238: .gate-v25-light{
+L0239:   width:28px;
+L0240:   height:28px;
+L0241:   border-radius:50%;
+L0242:   background:#444;
+L0243:   box-shadow:0 0 25px rgba(255,255,255,.12);
+L0244: }
+L0245: 
+L0246: .gate-v25-light.allowed{
+L0247:   background:#43d978;
+L0248:   box-shadow:0 0 35px rgba(67,217,120,.65);
+L0249: }
+L0250: 
+L0251: .gate-v25-light.duplicate{
+L0252:   background:#ffae42;
+L0253:   box-shadow:0 0 35px rgba(255,174,66,.65);
+L0254: }
+L0255: 
+L0256: .gate-v25-light.denied{
+L0257:   background:#ff5353;
+L0258:   box-shadow:0 0 35px rgba(255,83,83,.65);
+L0259: }
+L0260: 
+L0261: .gate-v25-controls{
+L0262:   display:grid;
+L0263:   grid-template-columns:
+L0264:     minmax(0,1fr)
+L0265:     auto
+L0266:     auto;
+L0267:   gap:10px;
+L0268: }
+L0269: 
+L0270: .gate-v25-camera{
+L0271:   position:relative;
+L0272:   max-width:620px;
+L0273:   margin:20px auto;
+L0274:   overflow:hidden;
+L0275:   border-radius:20px;
+L0276: }
+L0277: 
+L0278: .gate-v25-camera video{
+L0279:   display:block;
+L0280:   width:100%;
+L0281:   background:#000;
+L0282: }
+L0283: 
+L0284: .gate-v25-frame{
+L0285:   position:absolute;
+L0286:   width:220px;
+L0287:   height:220px;
+L0288:   left:50%;
+L0289:   top:50%;
+L0292:   border-radius:22px;
+L0293: }
+L0294: 
+L0295: .gate-v25-result{
+L0296:   margin-top:20px;
+L0297:   border-radius:20px;
+L0298:   padding:28px;
+L0299:   text-align:center;
+L0300: }
+L0301: 
+L0302: .gate-v25-result.allowed{
+L0303:   background:rgba(67,217,120,.12);
+L0304:   border:1px solid rgba(67,217,120,.38);
+L0305: }
+L0306: 
+L0307: .gate-v25-result.duplicate{
+L0308:   background:rgba(255,174,66,.12);
+L0309:   border:1px solid rgba(255,174,66,.38);
+L0310: }
+L0311: 
+L0312: .gate-v25-result.denied{
+L0313:   background:rgba(255,83,83,.12);
+L0314:   border:1px solid rgba(255,83,83,.38);
+L0315: }
+L0316: 
+L0317: .gate-v25-result>strong{
+L0318:   font-size:26px;
+L0319:   letter-spacing:.05em;
+L0320: }
+L0321: 
+L0322: .gate-v25-ticket{
+L0323:   display:grid;
+L0324:   grid-template-columns:
+L0325:     repeat(3,minmax(0,1fr));
+L0326:   gap:12px;
+L0327:   margin-top:20px;
+L0328:   text-align:left;
+L0329: }
+L0330: 
+L0331: .gate-v25-ticket div{
+L0332:   padding:14px;
+L0333:   border-radius:12px;
+L0334:   background:rgba(0,0,0,.20);
+L0335: }
+L0336: 
+L0337: .gate-v25-ticket span{
+L0338:   display:block;
+L0339:   font-size:10px;
+L0340:   letter-spacing:.1em;
+L0341:   opacity:.58;
+L0342: }
+L0343: 
+L0344: .gate-v25-ticket b{
+L0345:   display:block;
+L0346:   margin-top:5px;
+L0347: }
+L0348: 
+L0349: @media(max-width:1000px){
+L0357:     grid-template-columns:1fr;
+L0358:   }
+L0359: 
+L0360:   .gate-v25-ticket{
+L0361:     grid-template-columns:
+L0362:       repeat(2,minmax(0,1fr));
+L0363:   }
+L0364: 
+L0365:   .ticket-v25-access article{
+L0366:     grid-template-columns:
+L0367:       100px 1fr 1fr;
+L0368:   }
+L0369: }
+L0370: 
+L0371: @media(max-width:680px){
+L0372: 
+L0373:   .ticket-center-head,
+L0374:   .gate-v25-head{
+L0375:     align-items:stretch;
+L0376:     flex-direction:column;
+L0377:   }
+L0378: 
+L0379:   .ticket-v25-kpis{
+L0389:     grid-column:auto;
+L0390:   }
+L0391: 
+L0392:   .gate-v25-controls{
+L0393:     grid-template-columns:1fr;
+L0394:   }
+L0395: 
+L0396:   .gate-v25-ticket{
+L0397:     grid-template-columns:1fr;
+L0398:   }
+L0399: 
+L0400:   .ticket-v25-access article{
+L0401:     grid-template-columns:1fr;
+L0402:   }
+L0403: }
+
+============================================================
+.\server\tickets-v25.js
+============================================================
+L0023:       l.name AS lot_name
+L0024:     FROM tickets t
+L0025:     JOIN events e
+L0026:       ON e.id=t.event_id
+L0027:     LEFT JOIN ticket_lots l
+L0028:       ON l.id=t.lot_id
+L0029:     WHERE t.id=?
+L0030:   `).get(id);
+L0031: }
+L0039: ){
+L0040: 
+L0041:   app.get(
+L0042:     '/api/v25/tickets/dashboard/:eventId',
+L0043:     minRole(40),
+L0044:     (req,res)=>{
+L0045:       try{
+L0046: 
+L0047:         const eventId=n(req.params.eventId);
+L0048: 
+L0049:         const event=db.prepare(`
+L0050:           SELECT *
+L0051:           FROM events
+L0052:           WHERE id=?
+L0053:         `).get(eventId);
+L0054: 
+L0055:         if(!event){
+L0056:           return res.status(404).json({
+L0057:             error:'EVENT_NOT_FOUND'
+L0058:           });
+L0075:             ) AS courtesy,
+L0076:             SUM(
+L0077:               CASE
+L0078:                 WHEN checkin_at IS NOT NULL
+L0079:                 THEN 1 ELSE 0
+L0080:               END
+L0081:             ) AS checked_in,
+L0082:             COALESCE(
+L0083:               SUM(
+L0089:               0
+L0090:             ) AS revenue
+L0091:           FROM tickets
+L0092:           WHERE event_id=?
+L0093:         `).get(eventId);
+L0094: 
+L0095:         const lotCapacity=db.prepare(`
+L0096:           SELECT
+L0097:             COALESCE(
+L0098:               SUM(
+L0115:               END
+L0116:             ) AS unlimited_lots
+L0117:           FROM ticket_lots
+L0118:           WHERE event_id=?
+L0119:         `).get(eventId);
+L0120: 
+L0121:         const orders=db.prepare(`
+L0122:           SELECT
+L0123:             COUNT(*) AS total,
+L0124:             SUM(
+L0143:               0
+L0144:             ) AS pending_value
+L0145:           FROM ticket_orders
+L0146:           WHERE event_id=?
+L0147:         `).get(eventId);
+L0148: 
+L0149:         const issued=n(metrics.issued);
+L0150:         const checked=n(metrics.checked_in);
+L0151: 
+L0152:         res.json({
+L0205:   );
+L0206: 
+L0207:   app.get(
+L0208:     '/api/v25/tickets/orders/:eventId',
+L0209:     minRole(40),
+L0210:     (req,res)=>{
+L0211:       try{
+L0212: 
+L0213:         const rows=db.prepare(`
+L0217:             l.name AS lot_name
+L0218:           FROM ticket_orders o
+L0219:           JOIN events e
+L0220:             ON e.id=o.event_id
+L0221:           JOIN ticket_lots l
+L0222:             ON l.id=o.lot_id
+L0223:           WHERE o.event_id=?
+L0224:           ORDER BY o.id DESC
+L0225:           LIMIT 200
+L0226:         `).all(
+L0227:           n(req.params.eventId)
+L0228:         );
+L0229: 
+L0230:         res.json(rows);
+L0231: 
+L0232:       }catch(error){
+L0240:   );
+L0241: 
+L0242:   app.get(
+L0243:     '/api/v25/tickets/access/:eventId',
+L0244:     minRole(40),
+L0245:     (req,res)=>{
+L0246:       try{
+L0247: 
+L0248:         const rows=db.prepare(`
+L0249:           SELECT
+L0250:             a.*,
+L0251:             t.attendee_name,
+L0252:             t.ticket_code,
+L0253:             t.payment_status,
+L0254:             e.title AS event_title,
+L0255:             l.name AS lot_name,
+L0256:             u.name AS operator_name
+L0257:           FROM ticket_access_log a
+L0258:           LEFT JOIN tickets t
+L0259:             ON t.id=a.ticket_id
+L0260:           LEFT JOIN events e
+L0261:             ON e.id=a.event_id
+L0262:           LEFT JOIN ticket_lots l
+L0263:             ON l.id=t.lot_id
+L0264:           LEFT JOIN users u
+L0265:             ON u.id=a.user_id
+L0266:           WHERE a.event_id=?
+L0267:           ORDER BY a.id DESC
+L0268:           LIMIT 200
+L0269:         `).all(
+L0270:           n(req.params.eventId)
+L0271:         );
+L0272: 
+L0273:         res.json(rows);
+L0274: 
+L0275:       }catch(error){
+L0276: 
+L0277:         res.status(500).json({
+L0278:           error:'TICKET_ACCESS_HISTORY_FAILED',
+L0279:           message:error.message
+L0280:         });
+L0281:       }
+L0282:     }
+L0283:   );
+L0284: 
+L0285:   app.get(
+L0286:     '/api/v25/tickets/search/:eventId',
+L0287:     minRole(40),
+L0288:     (req,res)=>{
+L0289:       try{
+L0290: 
+L0291:         const q=txt(req.query.q);
+L0303:             l.name AS lot_name
+L0304:           FROM tickets t
+L0305:           JOIN events e
+L0306:             ON e.id=t.event_id
+L0307:           LEFT JOIN ticket_lots l
+L0308:             ON l.id=t.lot_id
+L0309:           WHERE t.event_id=?
+L0310:             AND (
+L0311:               t.ticket_code LIKE ?
+L0312:               OR COALESCE(
+L0313:                 t.attendee_name,
+L0314:                 ''
+L0315:               ) LIKE ?
+L0316:               OR COALESCE(
+L0317:                 t.attendee_phone,
+L0318:                 ''
+L0319:               ) LIKE ?
+L0320:               OR COALESCE(
+L0321:                 t.buyer_email,
+L0322:                 ''
+L0323:               ) LIKE ?
+L0324:             )
+L0325:           ORDER BY t.id DESC
+L0326:           LIMIT 100
+L0327:         `).all(
+L0328:           n(req.params.eventId),
+L0329:           like,
+L0330:           like,
+L0331:           like,
+L0332:           like
+L0333:         );
+L0337:       }catch(error){
+L0338: 
+L0339:         res.status(500).json({
+L0340:           error:'TICKET_SEARCH_FAILED',
+L0341:           message:error.message
+L0342:         });
+L0343:       }
+L0344:     }
+L0345:   );
+L0351:       try{
+L0352: 
+L0353:         const b=req.body||{};
+L0354:         const eventId=n(b.event_id);
+L0355:         const lotId=n(b.lot_id);
+L0356:         const attendee=txt(
+L0357:           b.attendee_name
+L0358:         );
+L0359: 
+L0360:         if(
+L0361:           !eventId ||
+L0362:           !attendee
+L0363:         ){
+L0364:           return res.status(400).json({
+L0365:             error:'TICKET_DATA_REQUIRED'
+L0366:           });
+L0367:         }
+L0379:           ].includes(paymentStatus)
+L0380:         ){
+L0381:           return res.status(400).json({
+L0382:             error:'INVALID_PAYMENT_STATUS'
+L0383:           });
+L0384:         }
+L0385: 
+L0386:         const create=db.transaction(
+L0387:           ()=>{
+L0390:               SELECT *
+L0391:               FROM events
+L0392:               WHERE id=?
+L0393:             `).get(eventId);
+L0394: 
+L0395:             if(!event){
+L0396:               throw new Error(
+L0397:                 'EVENT_NOT_FOUND'
+L0398:               );
+L0406:                 SELECT *
+L0407:                 FROM ticket_lots
+L0408:                 WHERE id=?
+L0409:                   AND event_id=?
+L0410:               `).get(
+L0411:                 lotId,
+L0412:                 eventId
+L0413:               );
+L0414: 
+L0415:               if(!lot){
+L0416:                 throw new Error(
+L0417:                   'LOT_NOT_FOUND'
+L0458:             const insert=
+L0459:               db.prepare(`
+L0460:                 INSERT INTO tickets(
+L0461:                   event_id,
+L0462:                   lot_id,
+L0463:                   attendee_name,
+L0464:                   attendee_phone,
+L0465:                   ticket_code,
+L0466:                   ticket_type,
+L0467:                   price,
+L0468:                   payment_status,
+L0469:                   payment_method,
+L0470:                   qr_payload,
+L0471:                   buyer_email,
+L0472:                   buyer_document
+L0473:                 )
+L0474:                 VALUES(
+L0475:                   ?,?,?,?,?,?,?,?,?,?,?,?
+L0476:                 )
+L0477:               `).run(
+L0478:                 eventId,
+L0479:                 lotId||null,
+L0480:                 attendee,
+L0481:                 txt(b.attendee_phone)||null,
+L0482:                 code,
+L0483:                 lot
+L0484:                   ? lot.name
+L0485:                   : txt(b.ticket_type)||'PADRAO',
+L0486:                 price,
+L0487:                 paymentStatus,
+L0488:                 method,
+L0489:                 code,
+L0490:                 txt(b.buyer_email)||null,
+L0491:                 txt(b.buyer_document)||null
+L0492:               );
+L0493: 
+L0494:             if(lot){
+L0495:               db.prepare(`
+L0496:                 UPDATE ticket_lots
+L0517:           ticketId,
+L0518:           {
+L0519:             source:'PRESENTIAL_V25',
+L0520:             event_id:eventId,
+L0521:             lot_id:lotId||null,
+L0522:             payment_status:
+L0523:               paymentStatus,
+L0524:             ticket_code:
+L0525:               ticket.ticket_code
+L0558:   );
+L0559: 
+L0560:   app.post(
+L0561:     '/api/v25/tickets/checkin',
+L0562:     minRole(40),
+L0563:     (req,res)=>{
+L0564:       try{
+L0565: 
+L0566:         const code=
+L0570:         if(!code){
+L0571:           return res.status(400).json({
+L0572:             ok:false,
+L0573:             result:'INVALID',
+L0574:             message:'Informe o codigo do ingresso.'
+L0575:           });
+L0576:         }
+L0577: 
+L0578:         let ticket=db.prepare(`
+L0584:             l.name AS lot_name
+L0585:           FROM tickets t
+L0586:           JOIN events e
+L0587:             ON e.id=t.event_id
+L0588:           LEFT JOIN ticket_lots l
+L0589:             ON l.id=t.lot_id
+L0590:           WHERE upper(t.ticket_code)=?
+L0591:         `).get(code);
+L0592: 
+L0593:         if(!ticket){
+L0594: 
+L0595:           db.prepare(`
+L0596:             INSERT INTO ticket_access_log(
+L0597:               code,
+L0598:               result,
+L0599:               user_id
+L0600:             )
+L0601:             VALUES(
+L0602:               ?,
+L0603:               'INVALID',
+L0604:               ?
+L0605:             )
+L0606:           `).run(
+L0607:             code,
+L0608:             req.user.id
+L0610: 
+L0611:           return res.json({
+L0612:             ok:false,
+L0613:             result:'INVALID',
+L0614:             message:'Ingresso invalido.'
+L0615:           });
+L0616:         }
+L0617: 
+L0618:         if(
+L0619:           ![
+L0626:         ){
+L0627: 
+L0628:           db.prepare(`
+L0629:             INSERT INTO ticket_access_log(
+L0630:               ticket_id,
+L0631:               event_id,
+L0632:               code,
+L0633:               result,
+L0634:               user_id
+L0635:             )
+L0636:             VALUES(
+L0637:               ?,?,?,
+L0638:               'PAYMENT_PENDING',
+L0639:               ?
+L0640:             )
+L0641:           `).run(
+L0642:             ticket.id,
+L0643:             ticket.event_id,
+L0644:             code,
+L0645:             req.user.id
+L0646:           );
+L0647: 
+L0648:           return res.json({
+L0649:             ok:false,
+L0650:             result:'PAYMENT_PENDING',
+L0651:             message:
+L0652:               'Pagamento ainda nao confirmado.',
+L0653:             ticket
+L0654:           });
+L0655:         }
+L0656: 
+L0657:         if(ticket.checkin_at){
+L0658: 
+L0659:           db.prepare(`
+L0660:             INSERT INTO ticket_access_log(
+L0661:               ticket_id,
+L0662:               event_id,
+L0663:               code,
+L0664:               result,
+L0665:               user_id
+L0666:             )
+L0667:             VALUES(
+L0668:               ?,?,?,
+L0669:               'DUPLICATE',
+L0670:               ?
+L0671:             )
+L0672:           `).run(
+L0673:             ticket.id,
+L0674:             ticket.event_id,
+L0675:             code,
+L0676:             req.user.id
+L0677:           );
+L0678: 
+L0679:           return res.json({
+L0680:             ok:false,
+L0681:             result:'DUPLICATE',
+L0682:             message:
+L0683:               'Ingresso ja utilizado.',
+L0684:             ticket
+L0685:           });
+L0686:         }
+L0688:         const update=db.prepare(`
+L0689:           UPDATE tickets
+L0690:           SET
+L0691:             checkin_at=CURRENT_TIMESTAMP,
+L0692:             checked_in_by=?
+L0693:           WHERE id=?
+L0694:             AND checkin_at IS NULL
+L0695:         `).run(
+L0696:           req.user.id,
+L0697:           ticket.id
+L0698:         );
+L0699: 
+L0704:           );
+L0705: 
+L0706:           db.prepare(`
+L0707:             INSERT INTO ticket_access_log(
+L0708:               ticket_id,
+L0709:               event_id,
+L0710:               code,
+L0711:               result,
+L0712:               user_id
+L0713:             )
+L0714:             VALUES(
+L0715:               ?,?,?,
+L0716:               'DUPLICATE',
+L0717:               ?
+L0718:             )
+L0719:           `).run(
+L0720:             ticket.id,
+L0721:             ticket.event_id,
+L0722:             code,
+L0723:             req.user.id
+L0724:           );
+L0725: 
+L0726:           return res.json({
+L0727:             ok:false,
+L0728:             result:'DUPLICATE',
+L0729:             message:
+L0730:               'Ingresso ja utilizado.',
+L0731:             ticket
+L0732:           });
+L0733:         }
+L0737:         );
+L0738: 
+L0739:         db.prepare(`
+L0740:           INSERT INTO ticket_access_log(
+L0741:             ticket_id,
+L0742:             event_id,
+L0743:             code,
+L0744:             result,
+L0745:             user_id
+L0746:           )
+L0747:           VALUES(
+L0748:             ?,?,?,
+L0749:             'ALLOWED',
+L0750:             ?
+L0751:           )
+L0752:         `).run(
+L0753:           ticket.id,
+L0754:           ticket.event_id,
+L0755:           code,
+L0756:           req.user.id
+L0757:         );
+L0758: 
+L0759:         audit(
+L0760:           req.user.id,
+L0761:           'CHECKIN',
+L0762:           'TICKET',
+L0763:           ticket.id,
+L0764:           {
+L0765:             result:'ALLOWED',
+L0766:             code
+L0767:           }
+L0768:         );
+L0769: 
+L0770:         return res.json({
+L0771:           ok:true,
+L0772:           result:'ALLOWED',
+L0773:           message:'ACESSO LIBERADO',
+L0774:           ticket
+L0775:         });
+L0776: 
+L0777:       }catch(error){
+L0778: 
+L0779:         console.error(
+L0780:           'TICKET_CHECKIN_V25',
+L0781:           error
+L0782:         );
+L0783: 
+L0784:         res.status(500).json({
+L0785:           ok:false,
+L0786:           result:'ERROR',
+L0787:           error:'CHECKIN_FAILED',
+L0788:           message:error.message
+L0789:         });
+L0790:       }
+L0791:     }
+L0792:   );
+
+============================================================
+.\src\api.js
+============================================================
+L0008:   salesV13:()=>request('/v13/sales/recent'),cancelSaleV13:(id,reason)=>request(`/v13/sales/${id}/cancel`,{method:'POST',body:JSON.stringify({reason})}),splitPaymentV13:body=>request('/v13/sales/split-payment',{method:'POST',body:JSON.stringify(body)}),withdrawalAdviceV13:()=>request('/v13/cash/withdrawal-advice'),pricingV13:()=>request('/v13/pricing'),priceProductV13:(id,body)=>request(`/v13/pricing/product/${id}`,{method:'PATCH',body:JSON.stringify(body)}),quotesV13:()=>request('/v13/quotes'),createQuoteV13:body=>request('/v13/quotes',{method:'POST',body:JSON.stringify(body)}),quoteAnalysisV13:id=>request(`/v13/quotes/${id}/analysis`),finalizeQuoteV13:(id,supplier_id)=>request(`/v13/quotes/${id}/finalize`,{method:'POST',body:JSON.stringify({supplier_id})}),publicSupplierQuoteV13:token=>request(`/public/supplier-quote/${token}`),submitSupplierQuoteV13:(token,body)=>request(`/public/supplier-quote/${token}`,{method:'POST',body:JSON.stringify(body)}),
+L0009: 
+L0010:   publicStore:()=>request('/public/store'),publicCreateOrder:body=>request('/public/orders',{method:'POST',body:JSON.stringify(body)}),publicOrder:code=>request(`/public/orders/${code}`),publicEvents:()=>request('/public/events'),publicEvent:id=>request(`/public/events/${id}`),publicBuyTicket:(id,body)=>request(`/public/events/${id}/buy`,{method:'POST',body:JSON.stringify(body)}),publicTicketOrder:code=>request(`/public/ticket-orders/${code}`),growthV12:()=>request('/v12/growth'),updateEventV12:(id,body)=>request(`/v12/events/${id}`,{method:'PATCH',body:JSON.stringify(body)}),
+L0011:   ticketDashboardV25:id=>request(`/v25/tickets/dashboard/${id}`),ticketOrdersV25:id=>request(`/v25/tickets/orders/${id}`),ticketAccessV25:id=>request(`/v25/tickets/access/${id}`),ticketSearchV25:(id,q)=>request(`/v25/tickets/search/${id}?q=${encodeURIComponent(q)}`),createPresentialTicketV25:body=>request('/v25/tickets/presential',{method:'POST',body:JSON.stringify(body)}),checkinV25:async code=>{const result=await request('/v25/tickets/checkin',{method:'POST',body:JSON.stringify({code})});window.dispatchEvent(new CustomEvent('nexus:ticket-checkin',{detail:result}));return result},publicMenu:()=>request('/public/menu'),ticketEvents:()=>request('/v11/tickets/events'),ticketLots:id=>request(`/v11/tickets/lots/${id}`),createTicketLot:body=>request('/v11/tickets/lots',{method:'POST',body:JSON.stringify(body)}),tickets:id=>request(`/v11/tickets/${id}`),createTicket:body=>request('/v11/tickets',{method:'POST',body:JSON.stringify(body)}),checkin:code=>request('/v11/access/checkin',{method:'POST',body:JSON.stringify({code})}),menuAdmin:()=>request('/v11/menu'),updateMenuItem:(id,body)=>request(`/v11/menu/${id}`,{method:'PATCH',body:JSON.stringify(body)}),salon:()=>request('/v11/salon'),updateTableV11:(id,body)=>request(`/v11/tables/${id}`,{method:'PATCH',body:JSON.stringify(body)}),deliveryV11:()=>request('/v11/delivery'),deliveryOneV11:id=>request(`/v11/delivery/${id}`),createDeliveryV11:body=>request('/v11/delivery',{method:'POST',body:JSON.stringify(body)}),deliveryStatusV11:(id,status)=>request(`/v11/delivery/${id}/status`,{method:'PATCH',body:JSON.stringify({status})}),
+L0012: 
+L0013: 
+L0014:   smartInventory:()=>request('/inventory/smart'),createSmartProduct:body=>request('/inventory/smart-product',{method:'POST',body:JSON.stringify(body)}),updateInventoryProfile:(id,body)=>request(`/inventory/${id}/profile`,{method:'PATCH',body:JSON.stringify(body)}),cashMovement:body=>request('/cash-movements',{method:'POST',body:JSON.stringify(body)}),cashMovements:()=>request('/cash-movements/current'),
+L0015:   customers:()=>request('/customers'),createCustomer:body=>request('/customers',{method:'POST',body:JSON.stringify(body)}),reservations:()=>request('/reservations'),createReservation:body=>request('/reservations',{method:'POST',body:JSON.stringify(body)}),reservationStatus:(id,status)=>request(`/reservations/${id}/status`,{method:'PATCH',body:JSON.stringify({status})}),
+L0016:   delivery:()=>request('/delivery'),createDelivery:body=>request('/delivery',{method:'POST',body:JSON.stringify(body)}),deliveryStatus:(id,status)=>request(`/delivery/${id}/status`,{method:'PATCH',body:JSON.stringify({status})}),eventsV06:()=>request('/events-v06'),createEventV06:body=>request('/events-v06',{method:'POST',body:JSON.stringify(body)}),addEventCost:(id,body)=>request(`/events-v06/${id}/costs`,{method:'POST',body:JSON.stringify(body)}),
+L0063:   markDesktopPrintedV16:(id,printerName)=>request('/v16/print-jobs/'+id+'/desktop/printed',{method:'POST',body:JSON.stringify({printer_name:printerName||null})}),
+L0064:   markDesktopFailedV16:(id,error,printerName)=>request('/v16/print-jobs/'+id+'/desktop/failed',{method:'POST',body:JSON.stringify({error:String(error||'DESKTOP_PRINT_FAILED'),printer_name:printerName||null})}),
+L0065:   retryDesktopPrintV16:id=>request('/v16/print-jobs/'+id+'/desktop/retry',{method:'POST'}),
+L0066:   queueSaleDocumentsV16:
+L0067:     (id, mode='SIMULATION') =>
+L0068:       request(
+L0069:         `/v16/sales/${id}/documents`,
+L0070:         {
+L0071:           method:'POST',
+L0072:           body:JSON.stringify({mode})
+L0073:         }
+L0074:       ),
+L0195: }
+L0196: 
+L0197: export function customerBuyTicketV26(
+L0198:  eventId,
+L0199:  data
+L0200: ){
+L0201:  return customerFetchV26(
+L0202:   `/api/public/events/${eventId}/buy`,
+L0203:   {
+L0204:    method:"POST",
+L0205:    body:JSON.stringify(data)
+L0206:   }
+L0207:  );
+L0208: }
+L0209: 
+L0210: export function customerAgeCheckV26(
+L0211:  eventId,
+L0212:  birthDate
+L0213: ){
+L0214:  return customerFetchV26(
+L0215:   `/api/public/ticket-age-check/${eventId}`,
+L0216:   {
+L0217:    method:"POST",
+L0218:    body:JSON.stringify({
+L0219:     birth_date:birthDate
+L0220:    })
+
+============================================================
+V3.6 GATE INTELLIGENCE MAP = PASS
+ZERO ALTERACOES REALIZADAS
+============================================================

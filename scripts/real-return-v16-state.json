@@ -1,0 +1,44 @@
+{
+  "cash_session_id": 5,
+  "product": {
+    "id": 1,
+    "name": "Cerveja Long Neck",
+    "price": 9,
+    "stock": 47
+  },
+  "backup": "C:\\Users\\rodri\\Desktop\\NEXUS-HOSPITALITY-ONE\\NEXUS-HOSPITALITY-ONE\\database-backups\\hospitality-pre-real-return-v16-2026-09-15T04-14-22-622Z.sqlite",
+  "sale7": {
+    "id": 7,
+    "status": "CANCELLED",
+    "released_at": "2026-09-15 03:45:16",
+    "cancelled_at": "2026-09-15 03:48:27"
+  },
+  "return7": 0,
+  "before_summary": {
+    "session": {
+      "id": 5,
+      "user_id": 1,
+      "status": "OPEN",
+      "opening_amount": 20,
+      "closing_amount": null,
+      "expected_amount": null,
+      "opened_at": "2026-09-14 19:22:03",
+      "closed_at": null,
+      "notes": "Abertura pelo Smart POS V0.8"
+    },
+    "sales": {
+      "count": 5,
+      "revenue": 103,
+      "tips": 0,
+      "gross_revenue": 103,
+      "returns": 0
+    },
+    "methods": {
+      "DINHEIRO": 69,
+      "PIX": 34
+    },
+    "supplies": 0,
+    "withdrawals": 0,
+    "expected_cash": 89
+  }
+}

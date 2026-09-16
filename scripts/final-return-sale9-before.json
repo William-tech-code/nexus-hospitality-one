@@ -1,0 +1,80 @@
+{
+  "sale": {
+    "id": 9,
+    "total": 9,
+    "payment_method": "DINHEIRO",
+    "status": "PAID",
+    "table_label": null,
+    "customer_name": "HOMOLOGACAO RETURN NEXUS V1.6",
+    "created_at": "2026-09-15 04:14:22",
+    "cash_session_id": 5,
+    "user_id": 1,
+    "employee_id": null,
+    "tip_amount": 0,
+    "cancelled_at": null,
+    "cancel_reason": null,
+    "received_amount": 9,
+    "change_amount": 0,
+    "release_code": "R00009-ACEF",
+    "released_at": "2026-09-15 04:14:22",
+    "released_by": 1,
+    "cancelled_by": null
+  },
+  "item": {
+    "id": 9,
+    "sale_id": 9,
+    "product_id": 1,
+    "qty": 1,
+    "unit_price": 9,
+    "unit_cost": 4.5,
+    "sale_mode": "UNIT"
+  },
+  "ledger": [
+    {
+      "id": 8,
+      "sale_id": 9,
+      "product_id": 1,
+      "stock_delta": -1,
+      "closed_delta": 0,
+      "open_delta": 0,
+      "created_at": "2026-09-15 04:14:22"
+    }
+  ],
+  "inventory": {
+    "1": {
+      "product": {
+        "id": 1,
+        "name": "Cerveja Long Neck",
+        "stock": 46
+      },
+      "profile": null
+    }
+  },
+  "summary": {
+    "session": {
+      "id": 5,
+      "user_id": 1,
+      "status": "OPEN",
+      "opening_amount": 20,
+      "closing_amount": null,
+      "expected_amount": null,
+      "opened_at": "2026-09-14 19:22:03",
+      "closed_at": null,
+      "notes": "Abertura pelo Smart POS V0.8"
+    },
+    "sales": {
+      "count": 6,
+      "revenue": 112,
+      "tips": 0,
+      "gross_revenue": 112,
+      "returns": 0
+    },
+    "methods": {
+      "DINHEIRO": 78,
+      "PIX": 34
+    },
+    "supplies": 0,
+    "withdrawals": 0,
+    "expected_cash": 98
+  }
+}

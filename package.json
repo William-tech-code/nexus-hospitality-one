@@ -1,63 +1,64 @@
 {
-  "name": "nexus-hospitality-one",
-  "version": "1.5.4",
-  "private": true,
-  "type": "module",
-  "main": "electron/main.cjs",
-  "scripts": {
-    "dev": "vite --host localhost",
-    "server": "node server/index.js",
-    "build": "vite build --base=/",
-    "desktop": "electron .",
-    "check": "node --check server/index.js && node --check server/transaction-engine.js && node --check server/operational-v1.js && node --check server/operations-v11.js && node --check server/growth-v12.js && node --check server/business-v13.js && node --check server/operation-v14.js && node --check server/payments-v15.js",
-    "dist:win": "electron-builder --win nsis",
-    "dist:dir": "electron-builder --dir"
-  },
-  "dependencies": {
-    "@vitejs/plugin-react": "^5.0.4",
-    "better-sqlite3": "^12.4.1",
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "helmet": "^8.1.0",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1",
-    "vite": "^7.1.7",
-    "qrcode": "^1.5.4"
-  },
-  "devDependencies": {
-    "electron": "^38.1.2",
-    "electron-builder": "^26.0.12"
-  },
-  "build": {
-    "appId": "com.nexora.nexushospitalityone",
-    "productName": "NEXUS Hospitality One",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "electron/**/*",
-      "package.json"
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "artifactName": "NEXUS-HOSPITALITY-ONE-Setup-${version}.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "NEXUS Hospitality One",
-      "uninstallDisplayName": "NEXUS Hospitality One"
-    }
-  },
-  "description": "NEXUS Hospitality One V1.5.1 | Premium POS Stability",
-  "author": "NEXORA — Gestão & Compliance"
+    "name":  "nexus-hospitality-one",
+    "version":  "1.5.4",
+    "private":  true,
+    "type":  "module",
+    "main":  "electron/main.cjs",
+    "scripts":  {
+                    "dev":  "vite --host localhost",
+                    "server":  "node server/index.js",
+                    "build":  "vite build --base=/",
+                    "desktop":  "electron .",
+                    "check":  "node --check server/index.js \u0026\u0026 node --check server/transaction-engine.js \u0026\u0026 node --check server/operational-v1.js \u0026\u0026 node --check server/operations-v11.js \u0026\u0026 node --check server/growth-v12.js \u0026\u0026 node --check server/business-v13.js \u0026\u0026 node --check server/operation-v14.js \u0026\u0026 node --check server/payments-v15.js",
+                    "dist:win":  "electron-builder --win nsis",
+                    "dist:dir":  "electron-builder --dir",
+                    "start":  "node server/index.js"
+                },
+    "dependencies":  {
+                         "@vitejs/plugin-react":  "^5.0.4",
+                         "better-sqlite3":  "^12.4.1",
+                         "cors":  "^2.8.5",
+                         "express":  "^5.1.0",
+                         "helmet":  "^8.1.0",
+                         "react":  "^19.1.1",
+                         "react-dom":  "^19.1.1",
+                         "vite":  "^7.1.7",
+                         "qrcode":  "^1.5.4"
+                     },
+    "devDependencies":  {
+                            "electron":  "^38.1.2",
+                            "electron-builder":  "^26.0.12"
+                        },
+    "build":  {
+                  "appId":  "com.nexora.nexushospitalityone",
+                  "productName":  "NEXUS Hospitality One",
+                  "directories":  {
+                                      "output":  "release"
+                                  },
+                  "files":  [
+                                "electron/**/*",
+                                "package.json"
+                            ],
+                  "win":  {
+                              "target":  [
+                                             {
+                                                 "target":  "nsis",
+                                                 "arch":  [
+                                                              "x64"
+                                                          ]
+                                             }
+                                         ],
+                              "artifactName":  "NEXUS-HOSPITALITY-ONE-Setup-${version}.${ext}"
+                          },
+                  "nsis":  {
+                               "oneClick":  false,
+                               "allowToChangeInstallationDirectory":  true,
+                               "createDesktopShortcut":  true,
+                               "createStartMenuShortcut":  true,
+                               "shortcutName":  "NEXUS Hospitality One",
+                               "uninstallDisplayName":  "NEXUS Hospitality One"
+                           }
+              },
+    "description":  "NEXUS Hospitality One V1.5.1 | Premium POS Stability",
+    "author":  "NEXORA â€” GestÃ£o \u0026 Compliance"
 }

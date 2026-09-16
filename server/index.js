@@ -1,4 +1,8 @@
-﻿import { registerCustomerWallet } from "./customer-wallet-v26.js";
+﻿import {registerTicketDeliveryV39} from "./ticket-delivery-v39.js";
+import registerEventIntelligenceV37 from "./event-intelligence-v37.js";
+import registerEventPaymentTrackerV35 from "./event-payment-tracker-v35.js";
+import {registerEventAccessV31} from "./event-access-routes-v31.js";
+import { registerCustomerWallet } from "./customer-wallet-v26.js";
 import {initializeAsaasSecureRuntime} from './asaas-config.js';
 import express from 'express';import cors from 'cors';import helmet from 'helmet';import path from 'node:path';import fs from 'node:fs';
 import {db,initDb,setting} from './db.js';import {dashboardSnapshot,closingPlan,growthBrief,performanceSnapshot} from './intelligence.js';import {verifyPassword,hashPassword,sessionToken,tokenHash} from './security.js';import {registerOperations} from './operations.js';import {registerRecipeEngine,consumeProduct} from './recipe-engine.js';import {registerPremiumV05} from './premium-v05.js';import {initSuiteV06,registerSuiteV06,smartSalePrice,smartUnitCost} from './suite-v06.js';import {registerOperationalV1} from './operational-v1.js';import {initOperationsV11,registerPublicV11,registerOperationsV11} from './operations-v11.js';
@@ -415,6 +419,9 @@ app.get('/api/auth/capabilities',auth,(_req,res)=>res.json({passkeys:{prepared:t
 
 /* NEXUS_CUSTOMER_WALLET_V26_PUBLIC_BEFORE_GLOBAL_AUTH */
 registerCustomerWallet(app);
+registerEventPaymentTrackerV35(app);
+registerTicketDeliveryV39(app,{auth,minRole,audit});
+registerEventAccessV31(app);
 
 app.use('/api',auth);
 app.get('/api/dashboard',(_req,res)=>res.json({businessName:setting('business_name','Meu Bar & Restaurante'),snapshot:dashboardSnapshot(),growth:growthBrief(),performance:performanceSnapshot()}));
@@ -480,6 +487,7 @@ app.put('/api/settings',minRole(80),(req,res)=>{const allowed=new Set(['business
 
 registerOperations(app,{minRole,audit});registerRecipeEngine(app,minRole,audit);registerPremiumV05(app,minRole,audit);registerSuiteV06(app,minRole,audit);registerOperationalV1(app,{minRole,audit});registerOperationsV11(app,{minRole,audit});
 registerTicketsV25(app,{minRole,audit});
+registerEventIntelligenceV37(app,{minRole});
 
 app.use('/api',(req,res)=>res.status(404).json({error:'API_ROUTE_NOT_FOUND',message:`Rota API nÃƒÂ£o encontrada: ${req.method} ${req.originalUrl}`,version:'1.5.0'}));
 
@@ -487,6 +495,10 @@ const dist=path.resolve(process.cwd(),'dist');if(fs.existsSync(dist)){app.use(ex
 
 
 app.listen(PORT,'0.0.0.0',()=>console.log(`NEXUS HOSPITALITY ONE | API em 0.0.0.0:${PORT}`));
+
+
+
+
 
 
 

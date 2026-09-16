@@ -1,0 +1,429 @@
+﻿import crypto from "crypto";
+import { db } from "./db.js";
+
+function txt(v){
+  return String(v ?? "").trim();
+}
+
+function normalizeEmail(v){
+  return txt(v).toLowerCase();
+}
+
+function normalizePhone(v){
+  return txt(v).replace(/\D/g,"");
+}
+
+function normalizeDocument(v){
+  return txt(v).replace(/\D/g,"");
+}
+
+function randomToken(){
+  return crypto.randomBytes(32).toString("hex");
+}
+
+function hashToken(value){
+  return crypto
+    .createHash("sha256")
+    .update(String(value))
+    .digest("hex");
+}
+
+function ensureSchema(){
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS event_experience_audit(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id INTEGER,
+      ticket_order_id INTEGER,
+      ticket_customer_id INTEGER,
+      action TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'SUCCESS',
+      details TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_event_experience_order
+    ON event_experience_audit(ticket_order_id);
+
+    CREATE INDEX IF NOT EXISTS idx_event_experience_customer
+    ON event_experience_audit(ticket_customer_id);
+  `);
+
+  const customerColumns =
+    db.prepare(`PRAGMA table_info(ticket_customers)`).all()
+      .map(x=>x.name);
+
+  const orderColumns =
+    db.prepare(`PRAGMA table_info(ticket_orders)`).all()
+      .map(x=>x.name);
+
+  const ticketColumns =
+    db.prepare(`PRAGMA table_info(tickets)`).all()
+      .map(x=>x.name);
+
+  if(!orderColumns.includes("ticket_customer_id")){
+    db.exec(`
+      ALTER TABLE ticket_orders
+      ADD COLUMN ticket_customer_id INTEGER
+    `);
+  }
+
+  if(!ticketColumns.includes("ticket_customer_id")){
+    db.exec(`
+      ALTER TABLE tickets
+      ADD COLUMN ticket_customer_id INTEGER
+    `);
+  }
+
+  if(!customerColumns.includes("last_ticket_purchase_at")){
+    db.exec(`
+      ALTER TABLE ticket_customers
+      ADD COLUMN last_ticket_purchase_at TEXT
+    `);
+  }
+
+  if(!customerColumns.includes("ticket_purchase_count")){
+    db.exec(`
+      ALTER TABLE ticket_customers
+      ADD COLUMN ticket_purchase_count INTEGER NOT NULL DEFAULT 0
+    `);
+  }
+
+  if(!customerColumns.includes("ticket_total_spent")){
+    db.exec(`
+      ALTER TABLE ticket_customers
+      ADD COLUMN ticket_total_spent REAL NOT NULL DEFAULT 0
+    `);
+  }
+}
+
+ensureSchema();
+
+function findCustomer(order){
+
+  const document = normalizeDocument(order.buyer_document);
+  const email = normalizeEmail(order.buyer_email);
+  const phone = normalizePhone(order.buyer_phone);
+
+  if(document){
+    const row=db.prepare(`
+      SELECT *
+      FROM ticket_customers
+      WHERE replace(replace(replace(document,'.',''),'-',''),'/','')=?
+        AND status='ACTIVE'
+      ORDER BY id
+      LIMIT 1
+    `).get(document);
+
+    if(row) return row;
+  }
+
+  if(email){
+    const row=db.prepare(`
+      SELECT *
+      FROM ticket_customers
+      WHERE lower(email)=?
+        AND status='ACTIVE'
+      ORDER BY id
+      LIMIT 1
+    `).get(email);
+
+    if(row) return row;
+  }
+
+  if(phone){
+    const customers=db.prepare(`
+      SELECT *
+      FROM ticket_customers
+      WHERE status='ACTIVE'
+        AND phone IS NOT NULL
+      ORDER BY id
+    `).all();
+
+    const row=customers.find(
+      x=>normalizePhone(x.phone)===phone
+    );
+
+    if(row) return row;
+  }
+
+  return null;
+}
+
+function createCustomer(order){
+
+  const columns =
+    db.prepare(`PRAGMA table_info(ticket_customers)`).all();
+
+  const names = columns.map(x=>x.name);
+
+  const data = {};
+
+  if(names.includes("name"))
+    data.name = txt(order.buyer_name) || "Cliente NEXUS";
+
+  if(names.includes("email"))
+    data.email = normalizeEmail(order.buyer_email) || null;
+
+  if(names.includes("phone"))
+    data.phone = normalizePhone(order.buyer_phone) || null;
+
+  if(names.includes("document"))
+    data.document = normalizeDocument(order.buyer_document) || null;
+
+  if(names.includes("status"))
+    data.status = "ACTIVE";
+
+  /*
+   * Some existing installations use a customer access token.
+   * We populate it only when the column exists.
+   */
+  const accessToken = randomToken();
+
+  if(names.includes("access_token_hash"))
+    data.access_token_hash = hashToken(accessToken);
+
+  if(names.includes("created_at"))
+    delete data.created_at;
+
+  const fields = Object.keys(data);
+
+  if(!fields.length){
+    throw new Error("TICKET_CUSTOMER_SCHEMA_UNSUPPORTED");
+  }
+
+  const placeholders = fields.map(()=>"?").join(",");
+
+  const sql = `
+    INSERT INTO ticket_customers(
+      ${fields.join(",")}
+    )
+    VALUES(${placeholders})
+  `;
+
+  const info=db.prepare(sql).run(
+    ...fields.map(k=>data[k])
+  );
+
+  return {
+    customer:
+      db.prepare(`
+        SELECT *
+        FROM ticket_customers
+        WHERE id=?
+      `).get(info.lastInsertRowid),
+
+    access_token: accessToken
+  };
+}
+
+function audit({
+  eventId,
+  orderId,
+  customerId,
+  action,
+  status="SUCCESS",
+  details=null
+}){
+
+  db.prepare(`
+    INSERT INTO event_experience_audit(
+      event_id,
+      ticket_order_id,
+      ticket_customer_id,
+      action,
+      status,
+      details
+    )
+    VALUES(?,?,?,?,?,?)
+  `).run(
+    eventId || null,
+    orderId || null,
+    customerId || null,
+    action,
+    status,
+    details
+      ? JSON.stringify(details)
+      : null
+  );
+}
+
+/*
+ * Runs only after ticket issuance has succeeded.
+ *
+ * Idempotency:
+ * - an already linked order is returned unchanged;
+ * - tickets are updated by ticket_order_id;
+ * - purchase counters are incremented only on the first link.
+ */
+export function connectPaidTicketOrder(orderId){
+
+  const order=db.prepare(`
+    SELECT *
+    FROM ticket_orders
+    WHERE id=?
+  `).get(orderId);
+
+  if(!order){
+    throw new Error("TICKET_ORDER_NOT_FOUND");
+  }
+
+  if(order.payment_status!=="PAID"){
+    throw new Error("TICKET_ORDER_NOT_PAID");
+  }
+
+  if(order.ticket_customer_id){
+
+    const existing=db.prepare(`
+      SELECT *
+      FROM ticket_customers
+      WHERE id=?
+    `).get(order.ticket_customer_id);
+
+    return {
+      linked:true,
+      existing:true,
+      customer:existing,
+      customer_created:false
+    };
+  }
+
+  const issued=db.prepare(`
+    SELECT *
+    FROM tickets
+    WHERE ticket_order_id=?
+    ORDER BY id
+  `).all(order.id);
+
+  if(!issued.length){
+    throw new Error("TICKET_ORDER_WITHOUT_ISSUED_TICKETS");
+  }
+
+  let customer=findCustomer(order);
+  let created=false;
+  let accessToken=null;
+
+  if(!customer){
+
+    const result=createCustomer(order);
+
+    customer=result.customer;
+    accessToken=result.access_token;
+    created=true;
+  }
+
+  const transaction=db.transaction(()=>{
+
+    const current=db.prepare(`
+      SELECT ticket_customer_id
+      FROM ticket_orders
+      WHERE id=?
+    `).get(order.id);
+
+    if(current?.ticket_customer_id){
+      return;
+    }
+
+    db.prepare(`
+      UPDATE ticket_orders
+      SET ticket_customer_id=?,
+          updated_at=CURRENT_TIMESTAMP
+      WHERE id=?
+    `).run(
+      customer.id,
+      order.id
+    );
+
+    db.prepare(`
+      UPDATE tickets
+      SET ticket_customer_id=?
+      WHERE ticket_order_id=?
+        AND (
+          ticket_customer_id IS NULL
+          OR ticket_customer_id=?
+        )
+    `).run(
+      customer.id,
+      order.id,
+      customer.id
+    );
+
+    db.prepare(`
+      UPDATE ticket_customers
+      SET last_ticket_purchase_at=CURRENT_TIMESTAMP,
+          ticket_purchase_count=
+            COALESCE(ticket_purchase_count,0)+1,
+          ticket_total_spent=
+            COALESCE(ticket_total_spent,0)+?
+      WHERE id=?
+    `).run(
+      Number(order.total || 0),
+      customer.id
+    );
+
+    audit({
+      eventId:order.event_id,
+      orderId:order.id,
+      customerId:customer.id,
+      action:"AUTO_WALLET_LINK",
+      details:{
+        order_code:order.order_code,
+        tickets:issued.length,
+        customer_created:created,
+        total:Number(order.total || 0)
+      }
+    });
+  });
+
+  transaction();
+
+  customer=db.prepare(`
+    SELECT *
+    FROM ticket_customers
+    WHERE id=?
+  `).get(customer.id);
+
+  return {
+    linked:true,
+    existing:false,
+    customer,
+    customer_created:created,
+    access_token:accessToken,
+    tickets:issued.length
+  };
+}
+
+export function eventExperienceStatus(orderId){
+
+  const order=db.prepare(`
+    SELECT
+      o.id,
+      o.order_code,
+      o.event_id,
+      o.payment_status,
+      o.ticket_customer_id,
+      o.total,
+      o.created_at,
+      e.title AS event_title,
+      c.name AS customer_name,
+      c.email AS customer_email,
+      c.phone AS customer_phone,
+      (
+        SELECT COUNT(*)
+        FROM tickets t
+        WHERE t.ticket_order_id=o.id
+      ) AS tickets
+    FROM ticket_orders o
+    LEFT JOIN events e
+      ON e.id=o.event_id
+    LEFT JOIN ticket_customers c
+      ON c.id=o.ticket_customer_id
+    WHERE o.id=?
+  `).get(orderId);
+
+  return order || null;
+}
+
+console.log(
+  "NEXUS EVENT EXPERIENCE V3.0 ENGINE ONLINE"
+);

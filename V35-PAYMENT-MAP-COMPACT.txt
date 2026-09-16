@@ -1,0 +1,839 @@
+﻿NEXUS EVENT EXPERIENCE V3.5 - PAYMENT MAP
+
+============================================================
+.\server\growth-v12.js
+============================================================
+L0001: import {connectPaidTicketOrder} from "./event-experience-v30.js";
+L0002: import {asaasRequest,asaasWebhookToken} from './asaas-config.js';
+L0003: import crypto from 'node:crypto';
+L0004: import {db} from './db.js';import QRCode from 'qrcode';
+L0005: const n=v=>Number(v||0);const txt=v=>String(v||'').trim();
+L0008: export function initGrowthV12(){
+L0009:  db.exec(`
+L0010:  CREATE TABLE IF NOT EXISTS asaas_webhook_events(event_id TEXT PRIMARY KEY,event_type TEXT,payment_id TEXT,external_reference TEXT,received_at TEXT DEFAULT CURRENT_TIMESTAMP);
+L0011:  CREATE TABLE IF NOT EXISTS public_orders(id INTEGER PRIMARY KEY AUTOINCREMENT,public_code TEXT NOT NULL UNIQUE,customer_name TEXT NOT NULL,phone TEXT,email TEXT,cpf_cnpj TEXT,order_type TEXT NOT NULL DEFAULT 'PICKUP',address TEXT,notes TEXT,items_total REAL NOT NULL DEFAULT 0,delivery_fee REAL NOT NULL DEFAULT 0,total REAL NOT NULL DEFAULT 0,payment_method TEXT NOT NULL DEFAULT 'PIX',payment_status TEXT NOT NULL DEFAULT 'PENDING',asaas_customer_id TEXT,asaas_payment_id TEXT,invoice_url TEXT,pix_payload TEXT,pix_image TEXT,delivery_id INTEGER,status TEXT NOT NULL DEFAULT 'AWAITING_PAYMENT',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+L0012:  CREATE TABLE IF NOT EXISTS public_order_items(id INTEGER PRIMARY KEY AUTOINCREMENT,order_id INTEGER NOT NULL,product_id INTEGER NOT NULL,name TEXT NOT NULL,qty REAL NOT NULL DEFAULT 1,unit_price REAL NOT NULL DEFAULT 0,notes TEXT,FOREIGN KEY(order_id) REFERENCES public_orders(id) ON DELETE CASCADE);
+L0013:  CREATE TABLE IF NOT EXISTS ticket_orders(id INTEGER PRIMARY KEY AUTOINCREMENT,order_code TEXT NOT NULL UNIQUE,event_id INTEGER NOT NULL,lot_id INTEGER NOT NULL,buyer_name TEXT NOT NULL,buyer_phone TEXT,buyer_email TEXT,buyer_document TEXT,quantity INTEGER NOT NULL DEFAULT 1,total REAL NOT NULL DEFAULT 0,payment_status TEXT NOT NULL DEFAULT 'PENDING',asaas_customer_id TEXT,asaas_payment_id TEXT,invoice_url TEXT,pix_payload TEXT,pix_image TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(event_id) REFERENCES events(id),FOREIGN KEY(lot_id) REFERENCES ticket_lots(id));
+L0014:  CREATE TABLE IF NOT EXISTS growth_actions(id INTEGER PRIMARY KEY AUTOINCREMENT,action_date TEXT NOT NULL,title TEXT NOT NULL,reason TEXT,expected_impact REAL NOT NULL DEFAULT 0,status TEXT NOT NULL DEFAULT 'SUGGESTED',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+L0015:  `);
+L0016:  add('events','public_sales','INTEGER NOT NULL DEFAULT 1');add('events','sales_starts_at','TEXT');add('events','sales_ends_at','TEXT');add('events','description','TEXT');add('events','public_slug','TEXT');
+L0017:  add('delivery_orders','payment_status',"TEXT NOT NULL DEFAULT 'PENDING'");add('delivery_orders','public_order_id','INTEGER');
+L0018:  add('tickets','qr_payload','TEXT');add('tickets','buyer_email','TEXT');add('tickets','buyer_document','TEXT');add('tickets','ticket_order_id','INTEGER');
+L0019: 
+L0020:  add('ticket_orders','ticket_portal_token_hash','TEXT');
+L0021:  add('ticket_orders','ticket_portal_created_at','TEXT');
+L0022: 
+L0023:  db.exec(`
+L0024:   CREATE TABLE IF NOT EXISTS ticket_delivery_outbox(
+L0025:    id INTEGER PRIMARY KEY AUTOINCREMENT,
+L0026:    ticket_order_id INTEGER NOT NULL,
+L0027:    ticket_id INTEGER,
+L0028:    channel TEXT NOT NULL,
+L0029:    destination TEXT,
+L0035:    sent_at TEXT,
+L0036:    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+L0037:    FOREIGN KEY(ticket_order_id) REFERENCES ticket_orders(id),
+L0038:    FOREIGN KEY(ticket_id) REFERENCES tickets(id)
+L0039:   );
+L0040:  `);
+L0041: }
+L0042: 
+L0043: async function asaas(path,options={}){try{return await asaasRequest(path,options)}catch(e){if(e.message==='ASAAS_API_KEY_NOT_CONFIGURED')e.code='ASAAS_NOT_CONFIGURED';throw e}}
+L0044: async function charge({name,phone,email,document,value,description,externalReference}){const customer=await asaas('/customers',{method:'POST',body:{name,cpfCnpj:document||undefined,mobilePhone:phone||undefined,email:email||undefined,externalReference:`NEXUS-${externalReference}`,notificationDisabled:false}});const due=new Date();due.setDate(due.getDate()+1);const dueDate=due.toISOString().slice(0,10);const payment=await asaas('/payments',{method:'POST',body:{customer:customer.id,billingType:'UNDEFINED',value:Number(value.toFixed(2)),dueDate,description,externalReference}});const pix=await asaas(`/payments/${payment.id}/pixQrCode`);return{customer,payment,pix}}
+L0045: function publicMenu(){const business=db.prepare("SELECT value FROM settings WHERE key='business_name'").get()?.value||'NEXUS Hospitality';const products=db.prepare(`SELECT id,name,category,description,image_url,price,stock,menu_featured FROM products WHERE active=1 AND menu_visible=1 ORDER BY menu_featured DESC,category,name`).all().map(x=>({...x,available:n(x.stock)>0}));return{business,products}}
+L0046: function eventPublic(id){return db.prepare(`SELECT e.*,COALESCE((SELECT SUM(CASE WHEN t.payment_status='PAID' THEN 1 ELSE 0 END) FROM tickets t WHERE t.event_id=e.id),0) sold FROM events e WHERE e.id=? AND e.public_sales=1`).get(n(id))}
+L0047: function parseTime(v,fallback){if(!v)return fallback;const t=new Date(v).getTime();return Number.isFinite(t)?t:fallback}
+L0048: function lotState(l){
+L0049:  const now=Date.now(),start=parseTime(l.starts_at,0),end=parseTime(l.ends_at,Infinity);
+L0070: }
+L0071: 
+L0072: function queueTicketDelivery(order,tickets){
+L0073:  const rows=Array.isArray(tickets)?tickets:[];
+L0074:  const email=txt(order?.buyer_email);
+L0075:  const phone=txt(order?.buyer_phone);
+L0078:   SELECT id
+L0079:   FROM ticket_delivery_outbox
+L0080:   WHERE ticket_order_id=?
+L0081:     AND ticket_id=?
+L0082:     AND channel=?
+L0083:  `);
+L0085:  const insert=db.prepare(`
+L0086:   INSERT INTO ticket_delivery_outbox(
+L0087:    ticket_order_id,
+L0088:    ticket_id,
+L0089:    channel,
+L0090:    destination,
+L0135:  }
+L0136: }
+L0137: function activatePublicOrder(orderId){const o=db.prepare('SELECT * FROM public_orders WHERE id=?').get(orderId);if(!o||o.delivery_id)return;const items=db.prepare('SELECT * FROM public_order_items WHERE order_id=?').all(orderId);const info=db.prepare(`INSERT INTO delivery_orders(customer_name,phone,order_type,address,status,total,payment_method,notes,delivery_fee,payment_status,public_order_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)`).run(o.customer_name,o.phone,o.order_type,o.address,'NEW',o.total,o.payment_method,o.notes,o.delivery_fee,'PAID',o.id);for(const x of items)db.prepare('INSERT INTO delivery_items(delivery_id,product_id,qty,unit_price,sale_mode,notes) VALUES(?,?,?,?,?,?)').run(info.lastInsertRowid,x.product_id,x.qty,x.unit_price,'UNIT',x.notes||null);db.prepare("UPDATE public_orders SET payment_status='PAID',status='RECEIVED',delivery_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").run(info.lastInsertRowid,o.id)}
+L0138: function activateTicketOrder(orderId){
+L0139:  const o=db.prepare(
+L0140:   'SELECT * FROM ticket_orders WHERE id=?'
+L0141:  ).get(orderId);
+L0142: 
+L0143:  if(!o||o.payment_status==='PAID'){
+L0144:   return;
+L0145:  }
+L0146: 
+L0177:      ticket_type,
+L0178:      price,
+L0179:      payment_status,
+L0180:      payment_method,
+L0181:      qr_payload,
+L0182:      buyer_email,
+L0183:      buyer_document,
+L0184:      ticket_order_id
+L0185:     )
+L0186:     VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+L0187:    `).run(
+L0193:     lot.name,
+L0194:     n(lot.price),
+L0195:     'PAID',
+L0196:     'PIX',
+L0197:     ticketCode,
+L0198:     o.buyer_email,
+L0199:     o.buyer_document,
+L0210: 
+L0211:   db.prepare(`
+L0212:    UPDATE ticket_orders
+L0213:    SET payment_status='PAID',
+L0214:        ticket_portal_token_hash=?,
+L0215:        ticket_portal_created_at=CURRENT_TIMESTAMP,
+L0216:        updated_at=CURRENT_TIMESTAMP
+L0217:    WHERE id=?
+L0225: 
+L0226:  const currentOrder=db.prepare(
+L0227:   'SELECT * FROM ticket_orders WHERE id=?'
+L0228:  ).get(o.id);
+L0229: 
+L0230:  const issued=db.prepare(
+L0231:   'SELECT * FROM tickets WHERE ticket_order_id=? ORDER BY id'
+L0232:  ).all(o.id);
+L0233: 
+L0234:  queueTicketDelivery(
+L0235:   currentOrder,
+L0236:   issued
+L0237:  );
+L0240: 
+L0241:  try{
+L0242:   experience=connectPaidTicketOrder(
+L0243:    o.id
+L0244:   );
+L0245:  }catch(error){
+L0251: 
+L0252:  return{
+L0253:   portal_token:portalToken,
+L0254:   tickets:issued,
+L0255:   experience
+L0256:  };
+L0258: export function registerGrowthV12(app,{auth,minRole,audit}){
+L0259:  app.get('/api/public/store',(_q,res)=>res.json(publicMenu()));
+L0260:  app.post('/api/public/orders',async(req,res)=>{try{const b=req.body||{},items=Array.isArray(b.items)?b.items:[];if(!txt(b.customer_name)||!txt(b.phone)||!items.length)return res.status(400).json({error:'DADOS_DO_PEDIDO_OBRIGATORIOS'});const resolved=items.map(x=>{const p=db.prepare('SELECT * FROM products WHERE id=? AND active=1 AND menu_visible=1').get(n(x.product_id));if(!p||n(p.stock)<=0)throw new Error('PRODUTO_INDISPONIVEL');return{p,qty:Math.max(1,n(x.qty))}});const itemsTotal=resolved.reduce((s,x)=>s+x.qty*n(x.p.price),0),fee=b.order_type==='DELIVERY'?Math.max(0,n(b.delivery_fee)):0,total=itemsTotal+fee,publicCode=uid('PED');const info=db.prepare(`INSERT INTO public_orders(public_code,customer_name,phone,email,cpf_cnpj,order_type,address,notes,items_total,delivery_fee,total,payment_method) VALUES(?,?,?,?,?,?,?,?,?,?,?,'PIX')`).run(publicCode,txt(b.customer_name),txt(b.phone),txt(b.email)||null,txt(b.cpf_cnpj)||null,b.order_type==='DELIVERY'?'DELIVERY':'PICKUP',txt(b.address)||null,txt(b.notes)||null,itemsTotal,fee,total);for(const x of resolved)db.prepare('INSERT INTO public_order_items(order_id,product_id,name,qty,unit_price,notes) VALUES(?,?,?,?,?,?)').run(info.lastInsertRowid,x.p.id,x.p.name,x.qty,x.p.price,null);let pay=null;try{pay=await charge({name:txt(b.customer_name),phone:txt(b.phone),email:txt(b.email),document:txt(b.cpf_cnpj),value:total,description:`Pedido ${publicCode}`,externalReference:`ORDER:${info.lastInsertRowid}`});db.prepare('UPDATE public_orders SET asaas_customer_id=?,asaas_payment_id=?,invoice_url=?,pix_payload=?,pix_image=? WHERE id=?').run(pay.customer.id,pay.payment.id,pay.payment.invoiceUrl||null,pay.pix.payload||null,pay.pix.encodedImage||null,info.lastInsertRowid)}catch(e){if(e.code!=='ASAAS_NOT_CONFIGURED')throw e}const out=db.prepare('SELECT * FROM public_orders WHERE id=?').get(info.lastInsertRowid);res.status(201).json({...out,paymentConfigured:!!pay})}catch(e){res.status(400).json({error:e.message})}});
+L0261:  app.get('/api/public/orders/:code',(req,res)=>{const o=db.prepare('SELECT * FROM public_orders WHERE public_code=?').get(txt(req.params.code));if(!o)return res.status(404).json({error:'PEDIDO_NAO_ENCONTRADO'});res.json({...o,items:db.prepare('SELECT * FROM public_order_items WHERE order_id=?').all(o.id)})});
+L0262:  app.get('/api/public/my-ticket/:token',async(req,res)=>{
+L0263:  try{
+L0278:    SELECT
+L0279:     o.id,
+L0280:     o.order_code,
+L0281:     o.event_id,
+L0282:     o.lot_id,
+L0283:     o.buyer_name,
+L0284:     o.quantity,
+L0285:     o.total,
+L0286:     o.payment_status,
+L0287:     e.title AS event_title,
+L0288:     e.event_type,
+L0289:     e.artist_name,
+L0293:     e.image_url,
+L0294:     l.name AS lot_name
+L0295:    FROM ticket_orders o
+L0296:    JOIN events e
+L0297:     ON e.id=o.event_id
+L0298:    JOIN ticket_lots l
+L0299:     ON l.id=o.lot_id
+L0300:    WHERE o.ticket_portal_token_hash=?
+L0301:      AND o.payment_status='PAID'
+L0302:   `).get(hash);
+L0303: 
+L0304:   if(!order){
+L0316:     ticket_type,
+L0317:     price,
+L0318:     payment_status,
+L0319:     checkin_at
+L0320:    FROM tickets
+L0321:    WHERE ticket_order_id=?
+L0322:    ORDER BY id
+L0323:   `).all(order.id);
+L0324: 
+L0346:   return res.json({
+L0347:    order:{
+L0348:     order_code:order.order_code,
+L0349:     buyer_name:order.buyer_name,
+L0350:     quantity:order.quantity,
+L0351:     total:order.total,
+L0352:     payment_status:order.payment_status
+L0353:    },
+L0354: 
+L0355:    event:{
+L0384:  }
+L0385: });
+L0386: app.get('/api/public/events',(_q,res)=>res.json(db.prepare(`SELECT e.*,COALESCE((SELECT SUM(CASE WHEN t.payment_status='PAID' THEN 1 ELSE 0 END) FROM tickets t WHERE t.event_id=e.id),0) sold FROM events e WHERE e.public_sales=1 AND COALESCE(e.status,'') NOT IN ('CANCELLED','DRAFT') ORDER BY datetime(e.starts_at) ASC`).all()));
+L0387:  app.get('/api/public/events/:id',(req,res)=>{const e=eventPublic(req.params.id);if(!e)return res.status(404).json({error:'EVENTO_NAO_ENCONTRADO'});const lots=db.prepare('SELECT * FROM ticket_lots WHERE event_id=? ORDER BY id').all(e.id).map(x=>({...x,...lotState(x)}));res.json({...e,lots})});
+L0388:  app.post('/api/public/events/:id/buy',async(req,res)=>{
+L0389:  try{
+L0390:   /* CUSTOMER_LINKED_PUBLIC_BUY_V26 */
+L0391: 
+L0554: 
+L0555:   const info=db.prepare(`
+L0556:    INSERT INTO ticket_orders(
+L0557:     order_code,
+L0558:     event_id,
+L0559:     lot_id,
+L0560:     buyer_name,
+L0596: 
+L0597:    db.prepare(`
+L0598:     UPDATE ticket_orders
+L0599:     SET
+L0600:      asaas_customer_id=?,
+L0601:      asaas_payment_id=?,
+L0602:      invoice_url=?,
+L0603:      pix_payload=?,
+L0604:      pix_image=?
+L0605:     WHERE id=?
+L0606:    `).run(
+L0607:     pay.customer.id,
+L0608:     pay.payment.id,
+L0609:     pay.payment.invoiceUrl||null,
+L0610:     pay.pix.payload||null,
+L0611:     pay.pix.encodedImage||null,
+L0612:     info.lastInsertRowid
+L0613:    );
+L0614: 
+L0615:   }catch(err){
+L0616: 
+L0617:    if(err.code!=='ASAAS_NOT_CONFIGURED'){
+L0618:     throw err;
+L0619:    }
+L0620:   }
+L0623:    ...db.prepare(`
+L0624:     SELECT *
+L0625:     FROM ticket_orders
+L0626:     WHERE id=?
+L0627:    `).get(info.lastInsertRowid),
+L0628:    paymentConfigured:!!pay
+L0640:  }
+L0641: });
+L0642:  app.get('/api/public/ticket-orders/:code',async(req,res)=>{const o=db.prepare('SELECT * FROM ticket_orders WHERE order_code=?').get(txt(req.params.code));if(!o)return res.status(404).json({error:'COMPRA_NAO_ENCONTRADA'});let tickets=o.payment_status==='PAID'?db.prepare('SELECT ticket_code,attendee_name,ticket_type,price,checkin_at FROM tickets WHERE ticket_order_id=?').all(o.id):[];tickets=await Promise.all(tickets.map(async t=>({...t,qr_image:await QRCode.toDataURL(t.ticket_code,{width:360,margin:2,errorCorrectionLevel:'M'})})));res.json({...o,tickets})});
+L0643:  app.post('/api/webhooks/asaas',(req,res)=>{try{const expected=asaasWebhookToken(),received=req.headers['asaas-access-token'];if(!expected)return res.status(503).json({error:'WEBHOOK_TOKEN_NOT_CONFIGURED'});if(received!==expected)return res.status(401).json({error:'INVALID_WEBHOOK_TOKEN'});const ev=txt(req.body?.event),p=req.body?.payment||{},ref=txt(p.externalReference),eventId=txt(req.body?.id)||`${ev}:${txt(p.id)}:${txt(p.status)}`;const seen=db.prepare('SELECT event_id FROM asaas_webhook_events WHERE event_id=?').get(eventId);if(seen)return res.json({received:true,duplicate:true});db.prepare('INSERT INTO asaas_webhook_events(event_id,event_type,payment_id,external_reference) VALUES(?,?,?,?)').run(eventId,ev,txt(p.id)||null,ref||null);if(['PAYMENT_RECEIVED','PAYMENT_CONFIRMED'].includes(ev)){if(ref.startsWith('ORDER:'))activatePublicOrder(n(ref.split(':')[1]));if(ref.startsWith('TICKET:'))activateTicketOrder(n(ref.split(':')[1]))}res.json({received:true})}catch(e){res.status(500).json({error:e.message})}});
+L0644:  app.get('/api/v12/growth',auth,minRole(55),(_req,res)=>{const days=db.prepare(`SELECT strftime('%w',s.created_at,'localtime') dow,COUNT(*) sales,COALESCE(SUM(s.total),0) revenue FROM sales s WHERE s.status='PAID' AND datetime(s.created_at)>=datetime('now','-56 days') GROUP BY dow`).all();const products=db.prepare(`SELECT p.id,p.name,p.category,p.stock,p.minimum_stock,p.cost,p.price,COALESCE(SUM(CASE WHEN datetime(s.created_at)>=datetime('now','-30 days') THEN si.qty ELSE 0 END),0) qty30,COALESCE(SUM(CASE WHEN datetime(s.created_at)>=datetime('now','-30 days') THEN si.qty*si.unit_price ELSE 0 END),0) revenue30 FROM products p LEFT JOIN sale_items si ON si.product_id=p.id LEFT JOIN sales s ON s.id=si.sale_id AND s.status='PAID' WHERE p.active=1 GROUP BY p.id ORDER BY qty30 DESC`).all();const recommendations=products.map(p=>{const daily=n(p.qty30)/30,cover=daily>0?n(p.stock)/daily:999,target=Math.max(n(p.minimum_stock),daily*7),buy=Math.max(0,Math.ceil(target-n(p.stock)));let action='MANTER';if(daily===0&&n(p.stock)>0)action='NAO_COMPRAR';else if(cover<3)action='COMPRAR_URGENTE';else if(cover<7)action='COMPRAR';else if(cover>21)action='REDUZIR_COMPRA';return{...p,daily_avg:daily,coverage_days:cover===999?null:cover,recommended_stock:target,recommended_buy:buy,action}});const names=['Domingo','Segunda','TerÃ§a','Quarta','Quinta','Sexta','SÃ¡bado'];const week=Array.from({length:7},(_,i)=>{const r=days.find(x=>n(x.dow)===i)||{sales:0,revenue:0};return{dow:i,day:names[i],sales:n(r.sales),revenue:n(r.revenue)}});const avg=week.reduce((s,x)=>s+x.revenue,0)/7;const weak=week.filter(x=>x.revenue<avg*.75).map(x=>({...x,idea:`Dia abaixo da mÃ©dia: criar aÃ§Ã£o com produto de boa margem e estoque disponÃ­vel para ${x.day}.`}));res.json({generated_at:new Date().toISOString(),week,weekly_average:avg,weak_days:weak,top:products.slice(0,8),low:[...products].sort((a,b)=>n(a.qty30)-n(b.qty30)).slice(0,8),purchasing:recommendations.sort((a,b)=>n(b.recommended_buy)-n(a.recommended_buy))})});
+L0645:  app.patch('/api/v12/events/:id',auth,minRole(60),(req,res)=>{const b=req.body||{};db.prepare(`UPDATE events SET public_sales=COALESCE(?,public_sales),sales_starts_at=COALESCE(?,sales_starts_at),sales_ends_at=COALESCE(?,sales_ends_at),description=COALESCE(?,description),image_url=COALESCE(?,image_url),status=COALESCE(?,status),ends_at=COALESCE(?,ends_at) WHERE id=?`).run(b.public_sales==null?null:(b.public_sales?1:0),b.sales_starts_at??null,b.sales_ends_at??null,b.description??null,b.image_url??null,b.status??null,b.ends_at??null,n(req.params.id));audit(req.user.id,'UPDATE','EVENT_PUBLIC',req.params.id,b);res.json({ok:true})});
+L0646: }
+L0647: 
+
+============================================================
+.\server\tickets-v25.js
+============================================================
+L0064:             SUM(
+L0065:               CASE
+L0066:                 WHEN payment_status='PAID'
+L0067:                 THEN 1 ELSE 0
+L0068:               END
+L0069:             ) AS paid,
+L0070:             SUM(
+L0071:               CASE
+L0072:                 WHEN payment_status='COURTESY'
+L0073:                 THEN 1 ELSE 0
+L0074:               END
+L0075:             ) AS courtesy,
+L0083:               SUM(
+L0084:                 CASE
+L0085:                   WHEN payment_status='PAID'
+L0086:                   THEN price ELSE 0
+L0087:                 END
+L0088:               ),
+L0124:             SUM(
+L0125:               CASE
+L0126:                 WHEN payment_status='PENDING'
+L0127:                 THEN 1 ELSE 0
+L0128:               END
+L0129:             ) AS pending,
+L0130:             SUM(
+L0131:               CASE
+L0132:                 WHEN payment_status='PAID'
+L0133:                 THEN 1 ELSE 0
+L0134:               END
+L0135:             ) AS paid,
+L0136:             COALESCE(
+L0137:               SUM(
+L0138:                 CASE
+L0139:                   WHEN payment_status='PENDING'
+L0140:                   THEN total ELSE 0
+L0141:                 END
+L0142:               ),
+L0143:               0
+L0144:             ) AS pending_value
+L0145:           FROM ticket_orders
+L0146:           WHERE event_id=?
+L0147:         `).get(eventId);
+L0148: 
+L0154:           metrics:{
+L0155:             issued,
+L0156:             paid:n(metrics.paid),
+L0157:             courtesy:n(metrics.courtesy),
+L0158:             checked_in:checked,
+L0159:             revenue:n(metrics.revenue),
+L0182:           orders:{
+L0183:             total:n(orders.total),
+L0184:             pending:n(orders.pending),
+L0185:             paid:n(orders.paid),
+L0186:             pending_value:n(
+L0187:               orders.pending_value
+L0188:             )
+L0189:           }
+L0190:         });
+L0216:             e.title AS event_title,
+L0217:             l.name AS lot_name
+L0218:           FROM ticket_orders o
+L0219:           JOIN events e
+L0220:             ON e.id=o.event_id
+L0221:           JOIN ticket_lots l
+L0233: 
+L0234:         res.status(500).json({
+L0235:           error:'TICKET_ORDERS_FAILED',
+L0236:           message:error.message
+L0237:         });
+L0238:       }
+L0251:             t.attendee_name,
+L0252:             t.ticket_code,
+L0253:             t.payment_status,
+L0254:             e.title AS event_title,
+L0255:             l.name AS lot_name,
+L0256:             u.name AS operator_name
+L0369:         const paymentStatus=
+L0370:           txt(
+L0371:             b.payment_status||
+L0372:             'PAID'
+L0373:           ).toUpperCase();
+L0374: 
+L0375:         if(
+L0376:           ![
+L0377:             'PAID',
+L0378:             'COURTESY'
+L0379:           ].includes(paymentStatus)
+L0380:         ){
+L0381:           return res.status(400).json({
+L0382:             error:'INVALID_PAYMENT_STATUS'
+L0383:           });
+L0384:         }
+L0385: 
+L0466:                   ticket_type,
+L0467:                   price,
+L0468:                   payment_status,
+L0469:                   payment_method,
+L0470:                   qr_payload,
+L0471:                   buyer_email,
+L0520:             event_id:eventId,
+L0521:             lot_id:lotId||null,
+L0522:             payment_status:
+L0523:               paymentStatus,
+L0524:             ticket_code:
+L0525:               ticket.ticket_code
+L0618:         if(
+L0619:           ![
+L0620:             'PAID',
+L0621:             'COURTESY'
+L0622:           ].includes(
+L0623:             txt(ticket.payment_status)
+L0624:               .toUpperCase()
+L0625:           )
+L0626:         ){
+L0636:             VALUES(
+L0637:               ?,?,?,
+L0638:               'PAYMENT_PENDING',
+L0639:               ?
+L0640:             )
+L0641:           `).run(
+L0648:           return res.json({
+L0649:             ok:false,
+L0650:             result:'PAYMENT_PENDING',
+L0651:             message:
+L0652:               'Pagamento ainda nao confirmado.',
+L0653:             ticket
+
+============================================================
+.\server\customer-wallet-v26.js
+============================================================
+L0232:    t.ticket_type,
+L0233:    t.price,
+L0234:    t.payment_status,
+L0235:    t.checkin_at,
+L0236:    t.created_at,
+L0237:    t.attendee_name,
+L0238:    t.ticket_order_id,
+L0239: 
+L0240:    o.order_code,
+L0241:    o.total order_total,
+L0242: 
+L0243:    e.id event_id,
+L0254:   FROM tickets t
+L0255: 
+L0256:   LEFT JOIN ticket_orders o
+L0257:    ON o.id=t.ticket_order_id
+L0258: 
+L0259:   LEFT JOIN events e
+L0260:    ON e.id=t.event_id
+L0309: 
+L0310:  /*
+L0311:   * Claim an existing paid order through
+L0312:   * the secure private portal token.
+L0313:   */
+L0314:  app.post(
+L0330:     const order=db.prepare(`
+L0331:      SELECT *
+L0332:      FROM ticket_orders
+L0333:      WHERE ticket_portal_token_hash=?
+L0334:        AND payment_status='PAID'
+L0335:     `).get(tokenHash);
+L0336: 
+L0337:     if(!order){
+L0459:       SELECT customer_id
+L0460:       FROM ticket_customer_claims
+L0461:       WHERE ticket_order_id=?
+L0462:      `).get(order.id);
+L0463: 
+L0464:      if(
+L0476:        ticket_customer_claims(
+L0477:         customer_id,
+L0478:         ticket_order_id
+L0479:        )
+L0480:       VALUES(?,?)
+L0481:      `).run(
+L0485: 
+L0486:      db.prepare(`
+L0487:       UPDATE ticket_orders
+L0488:       SET
+L0489:        ticket_customer_id=?,
+L0490:        updated_at=CURRENT_TIMESTAMP
+L0498:       UPDATE tickets
+L0499:       SET ticket_customer_id=?
+L0500:       WHERE ticket_order_id=?
+L0501:      `).run(
+L0502:       customer.id,
+L0503:       order.id
+L0597:      SELECT
+L0598:       o.id,
+L0599:       o.order_code,
+L0600:       o.event_id,
+L0601:       o.lot_id,
+L0602:       o.quantity,
+L0603:       o.total,
+L0604:       o.payment_status,
+L0605:       o.invoice_url,
+L0606:       o.created_at,
+L0607:       o.updated_at,
+L0608:       e.title event_title,
+L0610:       e.venue_name,
+L0611:       l.name lot_name
+L0612:      FROM ticket_orders o
+L0613:      JOIN events e
+L0614:       ON e.id=o.event_id
+L0615:      LEFT JOIN ticket_lots l
+
+============================================================
+.\server\event-experience-v30.js
+============================================================
+L0001: import {createWalletMagicLink,queueWalletAccess} from "./event-access-v31.js";
+L0002: import crypto from "crypto";
+L0003: import { db } from "./db.js";
+L0004: 
+L0036:       id INTEGER PRIMARY KEY AUTOINCREMENT,
+L0037:       event_id INTEGER,
+L0038:       ticket_order_id INTEGER,
+L0039:       ticket_customer_id INTEGER,
+L0040:       action TEXT NOT NULL,
+L0041:       status TEXT NOT NULL DEFAULT 'SUCCESS',
+L0045: 
+L0046:     CREATE INDEX IF NOT EXISTS idx_event_experience_order
+L0047:     ON event_experience_audit(ticket_order_id);
+L0048: 
+L0049:     CREATE INDEX IF NOT EXISTS idx_event_experience_customer
+L0050:     ON event_experience_audit(ticket_customer_id);
+L0056: 
+L0057:   const orderColumns =
+L0058:     db.prepare(`PRAGMA table_info(ticket_orders)`).all()
+L0059:       .map(x=>x.name);
+L0060: 
+L0061:   const ticketColumns =
+L0065:   if(!orderColumns.includes("ticket_customer_id")){
+L0066:     db.exec(`
+L0067:       ALTER TABLE ticket_orders
+L0068:       ADD COLUMN ticket_customer_id INTEGER
+L0069:     `);
+L0070:   }
+L0231:     INSERT INTO event_experience_audit(
+L0232:       event_id,
+L0233:       ticket_order_id,
+L0234:       ticket_customer_id,
+L0235:       action,
+L0236:       status,
+L0255:  * Idempotency:
+L0256:  * - an already linked order is returned unchanged;
+L0257:  * - tickets are updated by ticket_order_id;
+L0258:  * - purchase counters are incremented only on the first link.
+L0259:  */
+L0260: export function connectPaidTicketOrder(orderId){
+L0261: 
+L0262:   const order=db.prepare(`
+L0263:     SELECT *
+L0264:     FROM ticket_orders
+L0265:     WHERE id=?
+L0266:   `).get(orderId);
+L0267: 
+L0268:   if(!order){
+L0269:     throw new Error("TICKET_ORDER_NOT_FOUND");
+L0270:   }
+L0271: 
+L0272:   if(order.payment_status!=="PAID"){
+L0273:     throw new Error("TICKET_ORDER_NOT_PAID");
+L0274:   }
+L0275: 
+L0276:   if(order.ticket_customer_id){
+L0293:     SELECT *
+L0294:     FROM tickets
+L0295:     WHERE ticket_order_id=?
+L0296:     ORDER BY id
+L0297:   `).all(order.id);
+L0298: 
+L0299:   if(!issued.length){
+L0300:     throw new Error("TICKET_ORDER_WITHOUT_ISSUED_TICKETS");
+L0301:   }
+L0302: 
+L0303:   let customer=findCustomer(order);
+L0318:     const current=db.prepare(`
+L0319:       SELECT ticket_customer_id
+L0320:       FROM ticket_orders
+L0321:       WHERE id=?
+L0322:     `).get(order.id);
+L0323: 
+L0327: 
+L0328:     db.prepare(`
+L0329:       UPDATE ticket_orders
+L0330:       SET ticket_customer_id=?,
+L0331:           updated_at=CURRENT_TIMESTAMP
+L0332:       WHERE id=?
+L0339:       UPDATE tickets
+L0340:       SET ticket_customer_id=?
+L0341:       WHERE ticket_order_id=?
+L0342:         AND (
+L0343:           ticket_customer_id IS NULL
+L0344:           OR ticket_customer_id=?
+L0369:       action:"AUTO_WALLET_LINK",
+L0370:       details:{
+L0371:         order_code:order.order_code,
+L0372:         tickets:issued.length,
+L0373:         customer_created:created,
+L0374:         total:Number(order.total || 0)
+L0385:   `).get(customer.id);
+L0386: 
+L0387:   const magic=createWalletMagicLink({
+L0388:     customerId:customer.id,
+L0389:     orderId:order.id,
+L0390:     expiresHours:72
+L0396:     email:order.buyer_email,
+L0397:     phone:order.buyer_phone,
+L0398:     magicToken:magic.token
+L0399:   });
+L0400: 
+L0401:   return {
+L0406:     access_token:accessToken,
+L0407:     tickets:issued.length,
+L0408:     wallet_access:{
+L0409:       token:magic.token,
+L0410:       expires_hours:magic.expires_hours,
+L0411:       notification
+L0412:     }
+L0413:   };
+L0419:     SELECT
+L0420:       o.id,
+L0421:       o.order_code,
+L0422:       o.event_id,
+L0423:       o.payment_status,
+L0424:       o.ticket_customer_id,
+L0425:       o.total,
+L0426:       o.created_at,
+L0432:         SELECT COUNT(*)
+L0433:         FROM tickets t
+L0434:         WHERE t.ticket_order_id=o.id
+L0435:       ) AS tickets
+L0436:     FROM ticket_orders o
+L0437:     LEFT JOIN events e
+L0438:       ON e.id=o.event_id
+L0439:     LEFT JOIN ticket_customers c
+
+============================================================
+.\server\event-access-v31.js
+============================================================
+L0016: 
+L0017:   db.exec(`
+L0018:     CREATE TABLE IF NOT EXISTS ticket_magic_links(
+L0019:       id INTEGER PRIMARY KEY AUTOINCREMENT,
+L0020:       ticket_customer_id INTEGER NOT NULL,
+L0021:       ticket_order_id INTEGER,
+L0022:       token_hash TEXT NOT NULL UNIQUE,
+L0023:       purpose TEXT NOT NULL DEFAULT 'WALLET_ACCESS',
+L0024:       status TEXT NOT NULL DEFAULT 'ACTIVE',
+L0025:       expires_at TEXT NOT NULL,
+L0026:       used_at TEXT,
+L0028:     );
+L0029: 
+L0030:     CREATE INDEX IF NOT EXISTS idx_magic_customer
+L0031:     ON ticket_magic_links(ticket_customer_id);
+L0032: 
+L0033:     CREATE INDEX IF NOT EXISTS idx_magic_order
+L0034:     ON ticket_magic_links(ticket_order_id);
+L0035: 
+L0036:     CREATE TABLE IF NOT EXISTS event_experience_notifications(
+L0037:       id INTEGER PRIMARY KEY AUTOINCREMENT,
+L0038:       ticket_customer_id INTEGER,
+L0039:       ticket_order_id INTEGER,
+L0040:       channel TEXT NOT NULL,
+L0041:       destination TEXT,
+L0042:       type TEXT NOT NULL,
+L0051:     CREATE INDEX IF NOT EXISTS idx_experience_notifications
+L0052:     ON event_experience_notifications(
+L0053:       ticket_order_id,
+L0054:       status
+L0055:     );
+L0056:   `);
+L0059: ensureSchema();
+L0060: 
+L0061: export function createWalletMagicLink({
+L0062:   customerId,
+L0063:   orderId=null,
+L0064:   expiresHours=72
+L0075:   if(orderId){
+L0076:     db.prepare(`
+L0077:       UPDATE ticket_magic_links
+L0078:       SET status='REPLACED'
+L0079:       WHERE ticket_order_id=?
+L0080:         AND status='ACTIVE'
+L0081:     `).run(orderId);
+L0082:   }
+L0086: 
+L0087:   db.prepare(`
+L0088:     INSERT INTO ticket_magic_links(
+L0089:       ticket_customer_id,
+L0090:       ticket_order_id,
+L0091:       token_hash,
+L0092:       expires_at
+L0093:     )
+L0122:   email=null,
+L0123:   phone=null,
+L0124:   magicToken
+L0125: }){
+L0126: 
+L0127:   const payload=JSON.stringify({
+L0128:     action:"OPEN_MY_TICKETS",
+L0129:     token:magicToken,
+L0130:     order_id:orderId
+L0131:   });
+L0132: 
+L0134:     INSERT INTO event_experience_notifications(
+L0135:       ticket_customer_id,
+L0136:       ticket_order_id,
+L0137:       channel,
+L0138:       destination,
+L0139:       type,
+L0150:       "EMAIL",
+L0151:       String(email).trim().toLowerCase(),
+L0152:       "TICKET_WALLET_ACCESS",
+L0153:       payload
+L0154:     );
+L0155:   }
+L0161:       "WHATSAPP",
+L0162:       String(phone).replace(/\D/g,""),
+L0163:       "TICKET_WALLET_ACCESS",
+L0164:       payload
+L0165:     );
+L0166:   }
+L0173: }
+L0174: 
+L0175: export function resolveWalletMagicLink(rawToken){
+L0176: 
+L0177:   const digest=hash(rawToken);
+L0178: 
+L0179:   const link=db.prepare(`
+L0180:     SELECT *
+L0181:     FROM ticket_magic_links
+L0182:     WHERE token_hash=?
+L0183:       AND status='ACTIVE'
+L0184:       AND datetime(expires_at)>datetime('now')
+
+============================================================
+.\server\event-access-routes-v31.js
+============================================================
+L0002: import { db } from "./db.js";
+L0003: import {
+L0004:   resolveWalletMagicLink
+L0005: } from "./event-access-v31.js";
+L0006: 
+L0007: function hash(value){
+L0061: 
+L0062:         const link=
+L0063:           resolveWalletMagicLink(raw);
+L0064: 
+L0065:         if(!link){
+L0066:           return res.status(401).json({
+L0090: 
+L0091:         /*
+L0092:          * O magic link continua marcado como ACTIVE
+L0093:          * ate expirar, permitindo ao comprador reabrir
+L0094:          * o acesso no mesmo dispositivo ou em outro.
+L0095:          * used_at registra a utilizacao.
+L0096:          */
+L0097:         db.prepare(`
+L0098:           UPDATE ticket_magic_links
+L0099:           SET used_at=CURRENT_TIMESTAMP
+L0100:           WHERE id=?
+L0101:         `).run(link.id);
+L0112:           },
+L0113:           order_id:
+L0114:             link.ticket_order_id,
+L0115:           redirect:
+L0116:             "/meus-ingressos"
+L0117:         });
+
+============================================================
+.\src\api.js
+============================================================
+L0004: async function request(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(token)headers.Authorization=`Bearer ${token}`;let res;try{res=await fetch(`${API}${path}`,{...options,headers})}catch(cause){const e=new Error('API do NEXUS Hospitality indisponÃƒÂ­vel. Confirme que o servidor estÃƒÂ¡ ativo na porta 8989.');e.code='API_UNREACHABLE';e.cause=cause;throw e}const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.message||data.error||`Erro HTTP ${res.status}`);e.code=data.error;e.status=res.status;throw e}return data}
+L0005: export const api={
+L0006:   paymentConfigV15:()=>request('/v15/payments/config'),saveAsaasV15:body=>request('/v15/payments/config',{method:'PUT',body:JSON.stringify(body)}),testAsaasV15:()=>request('/v15/payments/test',{method:'POST'}),
+L0007:   salesRecentV14:()=>request('/v14/sales/recent'),saleV14:id=>request(`/v14/sales/${id}`),createSaleV14:body=>request('/v14/sales',{method:'POST',body:JSON.stringify(body)}),releaseSaleV14:id=>request(`/v14/sales/${id}/release`,{method:'POST'}),changeCorrectionV14:(id,body)=>request(`/v14/sales/${id}/change-correction`,{method:'POST',body:JSON.stringify(body)}),returnSaleV14:(id,body)=>request(`/v14/sales/${id}/return`,{method:'POST',body:JSON.stringify(body)}),printSaleV14:(id,type)=>request(`/v14/sales/${id}/print`,{method:'POST',body:JSON.stringify({type})}),paymentConfigV14:()=>request('/v14/payment-config'),
+L0008:   salesV13:()=>request('/v13/sales/recent'),cancelSaleV13:(id,reason)=>request(`/v13/sales/${id}/cancel`,{method:'POST',body:JSON.stringify({reason})}),splitPaymentV13:body=>request('/v13/sales/split-payment',{method:'POST',body:JSON.stringify(body)}),withdrawalAdviceV13:()=>request('/v13/cash/withdrawal-advice'),pricingV13:()=>request('/v13/pricing'),priceProductV13:(id,body)=>request(`/v13/pricing/product/${id}`,{method:'PATCH',body:JSON.stringify(body)}),quotesV13:()=>request('/v13/quotes'),createQuoteV13:body=>request('/v13/quotes',{method:'POST',body:JSON.stringify(body)}),quoteAnalysisV13:id=>request(`/v13/quotes/${id}/analysis`),finalizeQuoteV13:(id,supplier_id)=>request(`/v13/quotes/${id}/finalize`,{method:'POST',body:JSON.stringify({supplier_id})}),publicSupplierQuoteV13:token=>request(`/public/supplier-quote/${token}`),submitSupplierQuoteV13:(token,body)=>request(`/public/supplier-quote/${token}`,{method:'POST',body:JSON.stringify(body)}),
+L0009: 
+L0010:   publicStore:()=>request('/public/store'),publicCreateOrder:body=>request('/public/orders',{method:'POST',body:JSON.stringify(body)}),publicOrder:code=>request(`/public/orders/${code}`),publicEvents:()=>request('/public/events'),publicEvent:id=>request(`/public/events/${id}`),publicBuyTicket:(id,body)=>request(`/public/events/${id}/buy`,{method:'POST',body:JSON.stringify(body)}),publicTicketOrder:code=>request(`/public/ticket-orders/${code}`),growthV12:()=>request('/v12/growth'),updateEventV12:(id,body)=>request(`/v12/events/${id}`,{method:'PATCH',body:JSON.stringify(body)}),
+L0011:   ticketDashboardV25:id=>request(`/v25/tickets/dashboard/${id}`),ticketOrdersV25:id=>request(`/v25/tickets/orders/${id}`),ticketAccessV25:id=>request(`/v25/tickets/access/${id}`),ticketSearchV25:(id,q)=>request(`/v25/tickets/search/${id}?q=${encodeURIComponent(q)}`),createPresentialTicketV25:body=>request('/v25/tickets/presential',{method:'POST',body:JSON.stringify(body)}),checkinV25:async code=>{const result=await request('/v25/tickets/checkin',{method:'POST',body:JSON.stringify({code})});window.dispatchEvent(new CustomEvent('nexus:ticket-checkin',{detail:result}));return result},publicMenu:()=>request('/public/menu'),ticketEvents:()=>request('/v11/tickets/events'),ticketLots:id=>request(`/v11/tickets/lots/${id}`),createTicketLot:body=>request('/v11/tickets/lots',{method:'POST',body:JSON.stringify(body)}),tickets:id=>request(`/v11/tickets/${id}`),createTicket:body=>request('/v11/tickets',{method:'POST',body:JSON.stringify(body)}),checkin:code=>request('/v11/access/checkin',{method:'POST',body:JSON.stringify({code})}),menuAdmin:()=>request('/v11/menu'),updateMenuItem:(id,body)=>request(`/v11/menu/${id}`,{method:'PATCH',body:JSON.stringify(body)}),salon:()=>request('/v11/salon'),updateTableV11:(id,body)=>request(`/v11/tables/${id}`,{method:'PATCH',body:JSON.stringify(body)}),deliveryV11:()=>request('/v11/delivery'),deliveryOneV11:id=>request(`/v11/delivery/${id}`),createDeliveryV11:body=>request('/v11/delivery',{method:'POST',body:JSON.stringify(body)}),deliveryStatusV11:(id,status)=>request(`/v11/delivery/${id}/status`,{method:'PATCH',body:JSON.stringify({status})}),
+L0012: 
+L0013: 
+L0030:   // ==================================================
+L0031:   // NEXUS HOSPITALITY ONE V1.6
+L0032:   // Operational Checkout & Audit
+L0033:   // ==================================================
+L0034: 
+L0035:   salesRecentV16: () =>
+L0058: 
+L0059:   /* NEXUS_DESKTOP_PRINT_FRONTEND_V218I1 */
+L0060:   desktopPrintPendingV16:(limit=50)=>request('/v16/print-jobs/desktop/pending?limit='+encodeURIComponent(limit)),
+L0061:   printJobV16:id=>request('/v16/print-jobs/'+id),
+L0062:   beginDesktopPrintV16:(id,printerName)=>request('/v16/print-jobs/'+id+'/desktop/begin',{method:'POST',body:JSON.stringify({printer_name:printerName||null})}),
+L0063:   markDesktopPrintedV16:(id,printerName)=>request('/v16/print-jobs/'+id+'/desktop/printed',{method:'POST',body:JSON.stringify({printer_name:printerName||null})}),
+L0200: ){
+L0201:  return customerFetchV26(
+L0202:   `/api/public/events/${eventId}/buy`,
+L0203:   {
+L0204:    method:"POST",
+L0205:    body:JSON.stringify(data)
+
+============================================================
+.\src\PublicEventsPremiumV33.jsx
+============================================================
+L0061:   const[loading,setLoading]=useState(true);
+L0062:   const[error,setError]=useState("");
+L0063:   const[checkout,setCheckout]=useState(null);
+L0064:   const[buying,setBuying]=useState(false);
+L0065: 
+L0066:   useEffect(()=>{
+L0079:           const data=
+L0080:             await jsonFetch(
+L0081:               `/api/public/events/${eventId}`
+L0082:             );
+L0083: 
+L0084:           if(!alive)return;
+L0097:           const data=
+L0098:             await jsonFetch(
+L0099:               "/api/public/events"
+L0100:             );
+L0101: 
+L0102:           if(!alive)return;
+L0195:       const result=
+L0196:         await jsonFetch(
+L0197:           `/api/public/events/${event.id}/buy`,
+L0198:           {
+L0199:             method:"POST",
+L0200:             headers:{
+L0213:         );
+L0214: 
+L0215:       setCheckout(result);
+L0216: 
+L0217:     }catch(e){
+L0218: 
+L0243:   }
+L0244: 
+L0245:   if(checkout){
+L0246: 
+L0247:     const order=
+L0248:       checkout?.order||
+L0249:       checkout;
+L0250: 
+L0251:     return(
+L0252:       <main className="nev33-shell">
+L0253:         <section className="nev33-checkout-success">
+L0254: 
+L0255:           <span className="nev33-eyebrow">
+L0256:             COMPRA INICIADA
+L0270:             <small>PEDIDO</small>
+L0271:             <strong>
+L0272:               {order?.order_code||
+L0273:                order?.id||
+L0274:                "NEXUS"}
+L0275:             </strong>
+L0276:           </div>
+L0277: 
+L0278:           {order?.pix_image&&(
+L0279:             <div className="nev33-pix">
+L0280:               <img
+L0281:                 src={
+L0282:                   order.pix_image.startsWith?.("data:")
+L0283:                     ?order.pix_image
+L0284:                     :`data:image/png;base64,${order.pix_image}`
+L0285:                 }
+L0286:                 alt="QR Code PIX"
+L0287:               />
+L0288:               <strong>
+L0289:                 Escaneie para pagar
+L0292:           )}
+L0293: 
+L0294:           {order?.pix_payload&&(
+L0295:             <div className="nev33-copy">
+L0296:               <small>PIX COPIA E COLA</small>
+L0297:               <textarea
+L0298:                 readOnly
+L0299:                 value={order.pix_payload}
+L0300:               />
+L0301:               <button
+L0302:                 onClick={async()=>{
+L0303:                   try{
+L0304:                     await navigator.clipboard.writeText(
+L0305:                       order.pix_payload
+L0306:                     );
+L0307:                   }catch{}
+L0308:                 }}
+L0309:               >
+L0310:                 Copiar PIX
+L0311:               </button>
+L0312:             </div>
+L0313:           )}
+L0314: 
+L0315:           {order?.invoice_url&&(
+L0316:             <a
+L0317:               className="nev33-primary"
+L0318:               href={order.invoice_url}
+L0319:               target="_blank"
+L0320:               rel="noreferrer"
+L0321:             >
+
+============================================================
+V3.5 COMPACT MAP = PASS
+ZERO ALTERACOES REALIZADAS
+============================================================

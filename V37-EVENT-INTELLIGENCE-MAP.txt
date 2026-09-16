@@ -1,0 +1,494 @@
+﻿NEXUS EVENT EXPERIENCE V3.7 - EVENT INTELLIGENCE MAP
+
+GERADO EM: 2026-09-16 15:47:12
+
+============================================================
+.\server\event-access-routes-v31.js
+============================================================
+L0001: import crypto from "crypto";
+L0124:         );
+L0125: 
+L0126:         res.status(500).json({
+L0127:           error:"EVENT_ACCESS_FAILED"
+L0128:         });
+L0129:       }
+L0130:     }
+L0131:   );
+L0132: 
+
+============================================================
+.\server\event-access-routes-v31.js.v32-20260916-142101.bak
+============================================================
+L0001: import crypto from "crypto";
+L0089:         );
+L0090: 
+L0091:         res.status(500).json({
+L0092:           error:"EVENT_ACCESS_FAILED"
+L0093:         });
+L0094:       }
+L0095:     }
+L0096:   );
+L0097: 
+
+============================================================
+.\server\event-access-v31.js
+============================================================
+L0001: import crypto from "crypto";
+L0167: 
+L0168:   return{
+L0169:     queued:true,
+L0170:     email:Boolean(email),
+L0171:     whatsapp:Boolean(phone)
+L0172:   };
+L0173: }
+L0174: 
+L0175: export function resolveWalletMagicLink(rawToken){
+
+============================================================
+.\server\event-experience-v30.js
+============================================================
+L0001: import {createWalletMagicLink,queueWalletAccess} from "./event-access-v31.js";
+L0434:         WHERE t.ticket_order_id=o.id
+L0435:       ) AS tickets
+L0436:     FROM ticket_orders o
+L0437:     LEFT JOIN events e
+L0438:       ON e.id=o.event_id
+L0439:     LEFT JOIN ticket_customers c
+L0440:       ON c.id=o.ticket_customer_id
+L0441:     WHERE o.id=?
+L0442:   `).get(orderId);
+
+============================================================
+.\server\event-experience-v30.js.v31-20260916-141902.bak
+============================================================
+L0001: import crypto from "crypto";
+L0414:         WHERE t.ticket_order_id=o.id
+L0415:       ) AS tickets
+L0416:     FROM ticket_orders o
+L0417:     LEFT JOIN events e
+L0418:       ON e.id=o.event_id
+L0419:     LEFT JOIN ticket_customers c
+L0420:       ON c.id=o.ticket_customer_id
+L0421:     WHERE o.id=?
+L0422:   `).get(orderId);
+
+============================================================
+.\server\event-payment-tracker-v35.js
+============================================================
+L0001: import crypto from "node:crypto";
+L0340: 
+L0341:         return res.status(500).json({
+L0342:           error:
+L0343:             "PAYMENT_TRACKING_STATUS_FAILED",
+L0344:           message:error.message
+L0345:         });
+L0346:       }
+L0347:     }
+L0348:   );
+
+============================================================
+.\server\financial-intelligence-v25.js
+============================================================
+L0001: import {db} from "./db.js";
+L1778:       periodKey,
+L1779:       {
+L1780:        revenue_target:
+L1781:         revenueTarget,
+L1782:        gross_profit_target:
+L1783:         grossProfitTarget,
+L1784:        average_ticket_target:
+L1785:         averageTicketTarget
+L1786:       }
+
+============================================================
+.\server\financial-intelligence-v25.js.T25E-BACKUP
+============================================================
+L0001: import {db} from "./db.js";
+L1728:       periodKey,
+L1729:       {
+L1730:        revenue_target:
+L1731:         revenueTarget,
+L1732:        gross_profit_target:
+L1733:         grossProfitTarget,
+L1734:        average_ticket_target:
+L1735:         averageTicketTarget
+L1736:       }
+
+============================================================
+.\server\financial-net-intelligence-v25.js
+============================================================
+L0001: import { db } from "./db.js";
+L0604:      error:
+L0605:       "NET_INTELLIGENCE_FAILED",
+L0606: 
+L0607:      detail:
+L0608:       error.message
+L0609:     });
+L0610:    }
+L0611:   }
+L0612:  );
+
+============================================================
+.\server\growth-v12.js.event-v30-20260916-141756.bak
+============================================================
+L0001: import {asaasRequest,asaasWebhookToken} from './asaas-config.js';
+L0627:  app.get('/api/public/ticket-orders/:code',async(req,res)=>{const o=db.prepare('SELECT * FROM ticket_orders WHERE order_code=?').get(txt(req.params.code));if(!o)return res.status(404).json({error:'COMPRA_NAO_ENCONTRADA'});let tickets=o.payment_status==='PAID'?db.prepare('SELECT ticket_code,attendee_name,ticket_type,price,checkin_at FROM tickets WHERE ticket_order_id=?').all(o.id):[];tickets=await Promise.all(tickets.map(async t=>({...t,qr_image:await QRCode.toDataURL(t.ticket_code,{width:360,margin:2,errorCorrectionLevel:'M'})})));res.json({...o,tickets})});
+L0628:  app.post('/api/webhooks/asaas',(req,res)=>{try{const expected=asaasWebhookToken(),received=req.headers['asaas-access-token'];if(!expected)return res.status(503).json({error:'WEBHOOK_TOKEN_NOT_CONFIGURED'});if(received!==expected)return res.status(401).json({error:'INVALID_WEBHOOK_TOKEN'});const ev=txt(req.body?.event),p=req.body?.payment||{},ref=txt(p.externalReference),eventId=txt(req.body?.id)||`${ev}:${txt(p.id)}:${txt(p.status)}`;const seen=db.prepare('SELECT event_id FROM asaas_webhook_events WHERE event_id=?').get(eventId);if(seen)return res.json({received:true,duplicate:true});db.prepare('INSERT INTO asaas_webhook_events(event_id,event_type,payment_id,external_reference) VALUES(?,?,?,?)').run(eventId,ev,txt(p.id)||null,ref||null);if(['PAYMENT_RECEIVED','PAYMENT_CONFIRMED'].includes(ev)){if(ref.startsWith('ORDER:'))activatePublicOrder(n(ref.split(':')[1]));if(ref.startsWith('TICKET:'))activateTicketOrder(n(ref.split(':')[1]))}res.json({received:true})}catch(e){res.status(500).json({error:e.message})}});
+L0629:  app.get('/api/v12/growth',auth,minRole(55),(_req,res)=>{const days=db.prepare(`SELECT strftime('%w',s.created_at,'localtime') dow,COUNT(*) sales,COALESCE(SUM(s.total),0) revenue FROM sales s WHERE s.status='PAID' AND datetime(s.created_at)>=datetime('now','-56 days') GROUP BY dow`).all();const products=db.prepare(`SELECT p.id,p.name,p.category,p.stock,p.minimum_stock,p.cost,p.price,COALESCE(SUM(CASE WHEN datetime(s.created_at)>=datetime('now','-30 days') THEN si.qty ELSE 0 END),0) qty30,COALESCE(SUM(CASE WHEN datetime(s.created_at)>=datetime('now','-30 days') THEN si.qty*si.unit_price ELSE 0 END),0) revenue30 FROM products p LEFT JOIN sale_items si ON si.product_id=p.id LEFT JOIN sales s ON s.id=si.sale_id AND s.status='PAID' WHERE p.active=1 GROUP BY p.id ORDER BY qty30 DESC`).all();const recommendations=products.map(p=>{const daily=n(p.qty30)/30,cover=daily>0?n(p.stock)/daily:999,target=Math.max(n(p.minimum_stock),daily*7),buy=Math.max(0,Math.ceil(target-n(p.stock)));let action='MANTER';if(daily===0&&n(p.stock)>0)action='NAO_COMPRAR';else if(cover<3)action='COMPRAR_URGENTE';else if(cover<7)action='COMPRAR';else if(cover>21)action='REDUZIR_COMPRA';return{...p,daily_avg:daily,coverage_days:cover===999?null:cover,recommended_stock:target,recommended_buy:buy,action}});const names=['Domingo','Segunda','TerÃ§a','Quarta','Quinta','Sexta','SÃ¡bado'];const week=Array.from({length:7},(_,i)=>{const r=days.find(x=>n(x.dow)===i)||{sales:0,revenue:0};return{dow:i,day:names[i],sales:n(r.sales),revenue:n(r.revenue)}});const avg=week.reduce((s,x)=>s+x.revenue,0)/7;const weak=week.filter(x=>x.revenue<avg*.75).map(x=>({...x,idea:`Dia abaixo da mÃ©dia: criar aÃ§Ã£o com produto de boa margem e estoque disponÃ­vel para ${x.day}.`}));res.json({generated_at:new Date().toISOString(),week,weekly_average:avg,weak_days:weak,top:products.slice(0,8),low:[...products].sort((a,b)=>n(a.qty30)-n(b.qty30)).slice(0,8),purchasing:recommendations.sort((a,b)=>n(b.recommended_buy)-n(a.recommended_buy))})});
+L0630:  app.patch('/api/v12/events/:id',auth,minRole(60),(req,res)=>{const b=req.body||{};db.prepare(`UPDATE events SET public_sales=COALESCE(?,public_sales),sales_starts_at=COALESCE(?,sales_starts_at),sales_ends_at=COALESCE(?,sales_ends_at),description=COALESCE(?,description),image_url=COALESCE(?,image_url),status=COALESCE(?,status),ends_at=COALESCE(?,ends_at) WHERE id=?`).run(b.public_sales==null?null:(b.public_sales?1:0),b.sales_starts_at??null,b.sales_ends_at??null,b.description??null,b.image_url??null,b.status??null,b.ends_at??null,n(req.params.id));audit(req.user.id,'UPDATE','EVENT_PUBLIC',req.params.id,b);res.json({ok:true})});
+L0631: }
+L0632: 
+
+============================================================
+.\server\intelligence.js
+============================================================
+L0001: import {db,setting} from './db.js';
+L0024: }
+L0025: export function performanceSnapshot(){
+L0026:   const employees=db.prepare(`SELECT e.id,e.name,e.role_label,
+L0027:     COALESCE((SELECT SUM(s.total) FROM sales s WHERE s.employee_id=e.id AND s.status='PAID' AND strftime('%Y-%m',s.created_at)=strftime('%Y-%m','now')),0) sales,
+L0028:     COALESCE((SELECT SUM(t.amount) FROM tips t WHERE t.employee_id=e.id AND strftime('%Y-%m',t.created_at)=strftime('%Y-%m','now')),0) tips,
+L0029:     COALESCE((SELECT SUM(r.amount) FROM employee_rewards r WHERE r.employee_id=e.id AND strftime('%Y-%m',r.created_at)=strftime('%Y-%m','now')),0) rewards
+L0030:     FROM employees e WHERE e.active=1 ORDER BY sales DESC`).all();
+L0031:   return employees.map(x=>({...x,total_due:round(n(x.tips)+n(x.rewards))}));
+L0032: }
+
+============================================================
+.\server\tickets-v25.js
+============================================================
+L0001: import crypto from 'node:crypto';
+L0784:         res.status(500).json({
+L0785:           ok:false,
+L0786:           result:'ERROR',
+L0787:           error:'CHECKIN_FAILED',
+L0788:           message:error.message
+L0789:         });
+L0790:       }
+L0791:     }
+L0792:   );
+
+============================================================
+.\src\App.jsx.event-v33-20260916-142437.bak
+============================================================
+L0001: import EventMagicAccessV32 from "./EventMagicAccessV32.jsx";
+L0462: function Goals({goals,snapshot,employees,onDone}){const[form,setForm]=useState({title:'',type:'BUSINESS',target_value:'',deadline:'',employee_id:''});async function create(){await api.createGoal({...form,target_value:Number(form.target_value),employee_id:form.employee_id||null});setForm({title:'',type:'BUSINESS',target_value:'',deadline:'',employee_id:''});onDone()}return <section className="page"><PageHead over="METAS & CONQUISTAS" title="Do fechamento de hoje aos objetivos do proprietÃ¡rio e da equipe"/><div className="hero goal-hero"><div><span>Meta diÃ¡ria</span><h2>{money(snapshot?.todayRevenue)} <small>/ {money(snapshot?.dailyGoal)}</small></h2><div className="progress"><i style={{width:`${Math.min(100,snapshot?.goalProgress||0)}%`}}/></div></div><b>{pct(snapshot?.goalProgress)}</b></div><div className="panel form-inline"><input placeholder="Ex.: Comprar nova geladeira" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value="BUSINESS">NegÃ³cio</option><option value="PERSONAL">Pessoal</option><option value="TEAM">Equipe</option></select>{form.type==='TEAM'&&<select value={form.employee_id} onChange={e=>setForm({...form,employee_id:e.target.value})}><option value="">Equipe geral</option>{employees.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select>}<input type="number" placeholder="Valor meta" value={form.target_value} onChange={e=>setForm({...form,target_value:e.target.value})}/><input type="date" value={form.deadline} onChange={e=>setForm({...form,deadline:e.target.value})}/><button className="primary" onClick={create}>Criar meta</button></div><div className="cards">{goals.map(g=><div className="mini-card" key={g.id}><span>{g.type}</span><h3>{g.title}</h3><p>{g.deadline||'Sem prazo definido'}</p><b>{money(g.current_value)} / {money(g.target_value)}</b></div>)}</div></section>}
+L0463: function OwnerAI({data,closing,performance}){return <section className="page"><PageHead over="NEXUS INTELLIGENCE" title="InteligÃªncia operacional que transforma dados em decisÃµes e aÃ§Ãµes"/><div className="ai-stage"><div className="ai-orb"><i/><i/><i/><b>N</b></div><div><span>INTELLIGENCE CORE</span><h2>{data?.growth?.headline}</h2>{data?.growth?.notes?.map((n,i)=><p key={i}>{n}</p>)}<div className="ai-command">â€œPosso tirar dinheiro do caixa hoje?â€ <em>â†’ motor avanÃ§ado de fluxo projetado entra na prÃ³xima camada.</em></div></div></div><div className="grid two"><div className="panel"><PanelTitle over="FECHAMENTO" title="AlocaÃ§Ã£o atual"/><Allocation closing={closing}/></div><div className="panel"><PanelTitle over="EQUIPE" title="Compromissos de performance"/><p className="big-number">{money(Number(performance?.pendingTips||0)+Number(performance?.pendingRewards||0))}</p><small>gorjetas + incentivos pendentes</small></div></div></section>}
+L0464: function Settings({user,onDone}){const[form,setForm]=useState(null),[pwd,setPwd]=useState({current_password:'',new_password:''}),[msg,setMsg]=useState('');useEffect(()=>{api.settings().then(setForm)},[]);if(!form)return <Boot/>;async function save(){await api.updateSettings(form);setMsg('ConfiguraÃ§Ãµes salvas.');onDone()}async function change(){try{await api.changePassword(pwd);setPwd({current_password:'',new_password:''});setMsg('Senha alterada com sucesso.')}catch(e){setMsg(e.message)}}return <section className="page"><PageHead over="CONFIGURAÃ‡Ã•ES" title="Regras financeiras, identidade e seguranÃ§a"/><div className="grid two"><div className="panel form-stack"><h3>NegÃ³cio e fechamento</h3><label>Nome<input value={form.business_name} onChange={e=>setForm({...form,business_name:e.target.value})}/></label><label>Meta diÃ¡ria<input type="number" value={form.daily_goal} onChange={e=>setForm({...form,daily_goal:e.target.value})}/></label>{[['reserve_percent','Reserva %'],['tax_percent','Impostos %'],['salary_percent','SalÃ¡rios %'],['owner_percent','Retirada %'],['reinvest_percent','Reinvestimento %']].map(([k,l])=><label key={k}>{l}<input type="number" value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/></label>)}<button className="primary" onClick={save}>Salvar regras</button></div><div className="panel form-stack"><h3>SeguranÃ§a da conta</h3><p className="muted">UsuÃ¡rio: {user.email}</p><input type="password" placeholder="Senha atual" value={pwd.current_password} onChange={e=>setPwd({...pwd,current_password:e.target.value})}/><input type="password" placeholder="Nova senha (10+ caracteres)" value={pwd.new_password} onChange={e=>setPwd({...pwd,new_password:e.target.value})}/><button className="primary" onClick={change}>Alterar senha</button><div className="bio-prep compact"><span>â—Ž</span><div><b>Passkey / biometria</b><small>Preparado para ativaÃ§Ã£o WebAuthn.</small></div></div></div></div>{msg&&<div className="notice">{msg}</div>}</section>}
+L0465: function Allocation({closing}){if(!closing)return <Empty text="Sem fechamento para calcular."/>;const rows=[['Reserva',closing.reserve],['Impostos',closing.taxes],['SalÃ¡rios',closing.payroll],['Retirada proprietÃ¡rio',closing.owner],['Reinvestimento',closing.reinvest],['Caixa operacional',closing.operating]];return <div className="allocation">{rows.map(([l,v])=><div key={l}><span>{l}</span><b>{money(v)}</b></div>)}</div>}
+L0466: function Kpi({label,value,sub}){return <div className="kpi"><span>{label}</span><b>{value}</b><small>{sub}</small></div>}function PanelTitle({over,title}){return <div className="panel-title"><span>{over}</span><h3>{title}</h3></div>}function PageHead({over,title}){return <div className="page-head"><span>{over}</span><h2>{title}</h2></div>}function Empty({text}){return <div className="empty">{text}</div>}function Coming({title,text}){return <section className="page"><PageHead over="PRÃ“XIMA CAMADA" title={title}/><div className="panel coming"><div className="coming-orb">N</div><h3>FundaÃ§Ã£o preparada</h3><p>{text}</p></div></section>}
+L0467: 
+L0468: 
+L0469: 
+L0470: 
+
+============================================================
+.\src\CustomerTicketPortalV25.css
+============================================================
+L0001: .nexus-ticket-portal{
+L0575:  }
+L0576: 
+L0577:  .wallet-logout{
+L0578:   margin-left:auto;
+L0579:  }
+L0580: 
+L0581: }
+
+============================================================
+.\src\CustomerTicketPortalV25.jsx
+============================================================
+L0001: import React,{useEffect,useState}from'react';
+L0620:     </p>
+L0621:    </footer>
+L0622: 
+L0623:   </main>
+L0624:  );
+L0625: }
+
+============================================================
+.\src\EventMagicAccessV32.jsx
+============================================================
+L0001: import React,{
+L0197:         )}
+L0198: 
+L0199:       </section>
+L0200:     </main>
+L0201:   );
+L0202: }
+
+============================================================
+.\src\EventPaymentTrackerV35.jsx
+============================================================
+L0001: import React,{
+L0245:       </div>
+L0246: 
+L0247:       <strong>
+L0248:         {status==="PAID"
+L0249:           ?"Emitindo seus ingressos..."
+L0250:           :"Aguardando confirmação do pagamento"}
+L0251:       </strong>
+L0252: 
+L0253:       <p>
+
+============================================================
+.\src\FinancialGrowthDashboardV25.css
+============================================================
+L0001: .fg-shell{
+L0765: 
+L0766: @media(max-width:900px){
+L0767: 
+L0768:  .fg-confidence-main{
+L0769:   align-items:flex-start;
+L0770:   flex-direction:column;
+L0771:  }
+L0772: 
+L0773:  .fg-confidence-badge{
+
+============================================================
+.\src\FinancialGrowthDashboardV25.jsx
+============================================================
+L0001: import React,{
+L1086: 
+L1087:    </section>
+L1088: 
+L1089:   </main>
+L1090:  );
+L1091: }
+L1092: 
+L1093: 
+
+============================================================
+.\src\PublicEventsPremiumV33.css
+============================================================
+L0001: .nev33-shell{
+L0706: 
+L0707: .nev35-open-wallet{
+L0708:  width:100%;
+L0709:  margin:18px 0 12px;
+L0710:  padding:16px;
+L0711:  border:0;
+L0712:  border-radius:14px;
+L0713:  background:#fff;
+L0714:  color:#080a0d;
+
+============================================================
+.\src\PublicEventsPremiumV33.jsx
+============================================================
+L0001: import React,{
+L0682: 
+L0683:       </section>
+L0684: 
+L0685:     </main>
+L0686:   );
+L0687: }
+L0688: 
+
+============================================================
+.\src\PublicEventsPremiumV33.jsx.v35-20260916-154335.bak
+============================================================
+L0001: import React,{
+L0671: 
+L0672:       </section>
+L0673: 
+L0674:     </main>
+L0675:   );
+L0676: }
+
+============================================================
+.\src\TicketOrderCenterV25.jsx
+============================================================
+L0001: import React,{
+L0717:                   </td>
+L0718: 
+L0719:                   <td>
+L0720:                     {row.checkin_at
+L0721:                       ? 'UTILIZADO'
+L0722:                       : 'DISPONIVEL'}
+L0723:                   </td>
+L0724:                 </tr>
+L0725:               ))}
+
+============================================================
+.\src\TicketsV15.jsx
+============================================================
+L0001: import React,{
+L0896: 
+L0897:                   <td>
+L0898:                     {row.checkin_at
+L0899:                       ? `OK ${dt(row.checkin_at)}`
+L0900:                       : 'AGUARDANDO'}
+L0901:                   </td>
+L0902: 
+L0903:                 </tr>
+L0904:               )}
+
+============================================================
+.\src\TicketsV25.css
+============================================================
+L0001: .ticket-center-v25,
+L0757:  display:flex;
+L0758:  justify-content:space-between;
+L0759:  gap:12px;
+L0760:  margin-top:18px;
+L0761:  padding-top:16px;
+L0762:  border-top:1px solid rgba(255,255,255,.06);
+L0763:  font-size:8px;
+L0764:  letter-spacing:.11em;
+L0765:  opacity:.3;
+
+============================================================
+.\src\TicketsV25.css.v36-20260916-154624.bak
+============================================================
+L0001: .ticket-center-v25,
+L0343: 
+L0344: .gate-v25-ticket b{
+L0345:   display:block;
+L0346:   margin-top:5px;
+L0347: }
+L0348: 
+L0349: @media(max-width:1000px){
+L0350: 
+L0351:   .ticket-v25-kpis{
+
+
+============================================================
+DATABASE EVENT INTELLIGENCE SCHEMA
+============================================================
+
+----------------------------------------
+TABLE = events
+STATUS = FOUND
+id | INTEGER | NULL | PK
+title | TEXT | NOT NULL | 
+event_type | TEXT | NOT NULL | 
+venue_name | TEXT | NULL | 
+starts_at | TEXT | NULL | 
+ends_at | TEXT | NULL | 
+status | TEXT | NOT NULL | 
+artist_name | TEXT | NULL | 
+image_url | TEXT | NULL | 
+capacity | INTEGER | NULL | 
+cost_estimate | REAL | NOT NULL | 
+created_at | TEXT | NOT NULL | 
+revenue_actual | REAL | NOT NULL | 
+audience_actual | INTEGER | NOT NULL | 
+public_sales | INTEGER | NOT NULL | 
+sales_starts_at | TEXT | NULL | 
+sales_ends_at | TEXT | NULL | 
+description | TEXT | NULL | 
+public_slug | TEXT | NULL | 
+
+----------------------------------------
+TABLE = event_costs
+STATUS = FOUND
+id | INTEGER | NULL | PK
+event_id | INTEGER | NOT NULL | 
+description | TEXT | NOT NULL | 
+category | TEXT | NOT NULL | 
+amount | REAL | NOT NULL | 
+created_at | TEXT | NOT NULL | 
+
+----------------------------------------
+TABLE = ticket_lots
+STATUS = FOUND
+id | INTEGER | NULL | PK
+event_id | INTEGER | NOT NULL | 
+name | TEXT | NOT NULL | 
+price | REAL | NOT NULL | 
+quantity | INTEGER | NOT NULL | 
+sold | INTEGER | NOT NULL | 
+starts_at | TEXT | NULL | 
+ends_at | TEXT | NULL | 
+status | TEXT | NOT NULL | 
+created_at | TEXT | NOT NULL | 
+
+----------------------------------------
+TABLE = ticket_orders
+STATUS = FOUND
+id | INTEGER | NULL | PK
+order_code | TEXT | NOT NULL | 
+event_id | INTEGER | NOT NULL | 
+lot_id | INTEGER | NOT NULL | 
+buyer_name | TEXT | NOT NULL | 
+buyer_phone | TEXT | NULL | 
+buyer_email | TEXT | NULL | 
+buyer_document | TEXT | NULL | 
+quantity | INTEGER | NOT NULL | 
+total | REAL | NOT NULL | 
+payment_status | TEXT | NOT NULL | 
+asaas_customer_id | TEXT | NULL | 
+asaas_payment_id | TEXT | NULL | 
+invoice_url | TEXT | NULL | 
+pix_payload | TEXT | NULL | 
+pix_image | TEXT | NULL | 
+created_at | TEXT | NOT NULL | 
+updated_at | TEXT | NOT NULL | 
+ticket_portal_token_hash | TEXT | NULL | 
+ticket_portal_created_at | TEXT | NULL | 
+
+----------------------------------------
+TABLE = tickets
+STATUS = FOUND
+id | INTEGER | NULL | PK
+event_id | INTEGER | NOT NULL | 
+attendee_name | TEXT | NULL | 
+ticket_code | TEXT | NOT NULL | 
+ticket_type | TEXT | NULL | 
+price | REAL | NOT NULL | 
+payment_status | TEXT | NOT NULL | 
+checkin_at | TEXT | NULL | 
+created_at | TEXT | NOT NULL | 
+lot_id | INTEGER | NULL | 
+attendee_phone | TEXT | NULL | 
+payment_method | TEXT | NULL | 
+checked_in_by | INTEGER | NULL | 
+qr_payload | TEXT | NULL | 
+buyer_email | TEXT | NULL | 
+buyer_document | TEXT | NULL | 
+ticket_order_id | INTEGER | NULL | 
+
+----------------------------------------
+TABLE = ticket_access_log
+STATUS = FOUND
+id | INTEGER | NULL | PK
+ticket_id | INTEGER | NULL | 
+event_id | INTEGER | NULL | 
+code | TEXT | NOT NULL | 
+result | TEXT | NOT NULL | 
+user_id | INTEGER | NULL | 
+created_at | TEXT | NOT NULL | 
+
+----------------------------------------
+TABLE = ticket_customers
+STATUS = NOT_FOUND
+
+----------------------------------------
+TABLE = event_experience_audit
+STATUS = NOT_FOUND
+
+----------------------------------------
+TABLE = event_experience_notifications
+STATUS = NOT_FOUND
+
+----------------------------------------
+TABLE = ticket_payment_tracking
+STATUS = NOT_FOUND
+
+============================================================
+OBJETIVO V3.7
+============================================================
+SALES VELOCITY
+OCCUPANCY / CAPACITY
+REVENUE / COST / MARGIN
+CHECK-IN VELOCITY
+ACCESS ANOMALIES
+NO-SHOW / UNUSED TICKETS
+LOT PERFORMANCE
+PURCHASE PEAKS
+OPERATIONAL RECOMMENDATIONS
+REAL DATA ONLY
+NO FAKE AI
+
+============================================================
+V3.7 EVENT INTELLIGENCE MAP = PASS
+ZERO ALTERACOES REALIZADAS
+============================================================

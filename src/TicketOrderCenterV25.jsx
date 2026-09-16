@@ -1,10 +1,11 @@
-import React,{
+﻿import React,{
   useEffect,
   useMemo,
   useState
 } from 'react';
 
 import {api} from './api.js';
+import EventIntelligenceV37 from "./EventIntelligenceV37.jsx";
 import './TicketsV25.css';
 
 const money=value=>
@@ -789,7 +790,12 @@ export default function TicketOrderCenterV25(){
         </div>
 
       </section>
+      <EventIntelligenceV37
+        eventId={eventId}
+      />
+
 
     </section>
   );
 }
+
