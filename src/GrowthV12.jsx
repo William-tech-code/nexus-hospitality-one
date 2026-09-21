@@ -21,6 +21,175 @@ export function PublicEventsV12({eventId}){
 function PaymentView({order,title,after}){const code=order.public_code||order.order_code,[status,setStatus]=useState(order),[tickets,setTickets]=useState([]);useEffect(()=>{if(!order.order_code)return;let active=true;async function poll(){try{const r=await api.publicTicketOrder(order.order_code);if(active){setStatus(r);setTickets(r.tickets||[])}}catch{}}poll();const i=setInterval(poll,4000);return()=>{active=false;clearInterval(i)}},[order.order_code]);if(tickets.length)return <div className="payment-v12"><div className="tickets-ready-v12"><span>PAGAMENTO CONFIRMADO</span><h1>Seus ingressos estão prontos</h1><p>Apresente o QR Code ou o número na portaria.</p>{tickets.map((t,i)=><article key={t.ticket_code}><h3>Ingresso {i+1} • {t.ticket_type}</h3><img src={t.qr_image}/><b>{t.ticket_code}</b><small>{t.attendee_name} • {brl(t.price)}</small></article>)}</div></div>;return <div className="payment-v12"><div className="payment-card"><span>PAGAMENTO SEGURO • ASAAS</span><h1>{title}</h1><p>{after}</p><div className="payment-total">Total <b>{brl(status.total)}</b></div>{status.pix_image?<><img className="pix-qr" src={`data:image/png;base64,${status.pix_image}`}/><textarea readOnly value={status.pix_payload||''}/><button onClick={()=>navigator.clipboard?.writeText(status.pix_payload||'')}>COPIAR PIX COPIA E COLA</button>{status.invoice_url&&<a className="asaas-alt" href={status.invoice_url} target="_blank">Outras formas de pagamento no Asaas</a>}</>:status.invoice_url?<a className="checkout-pay" href={status.invoice_url} target="_blank">ABRIR PAGAMENTO ASAAS</a>:<div className="public-error">Integração Asaas ainda não configurada neste ambiente. O pedido foi registrado como pendente.</div>}<small>Código NEXUS: {code}</small>{order.order_code&&<em className="payment-wait">Aguardando confirmação automática do pagamento...</em>}</div></div>}
 function PublicState({title,text}){return <div className="public-state-v12"><div>N</div><h1>{title}</h1><p>{text}</p></div>}
 function Countdown({to}){const[now,setNow]=useState(Date.now());useEffect(()=>{const i=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(i)},[]);const d=Math.max(0,new Date(to).getTime()-now),days=Math.floor(d/86400000),h=Math.floor(d/3600000)%24,m=Math.floor(d/60000)%60,s=Math.floor(d/1000)%60;return <div className="countdown-v12"><span><b>{days}</b>dias</span><span><b>{h}</b>h</span><span><b>{m}</b>min</span><span><b>{s}</b>seg</span></div>}
-export function GrowthCenterV12(){const[data,setData]=useState(null);useEffect(()=>{api.growthV12().then(setData)},[]);if(!data)return <section className="page"><h2>Carregando inteligência de crescimento...</h2></section>;const urgent=data.purchasing.filter(x=>['COMPRAR_URGENTE','COMPRAR'].includes(x.action)).slice(0,10);return <section className="page growth-v12"><div className="page-heading"><div><span>AUTONOMOUS GROWTH ENGINE</span><h2>Centro de Crescimento & Compras</h2><p>O NEXUS observa vendas, giro e estoque para dizer onde agir e o que comprar.</p></div></div><div className="growth-kpis"><div><span>Média semanal por dia</span><b>{brl(data.weekly_average)}</b></div><div><span>Dias abaixo da meta</span><b>{data.weak_days.length}</b></div><div><span>Itens para repor</span><b>{urgent.length}</b></div></div><div className="grid two"><div className="panel"><h3>Movimento • Terça a Segunda</h3>{data.week.map(d=><div className="growth-row" key={d.day}><b>{d.day}</b><span>{d.sales} vendas</span><strong>{brl(d.revenue)}</strong></div>)}{data.weak_days.map(d=><div className="growth-idea" key={d.day}><b>✦ Plano para {d.day}</b><p>{d.idea}</p></div>)}</div><div className="panel"><h3>Compra recomendada</h3>{urgent.map(p=><div className="purchase-rec" key={p.id}><div><b>{p.name}</b><small>{p.coverage_days==null?'Sem giro recente':`${num(p.coverage_days)} dias de cobertura`}</small></div><strong>Comprar {num(p.recommended_buy)}</strong></div>)}</div></div><div className="grid two"><div className="panel"><h3>Mais vendidos • 30 dias</h3>{data.top.map((p,i)=><div className="growth-row" key={p.id}><b>#{i+1} {p.name}</b><span>{num(p.qty30)} un.</span><strong>{brl(p.revenue30)}</strong></div>)}</div><div className="panel"><h3>Baixo giro / evitar excesso</h3>{data.low.map(p=><div className="growth-row" key={p.id}><b>{p.name}</b><span>{num(p.qty30)} vendidos</span><strong>{num(p.stock)} em estoque</strong></div>)}</div></div></section>}
+export function GrowthCenterV12(){
+  const[data,setData]=useState(null);
+  const[error,setError]=useState('');
+
+  const load=()=>{
+    setError('');
+    api.growthV12()
+      .then(setData)
+      .catch(e=>setError(e.message));
+  };
+
+  useEffect(()=>{load()},[]);
+
+  if(error)return <section className="page"><div className="error-box">{error}</div><button onClick={load}>TENTAR NOVAMENTE</button></section>;
+  if(!data)return <section className="page"><h2>Carregando inteligência de crescimento...</h2></section>;
+
+  const urgent=(data.purchasing||[]).filter(x=>['COMPRAR_URGENTE','COMPRAR'].includes(x.action)).slice(0,10);
+  const pricing=(data.purchasing||[]).filter(x=>Number(x.cost||0)>0);
+  const opportunities=pricing.filter(x=>Number(x.suggested_price||0)>Number(x.price||0)+0.01);
+  const belowMargin=pricing.filter(x=>Number(x.current_margin||0)<Number(x.target_margin||0));
+
+  return <section className="page growth-v12">
+    <div className="page-heading">
+      <div>
+        <span>AUTONOMOUS GROWTH ENGINE</span>
+        <h2>Centro de Crescimento & Inteligência</h2>
+        <p>Vendas, giro, estoque, custos, margens e preços trabalhando em uma única inteligência.</p>
+      </div>
+      <button onClick={load}>ATUALIZAR INTELIGÊNCIA</button>
+    </div>
+
+    <div className="growth-kpis">
+      <div>
+        <span>Média semanal por dia</span>
+        <b>{brl(data.weekly_average)}</b>
+      </div>
+      <div>
+        <span>Itens para repor</span>
+        <b>{urgent.length}</b>
+      </div>
+      <div>
+        <span>Abaixo da margem alvo</span>
+        <b>{belowMargin.length}</b>
+      </div>
+      <div>
+        <span>Oportunidades de preço</span>
+        <b>{opportunities.length}</b>
+      </div>
+    </div>
+
+    <div className="panel">
+      <div className="v13-title">
+        <div>
+          <h3>Preço Inteligente & Margem</h3>
+          <p>Calculado automaticamente a partir do custo cadastrado. O preço atual nunca é alterado sem confirmação.</p>
+        </div>
+      </div>
+
+      {pricing.length===0
+        ? <div className="empty">Cadastre o custo dos produtos para ativar a inteligência de preço.</div>
+        : <div className="v13-table">
+            <div className="v13-tr price head">
+              <span>Produto</span>
+              <span>Custo</span>
+              <span>Preço atual</span>
+              <span>Margem atual</span>
+              <span>Margem alvo</span>
+              <span>Sugerido</span>
+            </div>
+
+            {pricing.map(p=>
+              <div className="v13-tr price" key={p.id}>
+                <span>
+                  <b>{p.name}</b>
+                  <small>{p.category}</small>
+                </span>
+                <span>{brl(p.cost)}</span>
+                <span>{brl(p.price)}</span>
+                <span>{Number(p.current_margin||0).toFixed(1).replace('.',',')}%</span>
+                <span>{Number(p.target_margin||0).toFixed(1).replace('.',',')}%</span>
+                <strong>{brl(p.suggested_price)}</strong>
+              </div>
+            )}
+          </div>
+      }
+    </div>
+
+    <div className="grid two">
+      <div className="panel">
+        <h3>Compra recomendada</h3>
+        {urgent.length===0
+          ? <div className="empty">Nenhuma reposição urgente neste momento.</div>
+          : urgent.map(p=>
+              <div className="purchase-rec" key={p.id}>
+                <div>
+                  <b>{p.name}</b>
+                  <small>
+                    {p.coverage_days==null
+                      ? 'Sem giro recente'
+                      : `${num(p.coverage_days)} dias de cobertura`}
+                  </small>
+                </div>
+                <strong>Comprar {num(p.recommended_buy)}</strong>
+              </div>
+            )
+        }
+      </div>
+
+      <div className="panel">
+        <h3>Oportunidades de margem</h3>
+        {opportunities.length===0
+          ? <div className="empty">Nenhuma correção de preço sugerida neste momento.</div>
+          : opportunities.slice(0,10).map(p=>
+              <div className="purchase-rec" key={p.id}>
+                <div>
+                  <b>{p.name}</b>
+                  <small>
+                    Atual {brl(p.price)} • margem {Number(p.current_margin||0).toFixed(1).replace('.',',')}%
+                  </small>
+                </div>
+                <strong>Sugerido {brl(p.suggested_price)}</strong>
+              </div>
+            )
+        }
+      </div>
+    </div>
+
+    <div className="grid two">
+      <div className="panel">
+        <h3>Mais vendidos • 30 dias</h3>
+        {(data.top||[]).map((p,i)=>
+          <div className="growth-row" key={p.id}>
+            <b>#{i+1} {p.name}</b>
+            <span>{num(p.qty30)} un.</span>
+            <strong>{brl(p.revenue30)}</strong>
+          </div>
+        )}
+      </div>
+
+      <div className="panel">
+        <h3>Baixo giro / evitar excesso</h3>
+        {(data.low||[]).map(p=>
+          <div className="growth-row" key={p.id}>
+            <b>{p.name}</b>
+            <span>{num(p.qty30)} vendidos</span>
+            <strong>{num(p.stock)} em estoque</strong>
+          </div>
+        )}
+      </div>
+    </div>
+
+    <div className="panel">
+      <h3>Movimento da semana</h3>
+      {(data.week||[]).map(d=>
+        <div className="growth-row" key={d.day}>
+          <b>{d.day}</b>
+          <span>{d.sales} vendas</span>
+          <strong>{brl(d.revenue)}</strong>
+        </div>
+      )}
+
+      {(data.weak_days||[]).map(d=>
+        <div className="growth-idea" key={d.day}>
+          <b>✦ Plano para {d.day}</b>
+          <p>{d.idea}</p>
+        </div>
+      )}
+    </div>
+  </section>
+}
 export function EventsAdminV12(){const[rows,setRows]=useState([]),[selected,setSelected]=useState(null),[form,setForm]=useState({title:'',event_type:'SHOW',venue_name:'',starts_at:'',artist_name:'',capacity:'',cost_estimate:''}),[publicForm,setPublicForm]=useState({description:'',image_url:'',sales_starts_at:'',sales_ends_at:'',ends_at:'',public_sales:true,status:'PLANNED'});async function load(){setRows(await api.eventsV06())}useEffect(()=>{load()},[]);async function create(){await api.createEventV06({...form,capacity:Number(form.capacity||0),cost_estimate:Number(String(form.cost_estimate||'0').replace(',','.'))});setForm({title:'',event_type:'SHOW',venue_name:'',starts_at:'',artist_name:'',capacity:'',cost_estimate:''});load()}function edit(e){setSelected(e);setPublicForm({description:e.description||'',image_url:e.image_url||'',sales_starts_at:e.sales_starts_at||'',sales_ends_at:e.sales_ends_at||'',ends_at:e.ends_at||'',public_sales:!!e.public_sales,status:e.status||'PLANNED'})}async function savePublic(){await api.updateEventV12(selected.id,publicForm);setSelected(null);load()}return <section className="page growth-v12"><div className="page-heading"><div><span>NEXUS EVENTS COMMERCE</span><h2>Eventos, Shows & Torneios</h2><p>Cadastre, publique, venda ingressos e encerre as vendas automaticamente.</p></div></div><div className="grid two"><div className="panel form-stack"><h3>Novo evento</h3><input placeholder="Nome do evento" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/><div className="form-inline"><select value={form.event_type} onChange={e=>setForm({...form,event_type:e.target.value})}><option>SHOW</option><option>TORNEIO</option><option>KARAOKE</option><option>COMUNITARIO</option></select><input placeholder="Artista / atração" value={form.artist_name} onChange={e=>setForm({...form,artist_name:e.target.value})}/></div><input placeholder="Local" value={form.venue_name} onChange={e=>setForm({...form,venue_name:e.target.value})}/><div className="form-inline"><input type="datetime-local" value={form.starts_at} onChange={e=>setForm({...form,starts_at:e.target.value})}/><input type="number" placeholder="Capacidade" value={form.capacity} onChange={e=>setForm({...form,capacity:e.target.value})}/></div><button className="primary" disabled={!form.title} onClick={create}>CRIAR EVENTO</button></div><div className="panel"><h3>Links públicos</h3><p>Todos os eventos publicados ficam em:</p><div className="public-link-v12">{location.origin}/eventos</div><button onClick={()=>window.open('/eventos','_blank')}>ABRIR PÁGINA DE EVENTOS</button></div></div><div className="panel table-wrap"><table><thead><tr><th>Evento</th><th>Data</th><th>Status</th><th>Venda pública</th><th>Ações</th></tr></thead><tbody>{rows.map(e=><tr key={e.id}><td><b>{e.title}</b><small style={{display:'block'}}>{e.artist_name||e.event_type}</small></td><td>{e.starts_at?new Date(e.starts_at).toLocaleString('pt-BR'):'—'}</td><td>{e.status}</td><td>{e.public_sales?'Ativa':'Desativada'}</td><td><button onClick={()=>edit(e)}>Configurar</button> <button onClick={()=>window.open(`/eventos/${e.id}`,'_blank')}>Ver página</button></td></tr>)}</tbody></table></div>{selected&&<div className="v12-modal-back"><div className="v12-modal"><button className="v12-close" onClick={()=>setSelected(null)}>×</button><span>PUBLICAÇÃO & VENDAS</span><h2>{selected.title}</h2><textarea placeholder="Descrição pública" value={publicForm.description} onChange={e=>setPublicForm({...publicForm,description:e.target.value})}/><input placeholder="URL da imagem" value={publicForm.image_url} onChange={e=>setPublicForm({...publicForm,image_url:e.target.value})}/><label>Início das vendas<input type="datetime-local" value={publicForm.sales_starts_at} onChange={e=>setPublicForm({...publicForm,sales_starts_at:e.target.value})}/></label><label>Fim das vendas<input type="datetime-local" value={publicForm.sales_ends_at} onChange={e=>setPublicForm({...publicForm,sales_ends_at:e.target.value})}/></label><label>Fim do evento<input type="datetime-local" value={publicForm.ends_at} onChange={e=>setPublicForm({...publicForm,ends_at:e.target.value})}/></label><label className="v12-check"><input type="checkbox" checked={publicForm.public_sales} onChange={e=>setPublicForm({...publicForm,public_sales:e.target.checked})}/> Venda pública habilitada</label><button className="checkout-pay" onClick={savePublic}>SALVAR E PUBLICAR</button><div className="public-link-v12">{location.origin}/eventos/{selected.id}</div></div></div>}</section>}
 export function GateScannerV12(){const[code,setCode]=useState(''),[result,setResult]=useState(null),[camera,setCamera]=useState(false),videoRef=React.useRef(null),streamRef=React.useRef(null);async function check(value=code){const c=String(value||'').trim().toUpperCase();if(!c)return;try{const r=await api.checkin(c);setResult(r);setCode(c)}catch(e){setResult({ok:false,message:e.message})}}async function start(){if(!('BarcodeDetector'in window)){setResult({ok:false,message:'Leitor QR nativo não disponível neste navegador. Use o número do ingresso.'});return}try{const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});streamRef.current=stream;setCamera(true);setTimeout(async()=>{if(!videoRef.current)return;videoRef.current.srcObject=stream;await videoRef.current.play();const detector=new BarcodeDetector({formats:['qr_code']});const loop=async()=>{if(!streamRef.current)return;try{const found=await detector.detect(videoRef.current);if(found[0]?.rawValue){stop();setCode(found[0].rawValue);check(found[0].rawValue);return}}catch{}requestAnimationFrame(loop)};loop()},50)}catch(e){setResult({ok:false,message:'Não foi possível acessar a câmera.'})}}function stop(){streamRef.current?.getTracks().forEach(t=>t.stop());streamRef.current=null;setCamera(false)}useEffect(()=>()=>stop(),[]);return <section className="panel gate-v12"><div><span>PORTARIA INTELIGENTE</span><h3>QR Code ou número do ingresso</h3><p>O mesmo ingresso só pode ser liberado uma vez.</p></div><div className="gate-actions-v12"><input placeholder="NX-XXXXXXXXXX" value={code} onChange={e=>setCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==='Enter'&&check()}/><button className="primary" onClick={()=>check()}>VALIDAR NÚMERO</button><button onClick={camera?stop:start}>{camera?'FECHAR CÂMERA':'LER QR CODE'}</button></div>{camera&&<video className="gate-camera-v12" ref={videoRef} playsInline muted/>}{result&&<div className={`v11-access ${result.ok?'ok':'bad'}`}><b>{result.ok?'✓ ACESSO LIBERADO':'✕ ACESSO NEGADO'}</b><span>{result.message}</span></div>}</section>}

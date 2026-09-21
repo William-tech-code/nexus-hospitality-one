@@ -1,0 +1,3999 @@
+============================================================
+ NEXUS HOSPITALITY ONE
+ AUDITORIA DA INTERFACE COMPLETA
+============================================================
+
+============================================================
+ ARQUIVO: App.jsx
+============================================================
+
+import EventCommandCenterV38 from "./EventCommandCenterV38.jsx";
+import PublicEventsPremiumV33 from "./PublicEventsPremiumV33.jsx";
+import EventMagicAccessV32 from "./EventMagicAccessV32.jsx";
+import FinancialGrowthDashboardV25 from "./FinancialGrowthDashboardV25.jsx";
+import CustomerWalletV26 from "./CustomerWalletV26.jsx";
+import React,{useEffect,useMemo,useState}from'react';import{api,setAuthToken}from'./api.js';import OperationalV03 from './OperationalV03.jsx';import RecipeV04 from './RecipeV04.jsx';import {AIPulse} from './PremiumV05.jsx';import {InventoryV06,CustomersV06,ReservationsV06,DeliveryV06,EventsV06,FiscalV06,ReportsV06} from './SuiteV06.jsx';import SmartPOSV16 from './SmartPOSV16.jsx';import {MenuV11,PublicMenuV11,SalonV11,DeliveryV11} from './OperationsV11.jsx';
+import TicketsV15 from './TicketsV15.jsx';import TicketOrderCenterV25 from './TicketOrderCenterV25.jsx';import GateScannerV25 from './GateScannerV25.jsx';import {PublicCommerceV12,PublicEventsV12,GrowthCenterV12,EventsAdminV12,GateScannerV12} from './GrowthV12.jsx';import {SupplierQuotePublicV13} from './BusinessV13.jsx';
+import BusinessV15 from './BusinessV15.jsx';
+import CustomerTicketPortalV25 from './CustomerTicketPortalV25.jsx';
+import RecentSalesV16 from "./RecentSalesV16.jsx";
+class RecentSalesErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null, info: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error, info) {
+    console.error("NEXUS RECENT SALES RUNTIME ERROR", error, info);
+    this.setState({ info });
+  }
+
+  render() {
+    if (this.state.error) {
+      return (
+        <section className="page">
+          <div className="panel">
+            <div className="eyebrow">NEXUS DIAGNOSTIC</div>
+
+            <h2>Erro localizado em Ultimas Vendas</h2>
+
+            <p>
+              O restante do NEXUS permanece operacional.
+              A falha abaixo ocorreu somente durante a montagem
+              do RecentSalesV16.
+            </p>
+
+            <pre style={{
+              whiteSpace: 'pre-wrap',
+              overflowWrap: 'anywhere',
+              padding: 16,
+              borderRadius: 12,
+              overflow: 'auto'
+            }}>
+              {String(
+                this.state.error?.stack ||
+                this.state.error?.message ||
+                this.state.error
+              )}
+            </pre>
+          </div>
+        </section>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2,maximumFractionDigits:2});const pct=v=>`${Number(v||0).toLocaleString('pt-BR',{maximumFractionDigits:1})}%`;const numBR=v=>Number(v||0).toLocaleString('pt-BR',{maximumFractionDigits:2});const roleLabel={OWNER:'ProprietÃ¡rio',MANAGER:'Gerente',FINANCE:'Financeiro',EVENTS:'Eventos',STOCK:'Estoque',CASHIER:'Caixa',WAITER:'GarÃ§om',KITCHEN:'Cozinha'};const roleLevel={OWNER:100,MANAGER:80,FINANCE:70,EVENTS:60,STOCK:55,CASHIER:50,WAITER:40,KITCHEN:30};
+const icons={negocio:'?',crescimento:'?',ingressos:'?',dashboard:'?',caixa:'?',comandas:'?',mesas:'?',cozinha:'?',bebidas:'?',receitas:'?',compras:'?',estoque:'?',financeiro:'?',performance:'?',equipe:'?',cardapio:'?',metas:'?',ia:'?',eventos:'?',fiscal:'?',clientes:'?',reservas:'?',delivery:'?',relatorios:'?',configuracoes:'?'};
+export default function App(){
+
+  /* NEXUS_FINANCIAL_GROWTH_ROUTE_V25 */
+  if(
+    /^\/inteligencia-financeira\/?$/i.test(
+      window.location.pathname
+    )
+  ){
+    return <FinancialGrowthDashboardV25/>;
+  }
+
+
+  /* NEXUS_CUSTOMER_WALLET_ROUTE_V26 */
+  const customerWalletRoute=
+    /^\/carteira\/?$/i.test(
+      window.location.pathname
+    );
+
+  const eventAccessMatch=
+ window.location.pathname.match(
+  /^\/acesso-ingressos\/([a-f0-9]{64})$/i
+ );
+
+if(eventAccessMatch){
+ return(
+  <EventMagicAccessV32
+   token={eventAccessMatch[1]}
+  />
+ );
+}
+if(customerWalletRoute){
+    return <CustomerWalletV26/>;
+  }
+
+  /* NEXUS_PUBLIC_TICKET_ROUTE */
+  const publicTicketMatch=
+    window.location.pathname.match(
+      /^\/meu-ingresso\/([a-f0-9]{64})\/?$/i
+    );
+
+  if(publicTicketMatch){
+    return (
+      <CustomerTicketPortalV25
+        token={publicTicketMatch[1]}
+      />
+    );
+  }
+const cleanPath=location.pathname.replace(/\/+$/,'')||'/';const eventMatch=cleanPath.match(/^\/eventos\/(\d+)$/);const supplierQuoteMatch=cleanPath.match(/^\/fornecedor\/cotacao\/([^/]+)$/);if(supplierQuoteMatch)return <SupplierQuotePublicV13 token={supplierQuoteMatch[1]}/>;if(cleanPath==='/cardapio'||cleanPath==='/loja'||new URLSearchParams(location.search).get('menu')==='public')return <PublicCommerceV12/>;if(cleanPath==='/eventos')return <PublicEventsPremiumV33/>;if(eventMatch)return <PublicEventsPremiumV33 eventId={eventMatch[1]}/>;
+ const[introDone,setIntroDone]=useState(false),[user,setUser]=useState(null),[authChecking,setAuthChecking]=useState(true),[tab,setTab]=useState('dashboard');const[data,setData]=useState(null),[products,setProducts]=useState([]),[orders,setOrders]=useState([]),[expenses,setExpenses]=useState([]),[goals,setGoals]=useState([]),[employees,setEmployees]=useState([]),[performance,setPerformance]=useState(null),[cash,setCash]=useState(null),[closing,setClosing]=useState(null),[loading,setLoading]=useState(false);
+ useEffect(()=>{api.me().then(r=>setUser(r.user)).catch(()=>setAuthToken('')).finally(()=>setAuthChecking(false))},[]);
+ async function load(){if(!user)return;setLoading(true);try{const[d,p,o,e,g,em,pe,ca]=await Promise.all([api.dashboard(),api.products(),api.orders(),api.expenses(),api.goals(),api.employees(),api.performance(),api.currentCash()]);setData(d);setProducts(p);setOrders(o);setExpenses(e);setGoals(g);setEmployees(em);setPerformance(pe);setCash(ca);setClosing(await api.closingPlan(d.snapshot.todayRevenue))}catch(err){if(err.status===401){setAuthToken('');setUser(null)}}finally{setLoading(false)}}
+ useEffect(()=>{load()},[user]);
+ async function doLogin(email,password){const r=await api.login({email,password});setAuthToken(r.token);setUser(r.user)}async function doLogout(){try{await api.logout()}catch{}setAuthToken('');setUser(null);setData(null);setIntroDone(false)}
+ if(!introDone)return <CinematicIntro ready={!authChecking} onEnter={()=>setIntroDone(true)}/>;if(authChecking)return <Boot/>;if(!user)return <Login onLogin={doLogin}/>;if(loading&&!data)return <Boot/>;
+ const level=roleLevel[user.role]||0;const nav=[['dashboard','VisÃ£o Geral',0],['negocio','InteligÃªncia & Crescimento',50],['crescimento','Crescimento & Compras',55],['caixa','Caixa Inteligente',40],['vendas','Ultimas Vendas',40],['mesas','Mesas & SalÃ£o',30],['ingressos','Ingressos & Acesso',40],['comandas','Comandas',30],['cozinha','Cozinha KDS',30],['bebidas','Bebidas & Doses',55],['receitas','Fichas & Drinks',55],['estoque','Estoque Inteligente',55],['compras','Compras & CotaÃ§Ãµes',55],['financeiro','Financeiro',70],['clientes','Clientes & CRM',40],['reservas','Reservas',40],['delivery','Delivery & Retirada',40],['performance','Performance & Rewards',80],['equipe','Equipe & Acessos',80],['cardapio','CardÃ¡pio & QR',40],['metas','Metas & Conquistas',40],['eventos','Eventos - legado',999],['ia','NEXUS AI',80],['fiscal','Fiscal & Smart Capture',70],['relatorios','RelatÃ³rios',50],['configuracoes','ConfiguraÃ§Ãµes',80]].filter(([, ,min])=>level>=min);
+ return <div className="app-shell"><aside className="sidebar"><div className="brand"><div className="brand-mark">N</div><div><strong>NEXUS</strong><small>HOSPITALITY ONE</small></div></div><nav>{nav.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={tab===k?'active':''}><span>{icons[k]}</span>{l}</button>)}</nav><div className="side-foot"><span><i className="live-dot"/> OPERATIONAL CORE</span><small>Real Operation Core â€¢ v1.4.0</small></div></aside><main><header className="topbar"><div><small>{greeting().toUpperCase()} â€¢ {roleLabel[user.role]||user.role}</small><h1>{data?.businessName||'NEXUS Hospitality One'}</h1></div><div className="top-actions"><span className="user-pill"><b>{initials(user.name)}</b><span>{user.name}<small>{roleLabel[user.role]||user.role}</small></span></span><button className="ghost" onClick={doLogout}>Sair</button><button className="primary" onClick={()=>setTab('caixa')}>+ Nova venda</button></div></header>
+ {tab==='negocio'&&<FinancialGrowthDashboardV25/>} {tab==='crescimento'&&<GrowthCenterV12/>} {tab==='dashboard'&&<><Dashboard data={data} closing={closing} cash={cash}/><div className="v05-ai-wrap"><AIPulse onNavigate={setTab}/></div></>} {tab==='caixa'&&<SmartPOSV16 products={products} employees={employees} cash={cash} user={user} onDone={load}/>} {tab==='vendas'&&<RecentSalesErrorBoundary><RecentSalesV16 user={user}/></RecentSalesErrorBoundary>}{tab==='mesas'&&<SalonV11 products={products} employees={employees}/>} {tab==='ingressos'&&<EventCommandCenterV38/>} {tab==='comandas'&&<OperationalV03 mode="orders" products={products} employees={employees} onDone={load}/>} {tab==='cozinha'&&<OperationalV03 mode="kds" products={products} employees={employees} onDone={load}/>} {tab==='bebidas'&&<OperationalV03 mode="beverages" products={products} employees={employees} onDone={load}/>} {tab==='receitas'&&<RecipeV04 products={products} onDone={load}/>} {tab==='estoque'&&<InventoryV06 onDone={load}/>} {tab==='compras'&&<OperationalV03 mode="procurement" products={products} employees={employees} onDone={load}/>} {tab==='financeiro'&&<Finance expenses={expenses} closing={closing} onDone={load}/>} {tab==='clientes'&&<CustomersV06/>} {tab==='reservas'&&<ReservationsV06/>} {tab==='delivery'&&<DeliveryV11 products={products}/>} {tab==='performance'&&<Performance data={performance} products={products} employees={employees} onDone={load}/>} {tab==='equipe'&&<Team user={user} employees={employees} onDone={load}/>} {tab==='cardapio'&&<MenuV11/>} {tab==='metas'&&<Goals goals={goals} snapshot={data?.snapshot} employees={employees} onDone={load}/>} {tab==='eventos'&&<EventsAdminV12/>} {tab==='ia'&&<OwnerAI data={data} closing={closing} performance={performance}/>} {tab==='fiscal'&&<FiscalV06/>} {tab==='relatorios'&&<ReportsV06/>} {tab==='configuracoes'&&<Settings user={user} onDone={load}/>}</main></div>
+}
+function greeting(){const h=new Date().getHours();return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'}function initials(n=''){return n.split(' ').filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()}
+function Boot(){return <div className="boot"><div className="orb"/><b>NEXUS</b><span>sincronizando Enterprise Foundation</span></div>}
+function CinematicIntro({ready,onEnter}){const[stage,setStage]=useState(0);useEffect(()=>{const t=[setTimeout(()=>setStage(1),650),setTimeout(()=>setStage(2),1550),setTimeout(()=>setStage(3),2600),setTimeout(()=>setStage(4),3750)];return()=>t.forEach(clearTimeout)},[]);return <div className={`cinematic-intro stage-${stage}`}><div className="cinema-vignette"/><div className="cinema-grid"/><div className="cinema-beam beam-a"/><div className="cinema-beam beam-b"/><div className="cinema-particles">{Array.from({length:28},(_,i)=><i key={i} style={{left:`${(i*37)%100}%`,top:`${(i*61)%100}%`,'--i':i}}/>)}</div><div className="cinema-scan"/><div className="cinema-content"><div className="cinema-kicker"><span/> NEXORA TECHNOLOGY <span/></div><div className="nexus-core"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="orbit orbit-three"/><div className="core-halo"/><div className="core-mark">N</div></div><div className="cinema-title-wrap"><h1>NEXUS</h1><h2>HOSPITALITY ONE</h2><p className="cinema-os">ENTERPRISE GROWTH OPERATING SYSTEM</p></div><div className="cinema-message"><strong>OPERAÃ‡ÃƒO <b>â€¢</b> INTELIGÃŠNCIA <b>â€¢</b> CRESCIMENTO</strong><p>Uma plataforma para operar, proteger, medir e expandir experiÃªncias de hospitalidade.</p></div><div className="cinema-entry"><div className="system-line"><i className={ready?'online':''}/><span>{ready?'NÃšCLEO DE IDENTIDADE PRONTO':'ATIVANDO NÃšCLEO DE IDENTIDADE'}</span></div><button onClick={onEnter} className="cinema-enter"><span>INICIAR EXPERIÃŠNCIA</span><b>â†’</b></button><small>POWERED BY NEXUS INTELLIGENCE</small></div></div><button className="cinema-skip" onClick={onEnter}>PULAR INTRO</button></div>}
+function Login({onLogin}){const[email,setEmail]=useState('admin@nexus.local'),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);async function go(e){e.preventDefault();setBusy(true);setError('');try{await onLogin(email,password)}catch(err){setError(err.message)}finally{setBusy(false)}}return <div className="login-scene"><div className="login-grid"/><div className="login-card"><div className="login-brand"><div className="brand-mark big">N</div><div><span>NEXORA TECHNOLOGY</span><h1>NEXUS</h1><p>HOSPITALITY ONE</p></div></div><div className="security-badge">IDENTITY CORE â€¢ SECURE ACCESS</div><h2>{greeting()}, acesso autorizado comeÃ§a aqui.</h2><p className="muted">Identifique-se para carregar seu perfil, permissÃµes, caixa, metas e trilha de auditoria.</p><form onSubmit={go}><label>E-mail<input value={email} onChange={e=>setEmail(e.target.value)} autoComplete="username"/></label><label>Senha<input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password"/></label>{error&&<div className="error-box">{error}</div>}<button className="primary wide login-btn" disabled={busy}>{busy?'AUTENTICANDO...':'ENTRAR NO NEXUS â†’'}</button></form><div className="bio-prep"><span>â—‰</span><div><b>Biometria / Passkeys</b><small>Base preparada para Windows Hello, Face ID e Touch ID via autenticaÃ§Ã£o do dispositivo.</small></div><em>PRÃ“XIMA CAMADA</em></div><small className="first-access">Primeiro acesso local: admin@nexus.local â€¢ altere a senha depois do login.</small></div></div>}
+function Dashboard({data,closing,cash}){if(!data)return null;const s=data.snapshot,g=data.growth;return <section className="page"><div className="hero neural"><div><div className="eyebrow">NEXUS GROWTH INTELLIGENCE</div><h2>Seu negÃ³cio nÃ£o precisa apenas funcionar.<br/><em>Ele precisa crescer.</em></h2><p>{g.headline}. Caixa, margem, estoque, equipe e metas formam uma Ãºnica leitura operacional.</p></div><div className="score-ring"><b>{g.score}</b><span>Growth Score</span></div></div><div className="status-strip"><span className={cash?'ok':'warn'}>â—Â CAIXA {cash?'ABERTO':'FECHADO'}</span><span>IDENTIDADE ATIVA</span><span>AUDITORIA ATIVA</span><span>PERFORMANCE ENGINE</span></div><div className="kpis"><Kpi label="Faturamento hoje" value={money(s.todayRevenue)} sub={`${pct(s.goalProgress)} da meta`}/><Kpi label="Lucro bruto estimado" value={money(s.grossProfitToday)} sub="antes das despesas"/><Kpi label="Ticket mÃ©dio" value={money(s.averageTicket)} sub={`${s.salesCount} venda(s)`}/><Kpi label="Faturamento mÃªs" value={money(s.monthRevenue)} sub={`despesas ${money(s.monthExpenses)}`}/></div><div className="grid two"><div className="panel"><PanelTitle over="FECHAMENTO INTELIGENTE" title="Para onde vai o dinheiro de hoje"/><Allocation closing={closing}/></div><div className="panel"><PanelTitle over="OWNER AI BRIEFING" title="O que merece sua atenÃ§Ã£o"/>{g.notes.map((n,i)=><div className="brief-row" key={i}><span>0{i+1}</span><p>{n}</p></div>)}</div></div><div className="grid two"><div className="panel"><PanelTitle over="ESTOQUE" title="Alerta de reposiÃ§Ã£o"/>{s.lowStock.length?s.lowStock.map(x=><div className="list-row" key={x.id}><div><b>{x.name}</b><small>{x.category}</small></div><strong>{numBR(x.stock)} / mÃ­n. {numBR(x.minimum_stock)}</strong></div>):<Empty text="Nenhum item abaixo do mÃ­nimo."/>}</div><div className="panel"><PanelTitle over="PERFORMANCE" title="Equipe e incentivos"/>{data.performance?.length?data.performance.slice(0,5).map(x=><div className="rank-row" key={x.id}><span>â—Â</span><div><b>{x.name}</b><small>{x.role_label}</small></div><strong>{money(x.total_due)}</strong></div>):<Empty text="Sem dados de performance ainda."/>}</div></div></section>}
+function Cashier({products,employees,cash,onDone}){const[cart,setCart]=useState([]),[payment,setPayment]=useState('PIX'),[employee,setEmployee]=useState(''),[tip,setTip]=useState('0'),[opening,setOpening]=useState('0'),[closingAmount,setClosingAmount]=useState('0'),[msg,setMsg]=useState('');const total=useMemo(()=>cart.reduce((s,x)=>s+x.price*x.qty,0),[cart]);function add(p){setCart(c=>{const e=c.find(x=>x.id===p.id);return e?c.map(x=>x.id===p.id?{...x,qty:x.qty+1}:x):[...c,{...p,qty:1}]})}async function open(){await api.openCash({opening_amount:Number(opening)});setMsg('Caixa aberto.');onDone()}async function close(){const r=await api.closeCash(cash.id,{closing_amount:Number(closingAmount)});setMsg(`Caixa fechado. DiferenÃ§a: ${money(r.difference)}`);onDone()}async function finish(){if(!cart.length)return;try{await api.createSale({payment_method:payment,employee_id:employee||null,tip_amount:Number(tip||0),items:cart.map(x=>({product_id:x.id,qty:x.qty}))});setCart([]);setTip('0');setMsg('Venda concluÃ­da com estoque, auditoria e performance atualizados.');await onDone()}catch(e){setMsg(e.message)}}return <section className="page"><PageHead over="CAIXA INTELIGENTE" title="SessÃ£o, venda, gorjeta, comissÃ£o e estoque em uma operaÃ§Ã£o"/>{!cash?<div className="panel cash-session"><div><b>CAIXA FECHADO</b><p>Abra uma sessÃ£o antes de registrar vendas.</p></div><input type="number" step="0.01" value={opening} onChange={e=>setOpening(e.target.value)} placeholder="Fundo de caixa"/><button className="primary" onClick={open}>Abrir caixa</button></div>:<div className="panel cash-session open"><div><b>CAIXA ABERTO #{cash.id}</b><p>Operador: {cash.user_name} â€¢ abertura {money(cash.opening_amount)}</p></div><input type="number" step="0.01" value={closingAmount} onChange={e=>setClosingAmount(e.target.value)} placeholder="Contagem fÃ­sica"/><button className="ghost" onClick={close}>Fechar caixa</button></div>}{msg&&<div className="notice">{msg}</div>}<div className="cash-grid"><div className="panel product-pad">{products.map(p=><button key={p.id} onClick={()=>add(p)} disabled={!cash}><b>{p.name}</b><small>{p.category} â€¢ estoque {p.stock}</small><strong>{money(p.price)}</strong></button>)}</div><div className="panel cart"><h3>Venda atual</h3>{cart.length?cart.map(x=><div className="cart-row" key={x.id}><span>{x.qty}Ã—</span><b>{x.name}</b><strong>{money(x.qty*x.price)}</strong></div>):<Empty text="Toque em um produto para adicionar."/>}<div className="total"><span>Total</span><b>{money(total+Number(tip||0))}</b></div><select value={employee} onChange={e=>setEmployee(e.target.value)}><option value="">Atendente do usuÃ¡rio atual</option>{employees.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><div className="split-fields"><select value={payment} onChange={e=>setPayment(e.target.value)}><option>PIX</option><option>DINHEIRO</option><option>CARTAO</option><option>COMANDA</option></select><input type="number" step="0.01" value={tip} onChange={e=>setTip(e.target.value)} placeholder="Gorjeta"/></div><button className="primary wide" disabled={!cash} onClick={finish}>Finalizar venda</button></div></div></section>}
+function Orders({orders,employees,onDone}){const[label,setLabel]=useState(''),[emp,setEmp]=useState('');async function create(){if(!label.trim())return;await api.createOrder({label,employee_id:emp||null});setLabel('');onDone()}return <section className="page"><PageHead over="COMANDAS ONLINE" title="Mesas, balcÃ£o, clientes e atendimento identificado"/><div className="panel form-inline"><input placeholder="Ex.: Mesa 07 / JoÃ£o" value={label} onChange={e=>setLabel(e.target.value)}/><select value={emp} onChange={e=>setEmp(e.target.value)}><option value="">Sem atendente</option>{employees.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><button className="primary" onClick={create}>Abrir comanda</button></div><div className="cards">{orders.map(o=><div className="mini-card" key={o.id}><span>ABERTA</span><h3>{o.label}</h3><p>{o.customer_name||'Sem cliente identificado'}</p><b>{money(o.subtotal)}</b></div>)}{!orders.length&&<Empty text="Nenhuma comanda aberta."/>}</div></section>}
+function Inventory({products}){return <section className="page"><PageHead over="ESTOQUE INTELIGENTE" title="Unidade, dose, custo, margem e ruptura"/><div className="panel table-wrap"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Unidade</th><th>Estoque</th><th>MÃ­nimo</th><th>Custo</th><th>Venda</th><th>Margem</th></tr></thead><tbody>{products.map(p=><tr key={p.id}><td><b>{p.name}</b></td><td>{p.category}</td><td>{p.unit_type}{p.dose_ml?` â€¢ ${p.dose_ml}ml/dose`:''}</td><td>{p.stock}</td><td>{p.minimum_stock}</td><td>{money(p.cost)}</td><td>{money(p.price)}</td><td>{p.price?pct((p.price-p.cost)/p.price*100):'0%'}</td></tr>)}</tbody></table></div></section>}
+function Finance({expenses,closing,onDone}){const[form,setForm]=useState({description:'',category:'Contas',amount:'',due_date:''});async function save(){await api.createExpense({...form,amount:Number(form.amount)});setForm({description:'',category:'Contas',amount:'',due_date:''});onDone()}return <section className="page"><PageHead over="FINANCEIRO" title="ObrigaÃ§Ãµes, reservas e destino do caixa"/><div className="grid two"><div className="panel"><PanelTitle over="ALOCAÃ‡ÃƒO" title="Plano do fechamento"/><Allocation closing={closing}/></div><div className="panel"><PanelTitle over="NOVA OBRIGAÃ‡ÃƒO" title="Registrar conta"/><div className="form-stack"><input placeholder="DescriÃ§Ã£o" value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/><select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option>Contas</option><option>SalÃ¡rios</option><option>Fornecedor</option><option>Impostos</option><option>Investimento</option></select><input type="number" placeholder="Valor" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/><input type="date" value={form.due_date} onChange={e=>setForm({...form,due_date:e.target.value})}/><button className="primary" onClick={save}>Registrar</button></div></div></div><div className="panel table-wrap"><table><thead><tr><th>DescriÃ§Ã£o</th><th>Categoria</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead><tbody>{expenses.map(x=><tr key={x.id}><td>{x.description}</td><td>{x.category}</td><td>{money(x.amount)}</td><td>{x.due_date||'â€”'}</td><td>{x.paid?'Pago':'Pendente'}</td></tr>)}</tbody></table></div></section>}
+function Performance({data,products,employees,onDone}){const[form,setForm]=useState({title:'',scope:'ANY',scope_value:'',reward_type:'FIXED_PER_UNIT',reward_value:''}),[tip,setTip]=useState({employee_id:'',amount:''});if(!data)return null;async function rule(){await api.createIncentive({...form,reward_value:Number(form.reward_value)});setForm({...form,title:'',reward_value:''});onDone()}async function addTip(){await api.createTip({employee_id:Number(tip.employee_id),amount:Number(tip.amount)});setTip({employee_id:'',amount:''});onDone()}return <section className="page"><PageHead over="NEXUS PERFORMANCE & REWARDS" title="Metas, gorjetas, comissÃ£o e incentivo que a equipe consegue acompanhar"/><div className="kpis"><Kpi label="Gorjetas pendentes" value={money(data.pendingTips)} sub="a repassar"/><Kpi label="Incentivos pendentes" value={money(data.pendingRewards)} sub="comissÃµes e bÃ´nus"/><Kpi label="Regras ativas" value={String(data.rules.length)} sub="campanhas"/><Kpi label="Equipe ativa" value={String(data.employees.length)} sub="pessoas"/></div><div className="grid two"><div className="panel"><PanelTitle over="RANKING" title="Performance do mÃªs"/>{data.employees.map((x,i)=><div className="performance-row" key={x.id}><span>{String(i+1).padStart(2,'0')}</span><div><b>{x.name}</b><small>Vendas {money(x.sales)} â€¢ gorjetas {money(x.tips)}</small></div><strong>{money(x.total_due)}</strong></div>)}</div><div className="panel"><PanelTitle over="NOVA CAMPANHA" title="ComissÃ£o por venda"/><div className="form-stack"><input placeholder="Ex.: Campanha Combo Gin" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/><select value={form.scope} onChange={e=>setForm({...form,scope:e.target.value,scope_value:''})}><option value="ANY">Qualquer produto</option><option value="PRODUCT">Produto especÃ­fico</option><option value="CATEGORY">Categoria</option></select>{form.scope==='PRODUCT'&&<select value={form.scope_value} onChange={e=>setForm({...form,scope_value:e.target.value})}><option value="">Selecione</option>{products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>}{form.scope==='CATEGORY'&&<input placeholder="Categoria" value={form.scope_value} onChange={e=>setForm({...form,scope_value:e.target.value})}/>}<select value={form.reward_type} onChange={e=>setForm({...form,reward_type:e.target.value})}><option value="FIXED_PER_UNIT">R$ por unidade</option><option value="PERCENT_SALE">% da venda</option></select><input type="number" step="0.01" placeholder="Valor do incentivo" value={form.reward_value} onChange={e=>setForm({...form,reward_value:e.target.value})}/><button className="primary" onClick={rule}>Ativar campanha</button></div></div></div><div className="grid two"><div className="panel"><PanelTitle over="GORJETA MANUAL" title="Creditar Ã  equipe"/><div className="form-inline"><select value={tip.employee_id} onChange={e=>setTip({...tip,employee_id:e.target.value})}><option value="">FuncionÃ¡rio</option>{employees.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input type="number" step="0.01" placeholder="Valor" value={tip.amount} onChange={e=>setTip({...tip,amount:e.target.value})}/><button className="primary" onClick={addTip}>Creditar</button></div></div><div className="panel"><PanelTitle over="REGRAS ATIVAS" title="Campanhas em execuÃ§Ã£o"/>{data.rules.map(x=><div className="list-row" key={x.id}><div><b>{x.title}</b><small>{x.scope} â€¢ {x.reward_type}</small></div><strong>{x.reward_type==='PERCENT_SALE'?`${x.reward_value}%`:money(x.reward_value)}</strong></div>)}</div></div></section>}
+function Team({user,employees:initialEmployees,onDone}){
+  const [name,setName]=useState('');
+  const [role,setRole]=useState('Atendimento');
+  const [employees,setEmployees]=useState(Array.isArray(initialEmployees)?initialEmployees:[]);
+  const [users,setUsers]=useState([]);
+  const [audit,setAudit]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [saving,setSaving]=useState(false);
+  const [error,setError]=useState('');
+  const [success,setSuccess]=useState('');
+  const [newUser,setNewUser]=useState({
+    name:'',
+    email:'',
+    password:'',
+    role:'CASHIER'
+  });
+
+  const canManage=user?.role==='OWNER'||user?.role==='MANAGER';
+  const canCreateUser=user?.role==='OWNER';
+
+  async function loadIdentity(){
+    setLoading(true);
+    setError('');
+
+    try{
+      const requests=[api.employees()];
+
+      if(canManage){
+        requests.push(api.users());
+        requests.push(api.audit());
+      }
+
+      const result=await Promise.all(requests);
+
+      setEmployees(Array.isArray(result[0])?result[0]:[]);
+
+      if(canManage){
+        setUsers(Array.isArray(result[1])?result[1]:[]);
+        setAudit(Array.isArray(result[2])?result[2]:[]);
+      }
+    }catch(err){
+      console.error('IDENTITY_LOAD_ERROR',err);
+      setError(err?.message||'NÃ£o foi possÃ­vel carregar o Identity & Access.');
+    }finally{
+      setLoading(false);
+    }
+  }
+
+  useEffect(()=>{
+    loadIdentity();
+  },[user?.id,user?.role]);
+
+  useEffect(()=>{
+    if(Array.isArray(initialEmployees)){
+      setEmployees(initialEmployees);
+    }
+  },[initialEmployees]);
+
+  async function addEmp(){
+    const employeeName=name.trim();
+    const roleLabel=role.trim();
+
+    if(!employeeName){
+      setError('Informe o nome do funcionÃ¡rio.');
+      return;
+    }
+
+    if(!roleLabel){
+      setError('Informe a funÃ§Ã£o do funcionÃ¡rio.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try{
+      await api.createEmployee({
+        name:employeeName,
+        role_label:roleLabel
+      });
+
+      setName('');
+      setSuccess('FuncionÃ¡rio adicionado com sucesso.');
+
+      await loadIdentity();
+
+      if(onDone){
+        await onDone();
+      }
+    }catch(err){
+      console.error('IDENTITY_CREATE_EMPLOYEE_ERROR',err);
+      setError(err?.message||'NÃ£o foi possÃ­vel adicionar o funcionÃ¡rio.');
+    }finally{
+      setSaving(false);
+    }
+  }
+
+  async function addUser(){
+    if(!canCreateUser){
+      setError('Somente o proprietÃ¡rio pode criar novos acessos.');
+      return;
+    }
+
+    const payload={
+      ...newUser,
+      name:newUser.name.trim(),
+      email:newUser.email.trim()
+    };
+
+    if(!payload.name||!payload.email||!payload.password){
+      setError('Preencha nome, e-mail e senha temporÃ¡ria.');
+      return;
+    }
+
+    if(payload.password.length<10){
+      setError('A senha temporÃ¡ria deve possuir pelo menos 10 caracteres.');
+      return;
+    }
+
+    setSaving(true);
+    setError('');
+    setSuccess('');
+
+    try{
+      await api.createUser(payload);
+
+      setNewUser({
+        name:'',
+        email:'',
+        password:'',
+        role:'CASHIER'
+      });
+
+      setSuccess('Acesso criado com sucesso.');
+
+      await loadIdentity();
+
+      if(onDone){
+        await onDone();
+      }
+    }catch(err){
+      console.error('IDENTITY_CREATE_USER_ERROR',err);
+      setError(err?.message||'NÃ£o foi possÃ­vel criar o acesso.');
+    }finally{
+      setSaving(false);
+    }
+  }
+
+  return <section className="page">
+    <PageHead
+      over="IDENTITY & ACCESS"
+      title="Pessoas, funÃ§Ãµes, permissÃµes e rastreabilidade"
+    />
+
+    {error&&<div className="error-box">{error}</div>}
+    {success&&<div className="notice">{success}</div>}
+
+    {loading
+      ? <div className="panel"><p className="muted">Carregando identidade e acessos...</p></div>
+      : <>
+        <div className="grid two">
+          <div className="panel">
+            <PanelTitle over="EQUIPE" title="FuncionÃ¡rios ativos"/>
+
+            {employees.length
+              ? employees.map(x=>
+                  <div className="list-row" key={x.id}>
+                    <div>
+                      <b>{x.name}</b>
+                      <small>{x.role_label}</small>
+                    </div>
+                    <strong>{x.active===0?'INATIVO':'ATIVO'}</strong>
+                  </div>
+                )
+              : <Empty text="Nenhum funcionÃ¡rio cadastrado."/>
+            }
+
+            {canManage&&
+              <div className="form-inline">
+                <input
+                  placeholder="Nome"
+                  value={name}
+                  onChange={e=>setName(e.target.value)}
+                />
+
+                <input
+                  placeholder="FunÃ§Ã£o"
+                  value={role}
+                  onChange={e=>setRole(e.target.value)}
+                />
+
+                <button
+                  className="primary"
+                  onClick={addEmp}
+                  disabled={saving}
+                >
+                  {saving?'Salvando...':'Adicionar'}
+                </button>
+              </div>
+            }
+          </div>
+
+          <div className="panel">
+            <PanelTitle
+              over="SEGURANÃ‡A"
+              title="Passkeys e autenticaÃ§Ã£o do dispositivo"
+            />
+
+            <div className="bio-card">
+              <div className="fingerprint">â—Ž</div>
+
+              <div>
+                <b>Camada preparada</b>
+                <p>
+                  Windows Hello, Face ID e Touch ID serÃ£o integrados
+                  via passkeys/WebAuthn sem armazenar biometria bruta
+                  na NEXUS.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {canCreateUser&&
+          <div className="grid two">
+            <div className="panel">
+              <PanelTitle over="NOVO ACESSO" title="Criar usuÃ¡rio"/>
+
+              <div className="form-stack">
+                <input
+                  placeholder="Nome"
+                  value={newUser.name}
+                  onChange={e=>setNewUser({...newUser,name:e.target.value})}
+                />
+
+                <input
+                  placeholder="E-mail"
+                  value={newUser.email}
+                  onChange={e=>setNewUser({...newUser,email:e.target.value})}
+                />
+
+                <input
+                  type="password"
+                  placeholder="Senha temporÃ¡ria (10+ caracteres)"
+                  value={newUser.password}
+                  onChange={e=>setNewUser({...newUser,password:e.target.value})}
+                />
+
+                <select
+                  value={newUser.role}
+                  onChange={e=>setNewUser({...newUser,role:e.target.value})}
+                >
+                  {Object.keys(roleLabel).map(r=>
+                    <option key={r} value={r}>
+                      {roleLabel[r]}
+                    </option>
+                  )}
+                </select>
+
+                <button
+                  className="primary"
+                  onClick={addUser}
+                  disabled={saving}
+                >
+                  {saving?'Criando...':'Criar acesso'}
+                </button>
+              </div>
+            </div>
+
+            <div className="panel">
+              <PanelTitle over="USUÃRIOS" title="Contas do sistema"/>
+
+              {users.length
+                ? users.map(x=>
+                    <div className="list-row" key={x.id}>
+                      <div>
+                        <b>{x.name}</b>
+                        <small>{x.email}</small>
+                      </div>
+
+                      <strong>
+                        {roleLabel[x.role]||x.role}
+                      </strong>
+                    </div>
+                  )
+                : <Empty text="Nenhuma conta encontrada."/>
+              }
+            </div>
+          </div>
+        }
+
+        {canManage&&
+          <div className="panel table-wrap">
+            <PanelTitle
+              over="AUDITORIA"
+              title="Ãšltimas aÃ§Ãµes registradas"
+            />
+
+            {audit.length
+              ? <table>
+                  <thead>
+                    <tr>
+                      <th>Quando</th>
+                      <th>UsuÃ¡rio</th>
+                      <th>AÃ§Ã£o</th>
+                      <th>Entidade</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {audit.slice(0,40).map(x=>
+                      <tr key={x.id}>
+                        <td>
+                          {new Date(x.created_at+'Z').toLocaleString('pt-BR')}
+                        </td>
+                        <td>{x.user_name||'Sistema'}</td>
+                        <td>{x.action}</td>
+                        <td>{x.entity}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              : <Empty text="Nenhuma aÃ§Ã£o registrada ainda."/>
+            }
+          </div>
+        }
+      </>
+    }
+  </section>
+}
+function Menu({products}){return <section className="page"><PageHead over="CARDÃPIO DIGITAL" title="Base pronta para QR, autoatendimento e pedido online"/><div className="cards">{products.map(p=><div className="menu-card" key={p.id}><div className="menu-image">{p.image_url?<img src={p.image_url}/>:<span>âœ¦</span>}</div><small>{p.category}</small><h3>{p.name}</h3><p>{p.description||'Produto disponÃ­vel no estabelecimento.'}</p><b>{money(p.price)}</b><button>Adicionar</button></div>)}</div></section>}
+function Goals({goals,snapshot,employees,onDone}){const[form,setForm]=useState({title:'',type:'BUSINESS',target_value:'',deadline:'',employee_id:''});async function create(){await api.createGoal({...form,target_value:Number(form.target_value),employee_id:form.employee_id||null});setForm({title:'',type:'BUSINESS',target_value:'',deadline:'',employee_id:''});onDone()}return <section className="page"><PageHead over="METAS & CONQUISTAS" title="Do fechamento de hoje aos objetivos do proprietÃ¡rio e da equipe"/><div className="hero goal-hero"><div><span>Meta diÃ¡ria</span><h2>{money(snapshot?.todayRevenue)} <small>/ {money(snapshot?.dailyGoal)}</small></h2><div className="progress"><i style={{width:`${Math.min(100,snapshot?.goalProgress||0)}%`}}/></div></div><b>{pct(snapshot?.goalProgress)}</b></div><div className="panel form-inline"><input placeholder="Ex.: Comprar nova geladeira" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value="BUSINESS">NegÃ³cio</option><option value="PERSONAL">Pessoal</option><option value="TEAM">Equipe</option></select>{form.type==='TEAM'&&<select value={form.employee_id} onChange={e=>setForm({...form,employee_id:e.target.value})}><option value="">Equipe geral</option>{employees.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select>}<input type="number" placeholder="Valor meta" value={form.target_value} onChange={e=>setForm({...form,target_value:e.target.value})}/><input type="date" value={form.deadline} onChange={e=>setForm({...form,deadline:e.target.value})}/><button className="primary" onClick={create}>Criar meta</button></div><div className="cards">{goals.map(g=><div className="mini-card" key={g.id}><span>{g.type}</span><h3>{g.title}</h3><p>{g.deadline||'Sem prazo definido'}</p><b>{money(g.current_value)} / {money(g.target_value)}</b></div>)}</div></section>}
+function OwnerAI({data,closing,performance}){return <section className="page"><PageHead over="NEXUS INTELLIGENCE" title="InteligÃªncia operacional que transforma dados em decisÃµes e aÃ§Ãµes"/><div className="ai-stage"><div className="ai-orb"><i/><i/><i/><b>N</b></div><div><span>INTELLIGENCE CORE</span><h2>{data?.growth?.headline}</h2>{data?.growth?.notes?.map((n,i)=><p key={i}>{n}</p>)}<div className="ai-command">â€œPosso tirar dinheiro do caixa hoje?â€ <em>â†’ motor avanÃ§ado de fluxo projetado entra na prÃ³xima camada.</em></div></div></div><div className="grid two"><div className="panel"><PanelTitle over="FECHAMENTO" title="AlocaÃ§Ã£o atual"/><Allocation closing={closing}/></div><div className="panel"><PanelTitle over="EQUIPE" title="Compromissos de performance"/><p className="big-number">{money(Number(performance?.pendingTips||0)+Number(performance?.pendingRewards||0))}</p><small>gorjetas + incentivos pendentes</small></div></div></section>}
+function Settings({user,onDone}){const[form,setForm]=useState(null),[pwd,setPwd]=useState({current_password:'',new_password:''}),[msg,setMsg]=useState('');useEffect(()=>{api.settings().then(setForm)},[]);if(!form)return <Boot/>;async function save(){await api.updateSettings(form);setMsg('ConfiguraÃ§Ãµes salvas.');onDone()}async function change(){try{await api.changePassword(pwd);setPwd({current_password:'',new_password:''});setMsg('Senha alterada com sucesso.')}catch(e){setMsg(e.message)}}return <section className="page"><PageHead over="CONFIGURAÃ‡Ã•ES" title="Regras financeiras, identidade e seguranÃ§a"/><div className="grid two"><div className="panel form-stack"><h3>NegÃ³cio e fechamento</h3><label>Nome<input value={form.business_name} onChange={e=>setForm({...form,business_name:e.target.value})}/></label><label>Meta diÃ¡ria<input type="number" value={form.daily_goal} onChange={e=>setForm({...form,daily_goal:e.target.value})}/></label>{[['reserve_percent','Reserva %'],['tax_percent','Impostos %'],['salary_percent','SalÃ¡rios %'],['owner_percent','Retirada %'],['reinvest_percent','Reinvestimento %']].map(([k,l])=><label key={k}>{l}<input type="number" value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/></label>)}<button className="primary" onClick={save}>Salvar regras</button></div><div className="panel form-stack"><h3>SeguranÃ§a da conta</h3><p className="muted">UsuÃ¡rio: {user.email}</p><input type="password" placeholder="Senha atual" value={pwd.current_password} onChange={e=>setPwd({...pwd,current_password:e.target.value})}/><input type="password" placeholder="Nova senha (10+ caracteres)" value={pwd.new_password} onChange={e=>setPwd({...pwd,new_password:e.target.value})}/><button className="primary" onClick={change}>Alterar senha</button><div className="bio-prep compact"><span>â—Ž</span><div><b>Passkey / biometria</b><small>Preparado para ativaÃ§Ã£o WebAuthn.</small></div></div></div></div>{msg&&<div className="notice">{msg}</div>}</section>}
+function Allocation({closing}){if(!closing)return <Empty text="Sem fechamento para calcular."/>;const rows=[['Reserva',closing.reserve],['Impostos',closing.taxes],['SalÃ¡rios',closing.payroll],['Retirada proprietÃ¡rio',closing.owner],['Reinvestimento',closing.reinvest],['Caixa operacional',closing.operating]];return <div className="allocation">{rows.map(([l,v])=><div key={l}><span>{l}</span><b>{money(v)}</b></div>)}</div>}
+function Kpi({label,value,sub}){return <div className="kpi"><span>{label}</span><b>{value}</b><small>{sub}</small></div>}function PanelTitle({over,title}){return <div className="panel-title"><span>{over}</span><h3>{title}</h3></div>}function PageHead({over,title}){return <div className="page-head"><span>{over}</span><h2>{title}</h2></div>}function Empty({text}){return <div className="empty">{text}</div>}function Coming({title,text}){return <section className="page"><PageHead over="PRÃ“XIMA CAMADA" title={title}/><div className="panel coming"><div className="coming-orb">N</div><h3>FundaÃ§Ã£o preparada</h3><p>{text}</p></div></section>}
+
+
+
+
+
+
+
+
+
+
+
+
+
+============================================================
+ FIM: App.jsx
+============================================================
+
+
+============================================================
+ ARQUIVO: App.css
+============================================================
+
+/* V1.5.3 — Ticket Commerce Refinement */
+.ticket-checkout-premium .tcp-hero{height:min(48vh,520px);min-height:390px}
+.ticket-checkout-premium .tcp-hero-content{padding-bottom:28px}
+.ticket-checkout-premium .tcp-hero h1{font-size:clamp(44px,6.5vw,78px);max-width:1000px}
+.ticket-checkout-premium .tcp-main{padding-top:28px;align-items:start}
+.ticket-checkout-premium .tcp-lots>button:not(:disabled){box-shadow:inset 0 0 0 1px rgba(229,189,103,.08)}
+.ticket-checkout-premium .tcp-lots>button.selected{box-shadow:0 14px 42px rgba(180,125,45,.16),inset 0 0 0 1px rgba(240,207,130,.2)}
+.ticket-checkout-premium .tcp-buy{font-size:18px;letter-spacing:.01em}
+@media(max-width:900px){.ticket-checkout-premium .tcp-hero{height:auto;min-height:430px}.ticket-checkout-premium .tcp-main{padding-top:16px}}
+
+
+============================================================
+ FIM: App.css
+============================================================
+
+
+============================================================
+ ARQUIVO: main.jsx
+============================================================
+
+import React from 'react';import{createRoot}from'react-dom/client';import App from './App.jsx';import './styles.css';createRoot(document.getElementById('root')).render(<React.StrictMode><App/></React.StrictMode>);
+
+
+============================================================
+ FIM: main.jsx
+============================================================
+
+
+============================================================
+ ARQUIVO: SmartPOSV16.jsx
+============================================================
+
+import React,{useMemo,useState}from'react';
+import './SmartPOSPremiumV21.css';
+import{api}from'./api.js';
+
+const brl=v=>Number(v||0).toLocaleString(
+  'pt-BR',
+  {style:'currency',currency:'BRL'}
+);
+
+const round=v=>
+  Math.round((Number(v||0)+Number.EPSILON)*100)/100;
+
+const num=v=>{
+  const raw=String(v??'').trim();
+
+  if(!raw)return 0;
+
+  const normalized=
+    raw.includes(',') ? raw.replace(/\./g,'').replace(',','.') : raw;
+
+  const value=Number(normalized);
+
+  return Number.isFinite(value)?value:0;
+};
+
+const METHODS=[
+  {id:'PIX',label:'PIX'},
+  {id:'DINHEIRO',label:'DINHEIRO'},
+  {id:'DEBITO',label:'DÃ‰BITO'},
+  {id:'CREDITO',label:'CRÃ‰DITO'}
+];
+
+function splitTotal(total,count){
+
+  const people=Math.max(1,Number(count)||1);
+  const cents=Math.round(Number(total||0)*100);
+
+  const base=Math.floor(cents/people);
+  const remainder=cents-(base*people);
+
+  return Array.from(
+    {length:people},
+    (_,index)=>
+      (base+(index<remainder?1:0))/100
+  );
+}
+
+export default function SmartPOSV16({
+  products=[],
+  cash,
+  onDone,
+  user
+}){
+
+  const[cart,setCart]=useState([]);
+  const[category,setCategory]=useState('TODOS');
+  const[search,setSearch]=useState('');
+
+  const[paymentOpen,setPaymentOpen]=useState(false);
+  const[paymentMode,setPaymentMode]=useState('');
+
+  const[singleMethod,setSingleMethod]=useState('');
+  const[singleReceived,setSingleReceived]=useState('');
+
+  const[peopleCount,setPeopleCount]=useState(2);
+  const[people,setPeople]=useState([]);
+
+  const[opening,setOpening]=useState('');
+  const[busy,setBusy]=useState(false);
+  const[msg,setMsg]=useState('');
+  const[success,setSuccess]=useState(null);
+
+  const categories=[
+    'TODOS',
+    ...new Set(
+      products.map(
+        p=>p.category||'OUTROS'
+      )
+    )
+  ];
+
+  const visibleProducts=useMemo(
+    ()=>products.filter(p=>
+      (
+        category==='TODOS'||
+        (p.category||'OUTROS')===category
+      )&&
+      String(p.name||'')
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    ),
+    [products,category,search]
+  );
+
+  const total=round(
+    cart.reduce(
+      (sum,item)=>
+        sum+
+        Number(item.price||0)*
+        Number(item.qty||0),
+      0
+    )
+  );
+
+  const singleReceivedValue=
+    num(singleReceived);
+
+  const singleChange=
+    singleMethod==='DINHEIRO' ? Math.max(
+          0,
+          round(singleReceivedValue-total)
+        )
+      : 0;
+
+  function add(product){
+
+    setCart(current=>{
+
+      const found=
+        current.find(
+          item=>item.id===product.id
+        );
+
+      if(found){
+
+        return current.map(
+          item=>
+            item.id===product.id ? {...item,qty:item.qty+1} : item
+        );
+      }
+
+      return[
+        ...current,
+        {...product,qty:1}
+      ];
+    });
+  }
+
+  function qty(id,delta){
+
+    setCart(current=>
+      current
+        .map(item=>
+          item.id===id ? {...item,qty:item.qty+delta} : item
+        )
+        .filter(item=>item.qty>0)
+    );
+  }
+
+  function closePayment(){
+
+    if(busy)return;
+
+    setPaymentOpen(false);
+    setPaymentMode('');
+    setSingleMethod('');
+    setSingleReceived('');
+    setPeople([]);
+    setMsg('');
+  }
+
+  function openPayment(){
+
+    if(!cart.length){
+      setMsg('Adicione pelo menos um produto.');
+      return;
+    }
+
+    setPaymentOpen(true);
+    setPaymentMode('');
+    setSingleMethod('');
+    setSingleReceived('');
+    setPeople([]);
+    setMsg('');
+  }
+
+  function chooseSingle(){
+
+    setPaymentMode('SINGLE');
+    setSingleMethod('');
+    setSingleReceived('');
+    setMsg('');
+  }
+
+  function chooseSplit(){
+
+    const count=2;
+    const values=splitTotal(total,count);
+
+    setPeopleCount(count);
+
+    setPeople(
+      values.map(
+        (amount,index)=>({
+          id:index+1,
+          amount,
+          method:'',
+          received:'',
+          paid:false
+        })
+      )
+    );
+
+    setPaymentMode('SPLIT');
+    setMsg('');
+  }
+
+  function rebuildPeople(nextCount){
+
+    const count=
+      Math.min(
+        20,
+        Math.max(
+          2,
+          Number(nextCount)||2
+        )
+      );
+
+    const values=
+      splitTotal(total,count);
+
+    setPeopleCount(count);
+
+    setPeople(
+      values.map(
+        (amount,index)=>({
+          id:index+1,
+          amount,
+          method:'',
+          received:'',
+          paid:false
+        })
+      )
+    );
+
+    setMsg('');
+  }
+
+  function updatePerson(index,patch){
+
+    setPeople(current=>
+      current.map(
+        (person,i)=>
+          i===index ? {...person,...patch} : person
+      )
+    );
+  }
+
+  function selectPersonMethod(index,method){
+
+    updatePerson(
+      index,
+      {
+        method,
+        received:'',
+        paid:method!=='DINHEIRO'
+      }
+    );
+  }
+
+  function confirmCashPerson(index){
+
+    const person=people[index];
+
+    if(!person)return;
+
+    const received=num(person.received);
+
+    if(received<person.amount){
+
+      setMsg(
+        `Pessoa ${index+1}: valor entregue menor que ${brl(person.amount)}.`
+      );
+
+      return;
+    }
+
+    updatePerson(
+      index,
+      {paid:true}
+    );
+
+    setMsg('');
+  }
+
+  function personChange(person){
+
+    if(person.method!=='DINHEIRO')return 0;
+
+    return Math.max(
+      0,
+      round(
+        num(person.received)-person.amount
+      )
+    );
+  }
+
+  const peoplePaid=
+    people.filter(
+      person=>person.paid&&person.method
+    ).length;
+
+  const allPeoplePaid=
+    people.length>0&&
+    people.every(
+      person=>person.paid&&person.method
+    );
+
+  function buildSplitPayments(){
+
+    const grouped={};
+
+    for(const person of people){
+
+      grouped[person.method]=round(
+        (grouped[person.method]||0)+
+        person.amount
+      );
+    }
+
+    return Object.entries(grouped)
+      .filter(([,amount])=>amount>0)
+      .map(([method,amount])=>({
+        method,
+        amount
+      }));
+  }
+
+  function splitCashReceived(){
+
+    return round(
+      people
+        .filter(
+          person=>person.method==='DINHEIRO'
+        )
+        .reduce(
+          (sum,person)=>
+            sum+num(person.received),
+          0
+        )
+    );
+  }
+
+  async function postSaleFlow(sale){
+
+    /*
+      NEXUS HOSPITALITY ONE V2.1.6
+
+      Venda confirmada = venda concluida.
+
+      Depois do pagamento, registramos automaticamente:
+
+      - ficha do cliente
+      - ficha de producao
+      - comprovante
+
+      Nenhum desses documentos bloqueia a retirada.
+
+      Neste momento usamos SIMULATION:
+      a fila e os documentos sao reais,
+      mas ainda nao enviamos fisicamente
+      para a impressora termica.
+
+      A camada Electron/thermal printer sera
+      conectada na proxima evolucao.
+    */
+
+    try{
+
+      const printResult =
+        await api.queueSaleDocumentsV16(
+          sale.id,
+          'SIMULATION'
+        );
+
+      return{
+        ...sale,
+        print_jobs:
+          printResult?.jobs || [],
+        documents_queued:true
+      };
+
+    }catch(printError){
+
+      console.warn(
+        '[NEXUS][POS] Documentos operacionais nao enfileirados:',
+        printError
+      );
+
+      /*
+        Falha documental NAO desfaz a venda.
+        A venda ja foi confirmada pelo backend.
+      */
+
+      return{
+        ...sale,
+        documents_queued:false,
+        print_warning:
+          printError?.message ||
+          'Venda concluida, mas os documentos nao foram enfileirados.'
+      };
+    }
+  }
+
+  async function finishSingle(){
+
+    if(!singleMethod){
+
+      setMsg(
+        'Escolha a forma de pagamento.'
+      );
+
+      return;
+    }
+
+    if(
+      singleMethod==='DINHEIRO'&&
+      singleReceivedValue<total
+    ){
+
+      setMsg(
+        `Informe pelo menos ${brl(total)} recebidos em dinheiro.`
+      );
+
+      return;
+    }
+
+    setBusy(true);
+    setMsg('');
+
+    try{
+
+      const body={
+
+        items:
+          cart.map(item=>({
+            product_id:item.id,
+            qty:item.qty,
+            mode:'UNIT'
+          })),
+
+        payments:[
+          {
+            method:singleMethod,
+            amount:total
+          }
+        ],
+
+        payment_method:singleMethod,
+
+        received_amount:
+          singleMethod==='DINHEIRO' ? singleReceivedValue : total,
+
+        customer_name:null,
+        employee_id:null,
+        tip_amount:0
+      };
+
+      const sale=
+        await api.createSaleV14(body);
+
+      let finalSale=sale;
+
+      try{
+
+        finalSale=
+          await postSaleFlow(sale);
+
+      }catch(flowError){
+
+        setSuccess({
+          sale,
+          warning:
+            'Venda registrada, mas a ficha/liberaÃ§Ã£o automÃ¡tica precisa de atenÃ§Ã£o: '+
+            (flowError.message||'erro operacional')
+        });
+
+        setPaymentOpen(false);
+        setCart([]);
+
+        await onDone?.();
+
+        return;
+      }
+
+      setSuccess({
+        sale:finalSale,
+        warning:''
+      });
+
+      setPaymentOpen(false);
+      setCart([]);
+
+      await onDone?.();
+
+      setTimeout(()=>{
+        setSuccess(null);
+      },1800);
+
+    }catch(e){
+
+      setMsg(
+        e.message||
+        'NÃ£o foi possÃ­vel concluir a venda.'
+      );
+
+    }finally{
+
+      setBusy(false);
+    }
+  }
+
+  async function finishSplit(){
+
+    if(!allPeoplePaid){
+
+      setMsg(
+        'Confirme o pagamento de todas as pessoas antes de finalizar.'
+      );
+
+      return;
+    }
+
+    const payments=
+      buildSplitPayments();
+
+    const paymentTotal=
+      round(
+        payments.reduce(
+          (sum,p)=>sum+p.amount,
+          0
+        )
+      );
+
+    if(
+      Math.abs(paymentTotal-total)>.01
+    ){
+
+      setMsg(
+        `A divisÃ£o nÃ£o fechou o total da venda. ${brl(paymentTotal)} de ${brl(total)}.`
+      );
+
+      return;
+    }
+
+    setBusy(true);
+    setMsg('');
+
+    try{
+
+      const cashAmount=
+        payments
+          .filter(p=>p.method==='DINHEIRO')
+          .reduce(
+            (sum,p)=>sum+p.amount,
+            0
+          );
+
+      const receivedCash=
+        splitCashReceived();
+
+      const body={
+
+        items:
+          cart.map(item=>({
+            product_id:item.id,
+            qty:item.qty,
+            mode:'UNIT'
+          })),
+
+        payments,
+
+        payment_method:
+          payments.length>1 ? 'MISTO' : payments[0].method,
+
+        received_amount:
+          cashAmount>0 ? receivedCash : total,
+
+        customer_name:null,
+        employee_id:null,
+        tip_amount:0
+      };
+
+      const sale=
+        await api.createSaleV14(body);
+
+      let finalSale=sale;
+
+      try{
+
+        finalSale=
+          await postSaleFlow(sale);
+
+      }catch(flowError){
+
+        setSuccess({
+          sale,
+          warning:
+            'Venda registrada, mas a ficha/liberaÃ§Ã£o automÃ¡tica precisa de atenÃ§Ã£o: '+
+            (flowError.message||'erro operacional')
+        });
+
+        setPaymentOpen(false);
+        setCart([]);
+
+        await onDone?.();
+
+        return;
+      }
+
+      setSuccess({
+        sale:finalSale,
+        warning:''
+      });
+
+      setPaymentOpen(false);
+      setCart([]);
+
+      await onDone?.();
+
+      setTimeout(()=>{
+        setSuccess(null);
+      },1800);
+
+    }catch(e){
+
+      setMsg(
+        e.message||
+        'NÃ£o foi possÃ­vel concluir a venda.'
+      );
+
+    }finally{
+
+      setBusy(false);
+    }
+  }
+
+  async function openCash(){
+
+    try{
+
+      setBusy(true);
+      setMsg('');
+
+      await api.openCash({
+        opening_amount:num(opening),
+        notes:'Abertura Smart POS V2.1'
+      });
+
+      await onDone?.();
+
+    }catch(e){
+
+      setMsg(e.message);
+
+    }finally{
+
+      setBusy(false);
+    }
+  }
+
+  if(!cash){
+
+    return(
+      <section className="fastpos open-page">
+
+        <style>{styles}</style>
+
+        <div className="open-card nexus-pos-premium-v21">
+
+          <span className="eyebrow">
+            NEXUS HOSPITALITY ONE
+          </span>
+
+          <h1>Abrir caixa</h1>
+
+          <p>
+            Operador: <b>{user?.name||'UsuÃ¡rio'}</b>
+          </p>
+
+          <label>Saldo inicial</label>
+
+          <div className="money-input">
+            <span>R$</span>
+
+            <input
+              value={opening}
+              onChange={
+                e=>setOpening(e.target.value)
+              }
+              placeholder="0,00"
+            />
+          </div>
+
+          <button
+            className="primary"
+            disabled={busy}
+            onClick={openCash}
+          >
+            ABRIR CAIXA
+          </button>
+
+          {msg&&(
+            <div className="message">
+              {msg}
+            </div>
+          )}
+
+        </div>
+
+      </section>
+    );
+  }
+
+  return(
+    <section className="fastpos nexus-pos-premium-v21">
+
+      <style>{styles}</style>
+
+      <header className="top">
+
+        <div className="brand">
+
+          <strong>NEXUS</strong>
+
+          <span>
+            HOSPITALITY ONE â€¢ FAST CHECKOUT
+          </span>
+
+        </div>
+
+        <div className="operator">
+
+          <div>
+            <small>OPERADOR</small>
+            <strong>{user?.name||'UsuÃ¡rio'}</strong>
+          </div>
+
+          <em>â— CAIXA ABERTO</em>
+
+        </div>
+
+      </header>
+
+      <div className="layout">
+
+        <main className="catalog">
+
+          <div className="catalog-top">
+
+            <input
+              className="search"
+              value={search}
+              onChange={
+                e=>setSearch(e.target.value)
+              }
+              placeholder="Buscar produto..."
+            />
+
+            <div className="categories">
+
+              {categories.map(c=>(
+                <button
+                  key={c}
+                  className={
+                    'category '+
+                    (category===c?'active':'')
+                  }
+                  onClick={()=>setCategory(c)}
+                >
+                  {c}
+                </button>
+              ))}
+
+            </div>
+
+          </div>
+
+          <div className="products">
+
+            {visibleProducts.map(product=>(
+              <button
+                className="product"
+                key={product.id}
+                onClick={()=>add(product)}
+              >
+
+                <div className="nx-product-media">
+
+                  {product.image_url ? (
+                    <img
+                      src={product.image_url}
+                      alt={product.name}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="nx-product-placeholder">
+                      <span>◆</span>
+                      <small>NEXUS</small>
+                    </div>
+                  )}
+
+                  <div className="nx-product-stock">
+                    {Number(product.stock || 0)} em estoque
+                  </div>
+
+                </div>
+
+                <div className="nx-product-content">
+
+                  <small className="nx-product-category">
+                    {product.category||'PRODUTO'}
+                  </small>
+
+                  <strong className="nx-product-name">
+                    {product.name}
+                  </strong>
+
+                  <div className="nx-product-bottom">
+
+                    <b className="nx-product-price">
+                      {brl(product.price)}
+                    </b>
+
+                    <span className="nx-product-add">
+                      +
+                    </span>
+
+                  </div>
+
+                </div>
+
+              </button>
+            ))}
+
+          </div>
+
+        </main>
+
+        <aside className="cart">
+
+          <div className="cart-title">
+
+            <div>
+              <small>PEDIDO ATUAL</small>
+
+              <strong>
+                {cart.reduce(
+                  (sum,item)=>sum+item.qty,
+                  0
+                )}{' '}
+                item(ns)
+              </strong>
+            </div>
+
+            {!!cart.length&&(
+              <button
+                className="clear"
+                onClick={()=>setCart([])}
+              >
+                LIMPAR
+              </button>
+            )}
+
+          </div>
+
+          <div className="cart-items">
+
+            {!cart.length&&(
+              <div className="empty">
+
+                <div className="empty-icon">
+                  +
+                </div>
+
+                <strong>
+                  Novo pedido
+                </strong>
+
+                <span>
+                  Selecione os produtos ao lado.
+                </span>
+
+              </div>
+            )}
+
+            {cart.map(item=>(
+              <div
+                className="cart-item"
+                key={item.id}
+              >
+
+                <div className="item-name">
+
+                  <strong>
+                    {item.name}
+                  </strong>
+
+                  <small>
+                    {brl(item.price)}
+                  </small>
+
+                </div>
+
+                <div className="qty">
+
+                  <button
+                    onClick={()=>
+                      qty(item.id,-1)
+                    }
+                  >
+                    âˆ’
+                  </button>
+
+                  <b>{item.qty}</b>
+
+                  <button
+                    onClick={()=>
+                      qty(item.id,1)
+                    }
+                  >
+                    +
+                  </button>
+
+                </div>
+
+                <strong>
+                  {brl(
+                    item.price*item.qty
+                  )}
+                </strong>
+
+              </div>
+            ))}
+
+          </div>
+
+          <div className="checkout">
+
+            <div className="total">
+
+              <span>TOTAL</span>
+
+              <strong>
+                {brl(total)}
+              </strong>
+
+            </div>
+
+            <button
+              className="pay"
+              disabled={!cart.length}
+              onClick={openPayment}
+            >
+              PAGAR
+              <span>{brl(total)}</span>
+            </button>
+
+          </div>
+
+        </aside>
+
+      </div>
+
+      {paymentOpen&&(
+        <div className="overlay">
+
+          <div className="modal">
+
+            <button
+              className="close"
+              onClick={closePayment}
+            >
+              Ã—
+            </button>
+
+            <span className="eyebrow">
+              FINALIZAR PEDIDO
+            </span>
+
+            <div className="pay-total">
+              {brl(total)}
+            </div>
+
+            {!paymentMode&&(
+              <>
+
+                <h2>
+                  Como serÃ¡ o pagamento?
+                </h2>
+
+                <div className="choice-grid">
+
+                  <button
+                    className="choice"
+                    onClick={chooseSingle}
+                  >
+
+                    <span className="choice-icon">
+                      1
+                    </span>
+
+                    <strong>
+                      PAGAR SOZINHO
+                    </strong>
+
+                    <small>
+                      Uma Ãºnica pessoa paga a conta
+                    </small>
+
+                  </button>
+
+                  <button
+                    className="choice"
+                    onClick={chooseSplit}
+                  >
+
+                    <span className="choice-icon">
+                      Ã·
+                    </span>
+
+                    <strong>
+                      DIVIDIR CONTA
+                    </strong>
+
+                    <small>
+                      O NEXUS calcula automaticamente
+                    </small>
+
+                  </button>
+
+                </div>
+
+              </>
+            )}
+
+            {paymentMode==='SINGLE'&&(
+              <>
+
+                <button
+                  className="back"
+                  onClick={()=>{
+                    setPaymentMode('');
+                    setSingleMethod('');
+                    setSingleReceived('');
+                    setMsg('');
+                  }}
+                >
+                  â† VOLTAR
+                </button>
+
+                <h2>
+                  Escolha a forma de pagamento
+                </h2>
+
+                <div className="methods">
+
+                  {METHODS.map(method=>(
+                    <button
+                      key={method.id}
+                      className={
+                        'method '+
+                        (
+                          singleMethod===method.id ? 'selected' : ''
+                        )
+                      }
+                      onClick={()=>{
+                        setSingleMethod(method.id);
+                        setSingleReceived('');
+                        setMsg('');
+                      }}
+                    >
+                      {method.label}
+                    </button>
+                  ))}
+
+                </div>
+
+                {singleMethod==='DINHEIRO'&&(
+                  <>
+
+                    <label className="field-label">
+                      Valor entregue pelo cliente
+                    </label>
+
+                    <div className="money-input large">
+
+                      <span>R$</span>
+
+                      <input
+                        autoFocus
+                        value={singleReceived}
+                        onChange={
+                          e=>
+                            setSingleReceived(
+                              e.target.value
+                            )
+                        }
+                        placeholder="0,00"
+                      />
+
+                    </div>
+
+                    <div className="cash-buttons">
+
+                      <button
+                        onClick={()=>
+                          setSingleReceived(
+                            total.toFixed(2)
+                          )
+                        }
+                      >
+                        EXATO
+                      </button>
+
+                      {[10,20,50,100,200]
+                        .filter(v=>v>=total)
+                        .map(v=>(
+                          <button
+                            key={v}
+                            onClick={()=>
+                              setSingleReceived(
+                                String(v)
+                              )
+                            }
+                          >
+                            R$ {v}
+                          </button>
+                        ))}
+
+                    </div>
+
+                    <div className="change">
+
+                      <span>TROCO</span>
+
+                      <strong>
+                        {brl(singleChange)}
+                      </strong>
+
+                    </div>
+
+                  </>
+                )}
+
+                <button
+                  className="finish"
+                  disabled={
+                    busy||
+                    !singleMethod||
+                    (
+                      singleMethod==='DINHEIRO'&&
+                      singleReceivedValue<total
+                    )
+                  }
+                  onClick={finishSingle}
+                >
+                  {busy ? 'FINALIZANDO...' : 'CONFIRMAR E FINALIZAR'}
+                </button>
+
+              </>
+            )}
+
+            {paymentMode==='SPLIT'&&(
+              <>
+
+                <button
+                  className="back"
+                  onClick={()=>{
+                    setPaymentMode('');
+                    setPeople([]);
+                    setMsg('');
+                  }}
+                >
+                  â† VOLTAR
+                </button>
+
+                <div className="split-head">
+
+                  <div>
+                    <small>
+                      DIVIDIR ENTRE
+                    </small>
+
+                    <strong>
+                      Quantas pessoas?
+                    </strong>
+                  </div>
+
+                  <div className="people-control">
+
+                    <button
+                      onClick={()=>
+                        rebuildPeople(
+                          peopleCount-1
+                        )
+                      }
+                      disabled={peopleCount<=2}
+                    >
+                      âˆ’
+                    </button>
+
+                    <b>
+                      {peopleCount}
+                    </b>
+
+                    <button
+                      onClick={()=>
+                        rebuildPeople(
+                          peopleCount+1
+                        )
+                      }
+                    >
+                      +
+                    </button>
+
+                  </div>
+
+                </div>
+
+                <div className="split-summary">
+
+                  <span>
+                    {peopleCount} pessoas
+                  </span>
+
+                  <strong>
+                    {peopleCount>0 ? `${brl(total/peopleCount)} em mÃ©dia` : brl(total)
+                    }
+                  </strong>
+
+                </div>
+
+                <div className="people-list">
+
+                  {people.map(
+                    (person,index)=>(
+                      <div
+                        className={
+                          'person '+
+                          (
+                            person.paid ? 'paid' : ''
+                          )
+                        }
+                        key={person.id}
+                      >
+
+                        <div className="person-head">
+
+                          <div>
+
+                            <small>
+                              PESSOA {index+1}
+                            </small>
+
+                            <strong>
+                              {brl(person.amount)}
+                            </strong>
+
+                          </div>
+
+                          {person.paid&&(
+                            <span className="paid-badge">
+                              âœ“ PAGO
+                            </span>
+                          )}
+
+                        </div>
+
+                        <div className="person-methods">
+
+                          {METHODS.map(method=>(
+                            <button
+                              key={method.id}
+                              className={
+                                person.method===method.id ? 'selected' : ''
+                              }
+                              onClick={()=>
+                                selectPersonMethod(
+                                  index,
+                                  method.id
+                                )
+                              }
+                            >
+                              {method.label}
+                            </button>
+                          ))}
+
+                        </div>
+
+                        {person.method==='DINHEIRO'&&(
+                          <div className="person-cash">
+
+                            <label>
+                              Entregou
+                            </label>
+
+                            <div className="mini-money">
+
+                              <span>R$</span>
+
+                              <input
+                                value={person.received}
+                                onChange={
+                                  e=>
+                                    updatePerson(
+                                      index,
+                                      {
+                                        received:e.target.value,
+                                        paid:false
+                                      }
+                                    )
+                                }
+                                placeholder="0,00"
+                              />
+
+                            </div>
+
+                            <div className="person-cash-bottom">
+
+                              <span>
+                                Troco:
+                                {' '}
+                                <b>
+                                  {brl(
+                                    personChange(person)
+                                  )}
+                                </b>
+                              </span>
+
+                              <button
+                                onClick={()=>
+                                  confirmCashPerson(index)
+                                }
+                              >
+                                CONFIRMAR
+                              </button>
+
+                            </div>
+
+                          </div>
+                        )}
+
+                      </div>
+                    )
+                  )}
+
+                </div>
+
+                <div className="paid-progress">
+
+                  <div>
+                    <small>
+                      PAGAMENTOS CONFIRMADOS
+                    </small>
+
+                    <strong>
+                      {peoplePaid}/{people.length}
+                    </strong>
+                  </div>
+
+                  <div className="progress">
+
+                    <span
+                      style={{
+                        width:
+                          `${
+                            people.length ? (peoplePaid/people.length)*100 : 0
+                          }%`
+                      }}
+                    />
+
+                  </div>
+
+                </div>
+
+                <button
+                  className="finish"
+                  disabled={
+                    busy||
+                    !allPeoplePaid
+                  }
+                  onClick={finishSplit}
+                >
+                  {busy ? 'FINALIZANDO...' : allPeoplePaid ? 'FINALIZAR VENDA' : `AGUARDANDO ${people.length-peoplePaid} PAGAMENTO(S)`}
+                </button>
+
+              </>
+            )}
+
+            {msg&&(
+              <div className="message">
+                {msg}
+              </div>
+            )}
+
+          </div>
+
+        </div>
+      )}
+
+      {success&&(
+        <div className="toast-success">
+
+          <div className="success-check">
+            âœ“
+          </div>
+
+          <div>
+
+            <small>
+              VENDA FINALIZADA
+            </small>
+
+            <strong>
+              Pedido #{success.sale?.id}
+            </strong>
+
+            <span>
+              {success.warning||
+               'Venda concluÃ­da â€¢ Ficha de retirada gerada â€¢ Caixa pronto'}
+            </span>
+
+          </div>
+
+        </div>
+      )}
+
+    </section>
+  );
+}
+
+const styles=`
+.fastpos{
+  --bg:#08090b;
+  --panel:#111318;
+  --panel2:#171a20;
+  --line:#292e37;
+  --text:#f5f6f8;
+  --muted:#9096a0;
+  --gold:#e6b94e;
+  --green:#59d99c;
+  --red:#ff657d;
+  min-height:100vh;
+  padding:20px;
+  box-sizing:border-box;
+  color:var(--text);
+  background:
+    radial-gradient(circle at 12% 0%,#1b170d 0,transparent 26%),
+    linear-gradient(135deg,#08090b,#101218);
+  font-family:Inter,Segoe UI,Arial,sans-serif
+}
+
+.fastpos *{
+  box-sizing:border-box
+}
+
+.fastpos button,
+.fastpos input{
+  font:inherit
+}
+
+.fastpos button{
+  cursor:pointer
+}
+
+.top{
+  max-width:1500px;
+  margin:0 auto 16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px
+}
+
+.brand strong{
+  display:block;
+  font-size:21px;
+  letter-spacing:3px
+}
+
+.brand span{
+  display:block;
+  margin-top:4px;
+  color:var(--gold);
+  font-size:10px;
+  letter-spacing:2px
+}
+
+.operator{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  padding:10px 14px;
+  border:1px solid var(--line);
+  border-radius:13px;
+  background:var(--panel)
+}
+
+.operator small,
+.operator strong{
+  display:block
+}
+
+.operator small{
+  color:var(--muted);
+  font-size:9px
+}
+
+.operator em{
+  color:var(--green);
+  font-size:10px;
+  font-style:normal
+}
+
+.layout{
+  max-width:1500px;
+  margin:auto;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 390px;
+  gap:16px;
+  align-items:start
+}
+
+.catalog{
+  min-width:0
+}
+
+.catalog-top{
+  position:sticky;
+  top:0;
+  z-index:5;
+  padding-bottom:10px;
+  background:linear-gradient(#0b0c10 80%,transparent)
+}
+
+.search{
+  width:100%;
+  padding:14px 16px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  outline:0;
+  background:#111318;
+  color:#fff
+}
+
+.categories{
+  display:flex;
+  gap:7px;
+  overflow:auto;
+  padding-top:9px
+}
+
+.category{
+  flex:none;
+  padding:8px 13px;
+  border:1px solid var(--line);
+  border-radius:999px;
+  background:#121419;
+  color:#999
+}
+
+.category.active{
+  border-color:var(--gold);
+  background:var(--gold);
+  color:#111;
+  font-weight:900
+}
+
+.products{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:10px
+}
+
+.product{
+  min-height:132px;
+  padding:15px;
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
+  text-align:left;
+  border:1px solid var(--line);
+  border-radius:16px;
+  background:linear-gradient(145deg,#171a20,#101217);
+  color:#fff;
+  transition:.15s
+}
+
+.product:hover{
+  transform:translateY(-2px);
+  border-color:#665634
+}
+
+.product small{
+  color:#777;
+  font-size:9px
+}
+
+.product strong{
+  font-size:15px
+}
+
+.product b{
+  color:var(--gold);
+  font-size:19px
+}
+
+.product em{
+  color:#999;
+  font-size:9px;
+  font-style:normal;
+  letter-spacing:1px
+}
+
+.cart{
+  position:sticky;
+  top:15px;
+  height:calc(100vh - 35px);
+  min-height:560px;
+  display:flex;
+  flex-direction:column;
+  border:1px solid var(--line);
+  border-radius:20px;
+  overflow:hidden;
+  background:var(--panel);
+  box-shadow:0 20px 50px rgba(0,0,0,.22)
+}
+
+.cart-title{
+  padding:16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-bottom:1px solid var(--line)
+}
+
+.cart-title small{
+  display:block;
+  color:var(--muted);
+  font-size:9px
+}
+
+.clear{
+  border:0;
+  background:transparent;
+  color:#c49d45;
+  font-size:10px
+}
+
+.cart-items{
+  flex:1;
+  overflow:auto;
+  padding:0 15px
+}
+
+.empty{
+  height:100%;
+  min-height:280px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:6px;
+  color:#777;
+  text-align:center
+}
+
+.empty-icon{
+  width:48px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  border:1px solid #343942;
+  border-radius:50%;
+  font-size:25px
+}
+
+.empty span{
+  font-size:12px
+}
+
+.cart-item{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  padding:13px 0;
+  border-bottom:1px solid #242831
+}
+
+.item-name{
+  flex:1
+}
+
+.item-name strong,
+.item-name small{
+  display:block
+}
+
+.item-name small{
+  margin-top:3px;
+  color:var(--muted)
+}
+
+.qty{
+  display:flex;
+  align-items:center;
+  gap:6px
+}
+
+.qty button{
+  width:29px;
+  height:29px;
+  border:1px solid #373c45;
+  border-radius:8px;
+  background:#1b1e24;
+  color:#fff
+}
+
+.checkout{
+  padding:15px;
+  border-top:1px solid var(--line);
+  background:#0e1014
+}
+
+.total{
+  display:flex;
+  justify-content:space-between;
+  align-items:end;
+  margin-bottom:12px
+}
+
+.total span{
+  color:var(--muted);
+  font-size:11px
+}
+
+.total strong{
+  font-size:30px
+}
+
+.pay{
+  width:100%;
+  padding:15px 18px;
+  display:flex;
+  justify-content:space-between;
+  border:0;
+  border-radius:12px;
+  background:var(--gold);
+  color:#111;
+  font-weight:950
+}
+
+.pay:disabled{
+  opacity:.35;
+  cursor:not-allowed
+}
+
+.overlay{
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:grid;
+  place-items:center;
+  padding:16px;
+  background:rgba(0,0,0,.82);
+  backdrop-filter:blur(9px)
+}
+
+.modal{
+  position:relative;
+  width:min(700px,100%);
+  max-height:94vh;
+  overflow:auto;
+  padding:25px;
+  border:1px solid #343a45;
+  border-radius:22px;
+  background:#111419;
+  box-shadow:0 35px 100px #000
+}
+
+.close{
+  position:absolute;
+  right:13px;
+  top:13px;
+  width:35px;
+  height:35px;
+  border:1px solid var(--line);
+  border-radius:50%;
+  background:#1a1d23;
+  color:#fff;
+  font-size:21px
+}
+
+.eyebrow{
+  color:var(--gold);
+  font-size:9px;
+  letter-spacing:2px
+}
+
+.pay-total{
+  margin:5px 0 18px;
+  font-size:43px;
+  font-weight:900
+}
+
+.choice-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:11px
+}
+
+.choice{
+  min-height:150px;
+  padding:20px;
+  border:1px solid var(--line);
+  border-radius:17px;
+  background:#171a20;
+  color:#fff;
+  text-align:left
+}
+
+.choice:hover{
+  border-color:var(--gold)
+}
+
+.choice-icon{
+  width:40px;
+  height:40px;
+  margin-bottom:17px;
+  display:grid;
+  place-items:center;
+  border-radius:11px;
+  background:#25200f;
+  color:var(--gold);
+  font-size:22px;
+  font-weight:900
+}
+
+.choice strong,
+.choice small{
+  display:block
+}
+
+.choice small{
+  margin-top:7px;
+  color:var(--muted)
+}
+
+.back{
+  margin-bottom:12px;
+  padding:0;
+  border:0;
+  background:transparent;
+  color:var(--gold)
+}
+
+.methods{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:8px
+}
+
+.method,
+.person-methods button{
+  padding:13px;
+  border:1px solid #333944;
+  border-radius:11px;
+  background:#181b21;
+  color:#ddd
+}
+
+.method.selected,
+.person-methods button.selected{
+  border-color:var(--gold);
+  background:#2a2414;
+  color:#f1c85d;
+  font-weight:900
+}
+
+.field-label{
+  display:block;
+  margin:17px 0 7px;
+  color:#aaa
+}
+
+.money-input{
+  display:flex;
+  align-items:center;
+  border:1px solid #383e48;
+  border-radius:12px;
+  padding:0 12px;
+  background:#0d0f12
+}
+
+.money-input span{
+  color:#777
+}
+
+.money-input input{
+  width:100%;
+  padding:13px;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:#fff
+}
+
+.money-input.large input{
+  font-size:29px;
+  font-weight:900
+}
+
+.cash-buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  margin-top:8px
+}
+
+.cash-buttons button{
+  padding:8px 11px;
+  border:1px solid #343a44;
+  border-radius:8px;
+  background:#1b1e24;
+  color:#ddd
+}
+
+.change{
+  margin-top:11px;
+  padding:13px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border:1px solid #28543f;
+  border-radius:12px;
+  background:#10251c
+}
+
+.change span{
+  color:#8ac9aa
+}
+
+.change strong{
+  color:var(--green);
+  font-size:26px
+}
+
+.finish{
+  width:100%;
+  margin-top:16px;
+  padding:15px;
+  border:0;
+  border-radius:12px;
+  background:var(--green);
+  color:#07140e;
+  font-weight:950
+}
+
+.finish:disabled{
+  opacity:.35;
+  cursor:not-allowed
+}
+
+.split-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:13px;
+  background:#171a20
+}
+
+.split-head small,
+.split-head strong{
+  display:block
+}
+
+.split-head small{
+  color:var(--muted);
+  font-size:9px
+}
+
+.people-control{
+  display:flex;
+  align-items:center;
+  gap:12px
+}
+
+.people-control button{
+  width:38px;
+  height:38px;
+  border:1px solid #393f49;
+  border-radius:10px;
+  background:#202329;
+  color:#fff;
+  font-size:20px
+}
+
+.people-control b{
+  min-width:28px;
+  text-align:center;
+  font-size:23px
+}
+
+.split-summary{
+  margin:9px 0;
+  padding:11px 14px;
+  display:flex;
+  justify-content:space-between;
+  border-radius:11px;
+  background:#0d0f12;
+  color:#aaa
+}
+
+.split-summary strong{
+  color:var(--gold)
+}
+
+.people-list{
+  display:grid;
+  gap:8px
+}
+
+.person{
+  padding:13px;
+  border:1px solid var(--line);
+  border-radius:13px;
+  background:#171a20
+}
+
+.person.paid{
+  border-color:#28543f;
+  background:#122219
+}
+
+.person-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px
+}
+
+.person-head small,
+.person-head strong{
+  display:block
+}
+
+.person-head small{
+  color:var(--muted);
+  font-size:9px
+}
+
+.person-head strong{
+  margin-top:2px;
+  font-size:20px
+}
+
+.paid-badge{
+  color:var(--green);
+  font-size:10px;
+  font-weight:900
+}
+
+.person-methods{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:5px
+}
+
+.person-methods button{
+  padding:9px 5px;
+  font-size:10px
+}
+
+.person-cash{
+  margin-top:10px;
+  padding:10px;
+  border-radius:10px;
+  background:#0d0f12
+}
+
+.person-cash label{
+  display:block;
+  margin-bottom:5px;
+  color:#888;
+  font-size:10px
+}
+
+.mini-money{
+  display:flex;
+  align-items:center;
+  border:1px solid #343a44;
+  border-radius:9px;
+  padding:0 9px
+}
+
+.mini-money span{
+  color:#777
+}
+
+.mini-money input{
+  width:100%;
+  padding:9px;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:#fff
+}
+
+.person-cash-bottom{
+  margin-top:7px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center
+}
+
+.person-cash-bottom span{
+  color:#aaa;
+  font-size:11px
+}
+
+.person-cash-bottom button{
+  padding:7px 10px;
+  border:0;
+  border-radius:8px;
+  background:var(--green);
+  color:#07140e;
+  font-size:9px;
+  font-weight:900
+}
+
+.paid-progress{
+  margin-top:11px;
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:11px;
+  background:#0d0f12
+}
+
+.paid-progress>div:first-child{
+  display:flex;
+  justify-content:space-between
+}
+
+.paid-progress small{
+  color:#888
+}
+
+.progress{
+  height:6px;
+  margin-top:8px;
+  overflow:hidden;
+  border-radius:999px;
+  background:#242830
+}
+
+.progress span{
+  display:block;
+  height:100%;
+  border-radius:999px;
+  background:var(--green);
+  transition:.2s
+}
+
+.message{
+  margin-top:11px;
+  padding:11px;
+  border:1px solid #594721;
+  border-radius:10px;
+  background:#251e10;
+  color:#efc75e
+}
+
+.toast-success{
+  position:fixed;
+  right:22px;
+  bottom:22px;
+  z-index:10000;
+  width:min(420px,calc(100% - 44px));
+  display:flex;
+  gap:13px;
+  align-items:center;
+  padding:16px;
+  border:1px solid #28543f;
+  border-radius:15px;
+  background:#102219;
+  box-shadow:0 20px 60px #000;
+  animation:toastIn .2s ease
+}
+
+.success-check{
+  flex:none;
+  width:43px;
+  height:43px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  background:#17442d;
+  color:var(--green);
+  font-size:22px;
+  font-weight:900
+}
+
+.toast-success small,
+.toast-success strong,
+.toast-success span{
+  display:block
+}
+
+.toast-success small{
+  color:#77b996;
+  font-size:8px;
+  letter-spacing:1px
+}
+
+.toast-success strong{
+  margin:2px 0;
+  font-size:17px
+}
+
+.toast-success span{
+  color:#a8c4b4;
+  font-size:10px
+}
+
+.open-page{
+  display:grid;
+  place-items:center
+}
+
+.open-card{
+  width:min(430px,100%);
+  padding:27px;
+  border:1px solid var(--line);
+  border-radius:20px;
+  background:var(--panel)
+}
+
+.open-card label{
+  display:block;
+  margin:18px 0 7px;
+  color:#aaa
+}
+
+.primary{
+  width:100%;
+  margin-top:14px;
+  padding:14px;
+  border:0;
+  border-radius:11px;
+  background:var(--gold);
+  color:#111;
+  font-weight:900
+}
+
+@keyframes toastIn{
+  from{
+    transform:translateY(15px);
+    opacity:0
+  }
+  to{
+    transform:translateY(0);
+    opacity:1
+  }
+}
+
+@media(max-width:950px){
+  .layout{
+    grid-template-columns:1fr
+  }
+
+  .cart{
+    position:relative;
+    top:auto;
+    height:auto;
+    min-height:420px
+  }
+}
+
+@media(max-width:600px){
+  .fastpos{
+    padding:11px
+  }
+
+  .products{
+    grid-template-columns:1fr 1fr
+  }
+
+  .choice-grid{
+    grid-template-columns:1fr
+  }
+
+  .person-methods{
+    grid-template-columns:1fr 1fr
+  }
+
+  .modal{
+    padding:20px 14px
+  }
+}
+`;
+
+
+============================================================
+ FIM: SmartPOSV16.jsx
+============================================================
+
+
+============================================================
+ ARQUIVO: SmartPOSPremiumV21.css
+============================================================
+
+/* =========================================================
+   NEXUS HOSPITALITY ONE
+   CAIXA PREMIUM V2.1
+   ========================================================= */
+
+.nexus-pos-premium-v21{
+  --nx-gold:#d6ae55;
+  --nx-gold-light:#f0d58a;
+  --nx-black:#07090c;
+  --nx-panel:#0d1117;
+  --nx-panel2:#111720;
+  --nx-border:rgba(255,255,255,.07);
+  --nx-gold-border:rgba(214,174,85,.25);
+  --nx-muted:#8f99a8;
+
+  min-height:calc(100vh - 105px);
+  color:#f7f8fa;
+  background:
+    radial-gradient(circle at 18% 0%,rgba(214,174,85,.07),transparent 30%),
+    linear-gradient(145deg,#07090c,#090c11 52%,#06080b);
+  border-radius:22px;
+}
+
+/* =========================================================
+   AREA DE PRODUTOS
+   ========================================================= */
+
+.nexus-pos-premium-v21 .products{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:14px;
+  align-content:start;
+}
+
+.nexus-pos-premium-v21 .product{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+
+  min-height:250px;
+  padding:0;
+  overflow:hidden;
+
+  text-align:left;
+  color:#fff;
+
+  background:
+    linear-gradient(155deg,#121821,#0c1016);
+
+  border:1px solid var(--nx-border);
+  border-radius:18px;
+
+  box-shadow:
+    0 12px 32px rgba(0,0,0,.24),
+    inset 0 1px 0 rgba(255,255,255,.025);
+
+  transition:
+    transform .16s ease,
+    border-color .16s ease,
+    box-shadow .16s ease;
+}
+
+.nexus-pos-premium-v21 .product:hover{
+  transform:translateY(-3px);
+  border-color:rgba(214,174,85,.55);
+
+  box-shadow:
+    0 18px 42px rgba(0,0,0,.36),
+    0 0 0 1px rgba(214,174,85,.08);
+}
+
+.nexus-pos-premium-v21 .product:active{
+  transform:scale(.985);
+}
+
+/* =========================================================
+   FOTO DO PRODUTO
+   ========================================================= */
+
+.nexus-pos-premium-v21 .nx-product-media{
+  position:relative;
+  width:100%;
+  height:132px;
+  overflow:hidden;
+
+  background:
+    radial-gradient(circle at center,rgba(214,174,85,.11),transparent 58%),
+    #080b10;
+
+  border-bottom:1px solid rgba(255,255,255,.05);
+}
+
+.nexus-pos-premium-v21 .nx-product-media img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transition:transform .22s ease;
+}
+
+.nexus-pos-premium-v21 .product:hover .nx-product-media img{
+  transform:scale(1.045);
+}
+
+.nexus-pos-premium-v21 .nx-product-placeholder{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+
+  width:100%;
+  height:100%;
+
+  color:var(--nx-gold);
+
+  background:
+    radial-gradient(circle,rgba(214,174,85,.10),transparent 60%);
+}
+
+.nexus-pos-premium-v21 .nx-product-placeholder span{
+  font-size:30px;
+  line-height:1;
+}
+
+.nexus-pos-premium-v21 .nx-product-placeholder small{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:3px;
+  opacity:.75;
+}
+
+/* =========================================================
+   ESTOQUE NO CARD
+   ========================================================= */
+
+.nexus-pos-premium-v21 .nx-product-stock{
+  position:absolute;
+  right:9px;
+  bottom:9px;
+
+  padding:5px 8px;
+
+  color:#f2f5f8;
+  background:rgba(4,7,10,.84);
+
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:999px;
+
+  font-size:9px;
+  font-weight:800;
+
+  backdrop-filter:blur(10px);
+}
+
+/* =========================================================
+   CONTEUDO DO PRODUTO
+   ========================================================= */
+
+.nexus-pos-premium-v21 .nx-product-content{
+  display:flex;
+  flex:1;
+  flex-direction:column;
+  padding:14px 15px 15px;
+}
+
+.nexus-pos-premium-v21 .nx-product-category{
+  margin-bottom:6px;
+
+  color:var(--nx-gold);
+
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:1.35px;
+  text-transform:uppercase;
+}
+
+.nexus-pos-premium-v21 .nx-product-name{
+  min-height:38px;
+
+  color:#f8fafc;
+
+  font-size:14px;
+  line-height:1.3;
+  font-weight:800;
+}
+
+.nexus-pos-premium-v21 .nx-product-bottom{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+
+  margin-top:auto;
+  padding-top:12px;
+}
+
+.nexus-pos-premium-v21 .nx-product-price{
+  color:var(--nx-gold-light);
+
+  font-size:20px;
+  font-weight:900;
+  letter-spacing:-.5px;
+}
+
+.nexus-pos-premium-v21 .nx-product-add{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  width:32px;
+  height:32px;
+
+  color:#080a0d;
+  background:
+    linear-gradient(135deg,#f1d88e,#d6ae55);
+
+  border-radius:10px;
+
+  font-size:20px;
+  font-weight:900;
+
+  box-shadow:
+    0 7px 18px rgba(214,174,85,.16);
+}
+
+/* =========================================================
+   CARRINHO / PEDIDO ATUAL
+   ========================================================= */
+
+.nexus-pos-premium-v21 .cart{
+  position:sticky;
+  top:12px;
+  align-self:flex-start;
+
+  max-height:calc(100vh - 130px);
+
+  background:
+    linear-gradient(180deg,rgba(17,23,32,.99),rgba(8,12,17,.99));
+
+  border:1px solid var(--nx-gold-border);
+  border-radius:20px;
+
+  box-shadow:
+    -14px 0 40px rgba(0,0,0,.18),
+    inset 1px 0 0 rgba(255,255,255,.025);
+}
+
+.nexus-pos-premium-v21 .cart-title{
+  border-bottom:1px solid rgba(214,174,85,.16);
+}
+
+.nexus-pos-premium-v21 .cart-title small{
+  color:var(--nx-gold);
+  font-weight:900;
+  letter-spacing:1.4px;
+}
+
+.nexus-pos-premium-v21 .cart-item{
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.055);
+  border-radius:13px;
+}
+
+.nexus-pos-premium-v21 .qty button{
+  color:var(--nx-gold-light);
+  background:rgba(214,174,85,.06);
+  border:1px solid rgba(214,174,85,.20);
+}
+
+.nexus-pos-premium-v21 .checkout{
+  border-top:1px solid rgba(214,174,85,.16);
+  background:rgba(5,8,12,.38);
+}
+
+.nexus-pos-premium-v21 .total span{
+  color:var(--nx-muted);
+}
+
+.nexus-pos-premium-v21 .total strong{
+  color:#fff;
+  font-size:27px;
+  letter-spacing:-.7px;
+}
+
+/* =========================================================
+   BOTAO PAGAR
+   ========================================================= */
+
+.nexus-pos-premium-v21 .pay,
+.nexus-pos-premium-v21 .finish{
+  min-height:56px;
+
+  color:#080a0c;
+
+  background:
+    linear-gradient(135deg,#f2db95,#d6ae55 55%,#b98931);
+
+  border:0;
+  border-radius:14px;
+
+  font-weight:950;
+  letter-spacing:.5px;
+
+  box-shadow:
+    0 12px 30px rgba(214,174,85,.16),
+    inset 0 1px 0 rgba(255,255,255,.42);
+
+  transition:
+    transform .14s ease,
+    filter .14s ease;
+}
+
+.nexus-pos-premium-v21 .pay:hover,
+.nexus-pos-premium-v21 .finish:hover{
+  filter:brightness(1.06);
+  transform:translateY(-1px);
+}
+
+.nexus-pos-premium-v21 .pay:disabled,
+.nexus-pos-premium-v21 .finish:disabled{
+  opacity:.42;
+  filter:grayscale(.5);
+}
+
+/* =========================================================
+   MODAIS DE PAGAMENTO
+   ========================================================= */
+
+.nexus-pos-premium-v21 .overlay{
+  background:rgba(2,4,7,.80);
+  backdrop-filter:blur(11px);
+}
+
+.nexus-pos-premium-v21 .modal{
+  color:#f7f8fa;
+
+  background:
+    radial-gradient(circle at top right,rgba(214,174,85,.08),transparent 30%),
+    linear-gradient(145deg,#121821,#090d13);
+
+  border:1px solid rgba(214,174,85,.22);
+  border-radius:24px;
+
+  box-shadow:
+    0 32px 90px rgba(0,0,0,.58);
+}
+
+.nexus-pos-premium-v21 .eyebrow{
+  color:var(--nx-gold);
+  letter-spacing:2px;
+}
+
+.nexus-pos-premium-v21 .pay-total{
+  color:var(--nx-gold-light);
+  font-weight:950;
+}
+
+.nexus-pos-premium-v21 .choice,
+.nexus-pos-premium-v21 .method{
+  color:#eef2f7;
+
+  background:rgba(255,255,255,.035);
+
+  border:1px solid rgba(255,255,255,.075);
+  border-radius:14px;
+}
+
+.nexus-pos-premium-v21 .choice:hover,
+.nexus-pos-premium-v21 .method:hover,
+.nexus-pos-premium-v21 .method.selected{
+  background:rgba(214,174,85,.09);
+  border-color:rgba(214,174,85,.55);
+}
+
+.nexus-pos-premium-v21 .method.selected{
+  color:var(--nx-gold-light);
+}
+
+/* =========================================================
+   DIVISAO DA CONTA
+   ========================================================= */
+
+.nexus-pos-premium-v21 .person{
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.065);
+  border-radius:15px;
+}
+
+.nexus-pos-premium-v21 .person.paid{
+  background:rgba(214,174,85,.055);
+  border-color:rgba(214,174,85,.34);
+}
+
+.nexus-pos-premium-v21 .paid-badge{
+  color:var(--nx-gold-light);
+}
+
+.nexus-pos-premium-v21 .progress{
+  background:rgba(255,255,255,.07);
+}
+
+.nexus-pos-premium-v21 .progress span{
+  background:
+    linear-gradient(90deg,#b98931,#f0d58a);
+}
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media(max-width:1180px){
+
+  .nexus-pos-premium-v21 .products{
+    grid-template-columns:
+      repeat(auto-fill,minmax(160px,1fr));
+  }
+
+  .nexus-pos-premium-v21 .nx-product-media{
+    height:112px;
+  }
+
+}
+
+@media(max-width:850px){
+
+  .nexus-pos-premium-v21 .cart{
+    position:relative;
+    top:auto;
+    max-height:none;
+  }
+
+  .nexus-pos-premium-v21 .products{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+  }
+
+}
+/* =========================================================
+   NEXUS HOSPITALITY ONE
+   SMART POS PREMIUM V2.2
+   FULL OPERATION DESK
+   ========================================================= */
+
+.nexus-pos-premium-v21.fastpos{
+  width:100%;
+  max-width:none;
+  min-height:calc(100vh - 90px);
+  padding:18px;
+  overflow:hidden;
+
+  background:
+    radial-gradient(circle at 10% 0%,rgba(214,174,85,.10),transparent 28%),
+    radial-gradient(circle at 88% 100%,rgba(214,174,85,.035),transparent 25%),
+    linear-gradient(145deg,#06080b 0%,#090d12 48%,#05070a 100%);
+
+  border:1px solid rgba(255,255,255,.045);
+  border-radius:24px;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    0 24px 70px rgba(0,0,0,.18);
+}
+
+/* HEADER */
+
+.nexus-pos-premium-v21 .top{
+  width:100%;
+  max-width:none;
+  min-height:74px;
+  margin:0 0 16px;
+  padding:0 5px 15px;
+
+  border-bottom:1px solid rgba(255,255,255,.065);
+}
+
+.nexus-pos-premium-v21 .brand strong{
+  font-size:24px;
+  font-weight:950;
+  letter-spacing:5px;
+}
+
+.nexus-pos-premium-v21 .brand span{
+  margin-top:6px;
+  color:#d6ae55;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:2.4px;
+}
+
+.nexus-pos-premium-v21 .operator{
+  min-width:245px;
+  padding:11px 15px;
+
+  background:
+    linear-gradient(145deg,rgba(18,24,32,.96),rgba(10,14,19,.96));
+
+  border:1px solid rgba(214,174,85,.18);
+  border-radius:14px;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    0 10px 28px rgba(0,0,0,.16);
+}
+
+.nexus-pos-premium-v21 .operator strong{
+  margin-top:2px;
+  font-size:13px;
+}
+
+.nexus-pos-premium-v21 .operator em{
+  padding:6px 9px;
+  color:#70e0a8;
+  background:rgba(89,217,156,.075);
+  border:1px solid rgba(89,217,156,.15);
+  border-radius:999px;
+  font-weight:800;
+}
+
+/* ESTRUTURA PRINCIPAL */
+
+.nexus-pos-premium-v21 .layout{
+  width:100%;
+  max-width:none;
+  margin:0;
+
+  grid-template-columns:minmax(0,1fr) 410px;
+  gap:18px;
+  align-items:start;
+}
+
+/* CATALOGO */
+
+.nexus-pos-premium-v21 .catalog{
+  min-width:0;
+  padding-right:2px;
+}
+
+.nexus-pos-premium-v21 .catalog-top{
+  position:sticky;
+  top:0;
+  z-index:20;
+
+  margin-bottom:12px;
+  padding:0 0 12px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(7,9,12,.99) 0%,
+      rgba(7,9,12,.96) 82%,
+      rgba(7,9,12,0) 100%
+    );
+}
+
+/* BUSCA */
+
+.nexus-pos-premium-v21 .search{
+  height:52px;
+  padding:0 18px;
+
+  color:#f7f8fa;
+  background:
+    linear-gradient(145deg,#10151c,#0b0f14);
+
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+
+  font-size:14px;
+
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025);
+}
+
+.nexus-pos-premium-v21 .search:focus{
+  border-color:rgba(214,174,85,.52);
+  box-shadow:
+    0 0 0 3px rgba(214,174,85,.07);
+}
+
+.nexus-pos-premium-v21 .search::placeholder{
+  color:#68717e;
+}
+
+/* CATEGORIAS */
+
+.nexus-pos-premium-v21 .categories{
+  gap:8px;
+  padding-top:10px;
+  scrollbar-width:thin;
+}
+
+.nexus-pos-premium-v21 .category{
+  min-height:36px;
+  padding:0 15px;
+
+  color:#9ca5b2;
+  background:rgba(255,255,255,.025);
+
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:10px;
+
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.4px;
+
+  transition:.15s ease;
+}
+
+.nexus-pos-premium-v21 .category:hover{
+  color:#f0d58a;
+  border-color:rgba(214,174,85,.32);
+}
+
+.nexus-pos-premium-v21 .category.active{
+  color:#090b0e;
+
+  background:
+    linear-gradient(135deg,#f2dc9a,#d6ae55);
+
+  border-color:#d6ae55;
+
+  box-shadow:
+    0 8px 22px rgba(214,174,85,.12);
+}
+
+/* PRODUTOS */
+
+.nexus-pos-premium-v21 .products{
+  grid-template-columns:repeat(auto-fill,minmax(185px,1fr));
+  gap:13px;
+  padding-bottom:30px;
+}
+
+.nexus-pos-premium-v21 .product{
+  min-height:238px;
+
+  background:
+    linear-gradient(155deg,#121821 0%,#0c1016 72%);
+
+  border:1px solid rgba(255,255,255,.065);
+  border-radius:17px;
+
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.20),
+    inset 0 1px 0 rgba(255,255,255,.025);
+}
+
+.nexus-pos-premium-v21 .product:hover{
+  transform:translateY(-3px);
+
+  border-color:rgba(214,174,85,.52);
+
+  box-shadow:
+    0 18px 38px rgba(0,0,0,.30),
+    0 0 0 1px rgba(214,174,85,.06);
+}
+
+.nexus-pos-premium-v21 .nx-product-media{
+  height:122px;
+
+  background:
+    radial-gradient(circle at 50% 45%,rgba(214,174,85,.12),transparent 58%),
+    linear-gradient(145deg,#0c1016,#080b0f);
+}
+
+.nexus-pos-premium-v21 .nx-product-media img{
+  object-fit:cover;
+}
+
+.nexus-pos-premium-v21 .nx-product-stock{
+  right:8px;
+  bottom:8px;
+  padding:5px 8px;
+
+  color:#dce2e9;
+  background:rgba(3,6,9,.82);
+
+  border:1px solid rgba(255,255,255,.09);
+
+  font-size:8px;
+  letter-spacing:.2px;
+}
+
+.nexus-pos-premium-v21 .nx-product-content{
+  padding:13px 14px 14px;
+}
+
+.nexus-pos-premium-v21 .nx-product-category{
+  margin-bottom:5px;
+  font-size:8px;
+  letter-spacing:1.3px;
+}
+
+.nexus-pos-premium-v21 .nx-product-name{
+  min-height:36px;
+  font-size:14px;
+  line-height:1.28;
+}
+
+.nexus-pos-premium-v21 .nx-product-price{
+  font-size:19px;
+}
+
+.nexus-pos-premium-v21 .nx-product-add{
+  width:34px;
+  height:34px;
+  border-radius:10px;
+
+  box-shadow:
+    0 8px 20px rgba(214,174,85,.16);
+}
+
+/* PAINEL DO PEDIDO */
+
+.nexus-pos-premium-v21 .cart{
+  position:sticky;
+  top:12px;
+
+  height:calc(100vh - 125px);
+  min-height:610px;
+  max-height:calc(100vh - 125px);
+
+  background:
+    radial-gradient(circle at 100% 0%,rgba(214,174,85,.06),transparent 25%),
+    linear-gradient(180deg,#111720 0%,#090d12 100%);
+
+  border:1px solid rgba(214,174,85,.22);
+  border-radius:20px;
+
+  box-shadow:
+    -12px 0 38px rgba(0,0,0,.16),
+    0 22px 55px rgba(0,0,0,.22),
+    inset 1px 0 0 rgba(255,255,255,.025);
+}
+
+.nexus-pos-premium-v21 .cart-title{
+  min-height:72px;
+  padding:17px 18px;
+
+  border-bottom:1px solid rgba(214,174,85,.14);
+}
+
+.nexus-pos-premium-v21 .cart-title small{
+  color:#d6ae55;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:1.8px;
+}
+
+.nexus-pos-premium-v21 .cart-title strong{
+  display:block;
+  margin-top:4px;
+  font-size:17px;
+}
+
+.nexus-pos-premium-v21 .clear{
+  padding:7px 9px;
+
+  color:#d6ae55;
+  background:rgba(214,174,85,.055);
+
+  border:1px solid rgba(214,174,85,.13);
+  border-radius:8px;
+
+  font-weight:800;
+}
+
+/* ITENS DO PEDIDO */
+
+.nexus-pos-premium-v21 .cart-items{
+  flex:1;
+  padding:12px;
+}
+
+.nexus-pos-premium-v21 .cart-item{
+  margin-bottom:8px;
+  padding:11px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.035),
+      rgba(255,255,255,.018)
+    );
+
+  border:1px solid rgba(255,255,255,.055);
+  border-radius:12px;
+}
+
+.nexus-pos-premium-v21 .item-name strong{
+  font-size:12px;
+}
+
+.nexus-pos-premium-v21 .item-name small{
+  font-size:10px;
+}
+
+.nexus-pos-premium-v21 .qty{
+  padding:3px;
+
+  background:#090c10;
+  border:1px solid rgba(255,255,255,.055);
+  border-radius:10px;
+}
+
+.nexus-pos-premium-v21 .qty button{
+  width:28px;
+  height:28px;
+
+  color:#f0d58a;
+  background:rgba(214,174,85,.055);
+
+  border:0;
+  border-radius:7px;
+}
+
+.nexus-pos-premium-v21 .qty b{
+  min-width:20px;
+  text-align:center;
+  font-size:12px;
+}
+
+/* ESTADO VAZIO */
+
+.nexus-pos-premium-v21 .empty{
+  min-height:300px;
+  color:#66707d;
+}
+
+.nexus-pos-premium-v21 .empty-icon{
+  width:54px;
+  height:54px;
+
+  color:#d6ae55;
+  background:rgba(214,174,85,.035);
+
+  border:1px solid rgba(214,174,85,.16);
+}
+
+.nexus-pos-premium-v21 .empty strong{
+  margin-top:5px;
+  color:#aeb6c1;
+}
+
+/* CHECKOUT */
+
+.nexus-pos-premium-v21 .checkout{
+  padding:17px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(5,8,12,.40),
+      rgba(5,8,12,.82)
+    );
+
+  border-top:1px solid rgba(214,174,85,.14);
+}
+
+.nexus-pos-premium-v21 .total{
+  margin-bottom:14px;
+}
+
+.nexus-pos-premium-v21 .total span{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:1.5px;
+}
+
+.nexus-pos-premium-v21 .total strong{
+  color:#f7f8fa;
+  font-size:34px;
+  font-weight:950;
+  letter-spacing:-1.4px;
+}
+
+.nexus-pos-premium-v21 .pay{
+  min-height:60px;
+  padding:0 18px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #f3df9f 0%,
+      #d6ae55 52%,
+      #bd8e35 100%
+    );
+
+  border-radius:13px;
+
+  font-size:13px;
+  font-weight:950;
+
+  box-shadow:
+    0 13px 30px rgba(214,174,85,.16),
+    inset 0 1px 0 rgba(255,255,255,.50);
+}
+
+.nexus-pos-premium-v21 .pay span{
+  font-size:16px;
+}
+
+/* MODAL */
+
+.nexus-pos-premium-v21 .overlay{
+  background:rgba(1,3,5,.86);
+  backdrop-filter:blur(13px);
+}
+
+.nexus-pos-premium-v21 .modal{
+  width:min(720px,calc(100% - 30px));
+  padding:28px;
+
+  background:
+    radial-gradient(circle at 90% 0%,rgba(214,174,85,.10),transparent 30%),
+    linear-gradient(145deg,#121821,#080c11);
+
+  border:1px solid rgba(214,174,85,.24);
+  border-radius:24px;
+
+  box-shadow:
+    0 35px 100px rgba(0,0,0,.70);
+}
+
+.nexus-pos-premium-v21 .pay-total{
+  margin:7px 0 21px;
+
+  color:#f0d58a;
+
+  font-size:46px;
+  font-weight:950;
+  letter-spacing:-1.5px;
+}
+
+.nexus-pos-premium-v21 .choice{
+  min-height:160px;
+  padding:21px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.045),
+      rgba(255,255,255,.018)
+    );
+
+  border:1px solid rgba(255,255,255,.075);
+}
+
+.nexus-pos-premium-v21 .choice:hover{
+  transform:translateY(-2px);
+  border-color:rgba(214,174,85,.50);
+}
+
+.nexus-pos-premium-v21 .methods{
+  gap:10px;
+}
+
+.nexus-pos-premium-v21 .method{
+  min-height:54px;
+  font-weight:850;
+}
+
+.nexus-pos-premium-v21 .method.selected{
+  color:#f0d58a;
+  background:rgba(214,174,85,.10);
+  border-color:rgba(214,174,85,.55);
+}
+
+/* TROCO */
+
+.nexus-pos-premium-v21 .change{
+  background:
+    linear-gradient(
+      145deg,
+      rgba(89,217,156,.10),
+      rgba(89,217,156,.045)
+    );
+
+  border-color:rgba(89,217,156,.25);
+}
+
+.nexus-pos-premium-v21 .change strong{
+  font-size:29px;
+}
+
+/* DIVISAO */
+
+.nexus-pos-premium-v21 .split-head,
+.nexus-pos-premium-v21 .person,
+.nexus-pos-premium-v21 .paid-progress{
+  background:
+    linear-gradient(
+      145deg,
+      rgba(255,255,255,.035),
+      rgba(255,255,255,.018)
+    );
+
+  border-color:rgba(255,255,255,.07);
+}
+
+.nexus-pos-premium-v21 .person.paid{
+  background:rgba(214,174,85,.055);
+  border-color:rgba(214,174,85,.30);
+}
+
+.nexus-pos-premium-v21 .paid-badge{
+  color:#f0d58a;
+}
+
+/* SUCESSO */
+
+.nexus-pos-premium-v21 .toast-success{
+  background:
+    linear-gradient(
+      145deg,
+      #102219,
+      #0b1812
+    );
+
+  border:1px solid rgba(89,217,156,.30);
+
+  box-shadow:
+    0 24px 70px rgba(0,0,0,.50);
+}
+
+/* RESPONSIVIDADE */
+
+@media(max-width:1250px){
+
+  .nexus-pos-premium-v21 .layout{
+    grid-template-columns:minmax(0,1fr) 370px;
+  }
+
+  .nexus-pos-premium-v21 .products{
+    grid-template-columns:
+      repeat(auto-fill,minmax(165px,1fr));
+  }
+
+}
+
+@media(max-width:980px){
+
+  .nexus-pos-premium-v21.fastpos{
+    overflow:visible;
+  }
+
+  .nexus-pos-premium-v21 .layout{
+    grid-template-columns:1fr;
+  }
+
+  .nexus-pos-premium-v21 .cart{
+    position:relative;
+    top:auto;
+
+    height:auto;
+    min-height:480px;
+    max-height:none;
+  }
+
+}
+
+@media(max-width:620px){
+
+  .nexus-pos-premium-v21.fastpos{
+    padding:10px;
+    border-radius:16px;
+  }
+
+  .nexus-pos-premium-v21 .top{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+
+  .nexus-pos-premium-v21 .operator{
+    width:100%;
+  }
+
+  .nexus-pos-premium-v21 .products{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:9px;
+  }
+
+  .nexus-pos-premium-v21 .product{
+    min-height:210px;
+  }
+
+  .nexus-pos-premium-v21 .nx-product-media{
+    height:100px;
+  }
+
+  .nexus-pos-premium-v21 .modal{
+    padding:21px 15px;
+  }
+
+  .nexus-pos-premium-v21 .pay-total{
+    font-size:38px;
+  }
+
+}
+
+
+
+============================================================
+ FIM: SmartPOSPremiumV21.css
+============================================================
+
+
+============================================================
+ MAPA COMPLETO DOS COMPONENTES JSX
+============================================================
+App.jsx | 42634 bytes | 16/09/2026 16:08:30
+BusinessV13.jsx | 6658 bytes | 15/09/2026 02:13:46
+BusinessV14.jsx | 5719 bytes | 15/09/2026 02:13:46
+BusinessV15.jsx | 10978 bytes | 16/09/2026 01:13:30
+CustomerTicketPortalV25.jsx | 10423 bytes | 16/09/2026 03:01:18
+CustomerWalletV26.jsx | 9899 bytes | 16/09/2026 14:30:11
+EventCommandCenterV38.jsx | 18034 bytes | 16/09/2026 16:08:29
+EventIntelligenceV37.jsx | 12561 bytes | 16/09/2026 15:50:09
+EventMagicAccessV32.jsx | 4028 bytes | 16/09/2026 14:21:02
+EventPaymentTrackerV35.jsx | 5062 bytes | 16/09/2026 15:43:39
+FinancialGrowthDashboardV25.jsx | 18809 bytes | 16/09/2026 03:43:17
+GateScannerV25.jsx | 19058 bytes | 16/09/2026 15:46:27
+GrowthV12.jsx | 25574 bytes | 16/09/2026 17:58:49
+main.jsx | 214 bytes | 15/09/2026 01:56:50
+OperationalV03.jsx | 14845 bytes | 16/09/2026 00:11:00
+OperationsV11.jsx | 16826 bytes | 15/09/2026 01:56:50
+PremiumV05.jsx | 28604 bytes | 16/09/2026 18:21:46
+PublicEventsPremiumV33.jsx | 14668 bytes | 16/09/2026 15:43:39
+RecentSalesV16.jsx | 16117 bytes | 16/09/2026 12:47:39
+RecipeV04.jsx | 5180 bytes | 15/09/2026 01:56:50
+SmartPOSV07.jsx | 7507 bytes | 15/09/2026 01:56:50
+SmartPOSV08.jsx | 10458 bytes | 15/09/2026 01:56:50
+SmartPOSV14.jsx | 6141 bytes | 15/09/2026 01:56:50
+SmartPOSV15.jsx | 6678 bytes | 15/09/2026 01:58:08
+SmartPOSV16.jsx | 42665 bytes | 17/09/2026 13:05:42
+SuiteV06.jsx | 27296 bytes | 15/09/2026 01:56:50
+TicketOrderCenterV25.jsx | 16220 bytes | 16/09/2026 16:04:16
+TicketsV15.jsx | 16674 bytes | 16/09/2026 01:31:06
+
+============================================================
+ MAPA COMPLETO DOS ARQUIVOS CSS
+============================================================
+App.css | 797 bytes | 15/09/2026 02:28:46
+CustomerTicketPortalV25.css | 9283 bytes | 16/09/2026 03:01:18
+CustomerWalletV26.css | 19691 bytes | 16/09/2026 14:30:11
+EventCommandCenterV38.css | 9391 bytes | 16/09/2026 16:08:30
+EventIntelligenceV37.css | 6018 bytes | 16/09/2026 15:50:09
+FinancialGrowthDashboardV25.css | 10755 bytes | 16/09/2026 03:43:17
+PublicEventsPremiumV33.css | 11153 bytes | 16/09/2026 15:43:39
+SmartPOSPremiumV21.css | 20422 bytes | 17/09/2026 13:05:43
+styles.css | 119453 bytes | 15/09/2026 02:22:30
+TicketsV25.css | 12794 bytes | 16/09/2026 15:46:28

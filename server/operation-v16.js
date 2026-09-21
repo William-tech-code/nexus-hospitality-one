@@ -1,4 +1,4 @@
-﻿import { db } from './db.js';
+import { db } from './db.js';
 import { returnCoverage } from './return-engine-v16.js';
 
 const n = v => Number(v || 0);
@@ -281,6 +281,33 @@ export function registerOperationV16(
           return res
             .status(409)
             .json({ error: 'STATUS_NAO_PERMITE_CANCELAMENTO' });
+        }
+
+        /*
+         * NEXUS V4.2 CANCEL RETURN GUARD
+         *
+         * Uma venda com devolucao registrada nao pode receber
+         * cancelamento integral depois. A devolucao ja pode ter
+         * restaurado estoque e registrado reversao financeira.
+         * Bloquear aqui impede dupla reposicao e dupla reversao.
+         */
+        const previousReturn = db.prepare(`
+          SELECT
+            COUNT(*) AS qty,
+            COALESCE(SUM(total), 0) AS total
+          FROM sale_returns
+          WHERE sale_id = ?
+        `).get(id);
+
+        if (n(previousReturn?.qty) > 0) {
+          return res
+            .status(409)
+            .json({
+              error: 'VENDA_COM_DEVOLUCAO_NAO_PERMITE_CANCELAMENTO_TOTAL',
+              message: 'Esta venda ja possui devolucao registrada. Continue pelo fluxo de devolucao.',
+              return_count: n(previousReturn.qty),
+              returned_total: n(previousReturn.total)
+            });
         }
 
         const roleLevel = {

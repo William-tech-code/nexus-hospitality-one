@@ -1,0 +1,438 @@
+/* =========================================================
+   NEXUS HOSPITALITY ONE
+   CAIXA PREMIUM V2.1
+   ========================================================= */
+
+.nexus-pos-premium-v21{
+  --nx-gold:#d6ae55;
+  --nx-gold-light:#f0d58a;
+  --nx-black:#07090c;
+  --nx-panel:#0d1117;
+  --nx-panel2:#111720;
+  --nx-border:rgba(255,255,255,.07);
+  --nx-gold-border:rgba(214,174,85,.25);
+  --nx-muted:#8f99a8;
+
+  min-height:calc(100vh - 105px);
+  color:#f7f8fa;
+  background:
+    radial-gradient(circle at 18% 0%,rgba(214,174,85,.07),transparent 30%),
+    linear-gradient(145deg,#07090c,#090c11 52%,#06080b);
+  border-radius:22px;
+}
+
+/* =========================================================
+   AREA DE PRODUTOS
+   ========================================================= */
+
+.nexus-pos-premium-v21 .products{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:14px;
+  align-content:start;
+}
+
+.nexus-pos-premium-v21 .product{
+  position:relative;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+
+  min-height:250px;
+  padding:0;
+  overflow:hidden;
+
+  text-align:left;
+  color:#fff;
+
+  background:
+    linear-gradient(155deg,#121821,#0c1016);
+
+  border:1px solid var(--nx-border);
+  border-radius:18px;
+
+  box-shadow:
+    0 12px 32px rgba(0,0,0,.24),
+    inset 0 1px 0 rgba(255,255,255,.025);
+
+  transition:
+    transform .16s ease,
+    border-color .16s ease,
+    box-shadow .16s ease;
+}
+
+.nexus-pos-premium-v21 .product:hover{
+  transform:translateY(-3px);
+  border-color:rgba(214,174,85,.55);
+
+  box-shadow:
+    0 18px 42px rgba(0,0,0,.36),
+    0 0 0 1px rgba(214,174,85,.08);
+}
+
+.nexus-pos-premium-v21 .product:active{
+  transform:scale(.985);
+}
+
+/* =========================================================
+   FOTO DO PRODUTO
+   ========================================================= */
+
+.nexus-pos-premium-v21 .nx-product-media{
+  position:relative;
+  width:100%;
+  height:132px;
+  overflow:hidden;
+
+  background:
+    radial-gradient(circle at center,rgba(214,174,85,.11),transparent 58%),
+    #080b10;
+
+  border-bottom:1px solid rgba(255,255,255,.05);
+}
+
+.nexus-pos-premium-v21 .nx-product-media img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  transition:transform .22s ease;
+}
+
+.nexus-pos-premium-v21 .product:hover .nx-product-media img{
+  transform:scale(1.045);
+}
+
+.nexus-pos-premium-v21 .nx-product-placeholder{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+
+  width:100%;
+  height:100%;
+
+  color:var(--nx-gold);
+
+  background:
+    radial-gradient(circle,rgba(214,174,85,.10),transparent 60%);
+}
+
+.nexus-pos-premium-v21 .nx-product-placeholder span{
+  font-size:30px;
+  line-height:1;
+}
+
+.nexus-pos-premium-v21 .nx-product-placeholder small{
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:3px;
+  opacity:.75;
+}
+
+/* =========================================================
+   ESTOQUE NO CARD
+   ========================================================= */
+
+.nexus-pos-premium-v21 .nx-product-stock{
+  position:absolute;
+  right:9px;
+  bottom:9px;
+
+  padding:5px 8px;
+
+  color:#f2f5f8;
+  background:rgba(4,7,10,.84);
+
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:999px;
+
+  font-size:9px;
+  font-weight:800;
+
+  backdrop-filter:blur(10px);
+}
+
+/* =========================================================
+   CONTEUDO DO PRODUTO
+   ========================================================= */
+
+.nexus-pos-premium-v21 .nx-product-content{
+  display:flex;
+  flex:1;
+  flex-direction:column;
+  padding:14px 15px 15px;
+}
+
+.nexus-pos-premium-v21 .nx-product-category{
+  margin-bottom:6px;
+
+  color:var(--nx-gold);
+
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:1.35px;
+  text-transform:uppercase;
+}
+
+.nexus-pos-premium-v21 .nx-product-name{
+  min-height:38px;
+
+  color:#f8fafc;
+
+  font-size:14px;
+  line-height:1.3;
+  font-weight:800;
+}
+
+.nexus-pos-premium-v21 .nx-product-bottom{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+
+  margin-top:auto;
+  padding-top:12px;
+}
+
+.nexus-pos-premium-v21 .nx-product-price{
+  color:var(--nx-gold-light);
+
+  font-size:20px;
+  font-weight:900;
+  letter-spacing:-.5px;
+}
+
+.nexus-pos-premium-v21 .nx-product-add{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  width:32px;
+  height:32px;
+
+  color:#080a0d;
+  background:
+    linear-gradient(135deg,#f1d88e,#d6ae55);
+
+  border-radius:10px;
+
+  font-size:20px;
+  font-weight:900;
+
+  box-shadow:
+    0 7px 18px rgba(214,174,85,.16);
+}
+
+/* =========================================================
+   CARRINHO / PEDIDO ATUAL
+   ========================================================= */
+
+.nexus-pos-premium-v21 .cart{
+  position:sticky;
+  top:12px;
+  align-self:flex-start;
+
+  max-height:calc(100vh - 130px);
+
+  background:
+    linear-gradient(180deg,rgba(17,23,32,.99),rgba(8,12,17,.99));
+
+  border:1px solid var(--nx-gold-border);
+  border-radius:20px;
+
+  box-shadow:
+    -14px 0 40px rgba(0,0,0,.18),
+    inset 1px 0 0 rgba(255,255,255,.025);
+}
+
+.nexus-pos-premium-v21 .cart-title{
+  border-bottom:1px solid rgba(214,174,85,.16);
+}
+
+.nexus-pos-premium-v21 .cart-title small{
+  color:var(--nx-gold);
+  font-weight:900;
+  letter-spacing:1.4px;
+}
+
+.nexus-pos-premium-v21 .cart-item{
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.055);
+  border-radius:13px;
+}
+
+.nexus-pos-premium-v21 .qty button{
+  color:var(--nx-gold-light);
+  background:rgba(214,174,85,.06);
+  border:1px solid rgba(214,174,85,.20);
+}
+
+.nexus-pos-premium-v21 .checkout{
+  border-top:1px solid rgba(214,174,85,.16);
+  background:rgba(5,8,12,.38);
+}
+
+.nexus-pos-premium-v21 .total span{
+  color:var(--nx-muted);
+}
+
+.nexus-pos-premium-v21 .total strong{
+  color:#fff;
+  font-size:27px;
+  letter-spacing:-.7px;
+}
+
+/* =========================================================
+   BOTAO PAGAR
+   ========================================================= */
+
+.nexus-pos-premium-v21 .pay,
+.nexus-pos-premium-v21 .finish{
+  min-height:56px;
+
+  color:#080a0c;
+
+  background:
+    linear-gradient(135deg,#f2db95,#d6ae55 55%,#b98931);
+
+  border:0;
+  border-radius:14px;
+
+  font-weight:950;
+  letter-spacing:.5px;
+
+  box-shadow:
+    0 12px 30px rgba(214,174,85,.16),
+    inset 0 1px 0 rgba(255,255,255,.42);
+
+  transition:
+    transform .14s ease,
+    filter .14s ease;
+}
+
+.nexus-pos-premium-v21 .pay:hover,
+.nexus-pos-premium-v21 .finish:hover{
+  filter:brightness(1.06);
+  transform:translateY(-1px);
+}
+
+.nexus-pos-premium-v21 .pay:disabled,
+.nexus-pos-premium-v21 .finish:disabled{
+  opacity:.42;
+  filter:grayscale(.5);
+}
+
+/* =========================================================
+   MODAIS DE PAGAMENTO
+   ========================================================= */
+
+.nexus-pos-premium-v21 .overlay{
+  background:rgba(2,4,7,.80);
+  backdrop-filter:blur(11px);
+}
+
+.nexus-pos-premium-v21 .modal{
+  color:#f7f8fa;
+
+  background:
+    radial-gradient(circle at top right,rgba(214,174,85,.08),transparent 30%),
+    linear-gradient(145deg,#121821,#090d13);
+
+  border:1px solid rgba(214,174,85,.22);
+  border-radius:24px;
+
+  box-shadow:
+    0 32px 90px rgba(0,0,0,.58);
+}
+
+.nexus-pos-premium-v21 .eyebrow{
+  color:var(--nx-gold);
+  letter-spacing:2px;
+}
+
+.nexus-pos-premium-v21 .pay-total{
+  color:var(--nx-gold-light);
+  font-weight:950;
+}
+
+.nexus-pos-premium-v21 .choice,
+.nexus-pos-premium-v21 .method{
+  color:#eef2f7;
+
+  background:rgba(255,255,255,.035);
+
+  border:1px solid rgba(255,255,255,.075);
+  border-radius:14px;
+}
+
+.nexus-pos-premium-v21 .choice:hover,
+.nexus-pos-premium-v21 .method:hover,
+.nexus-pos-premium-v21 .method.selected{
+  background:rgba(214,174,85,.09);
+  border-color:rgba(214,174,85,.55);
+}
+
+.nexus-pos-premium-v21 .method.selected{
+  color:var(--nx-gold-light);
+}
+
+/* =========================================================
+   DIVISAO DA CONTA
+   ========================================================= */
+
+.nexus-pos-premium-v21 .person{
+  background:rgba(255,255,255,.025);
+  border:1px solid rgba(255,255,255,.065);
+  border-radius:15px;
+}
+
+.nexus-pos-premium-v21 .person.paid{
+  background:rgba(214,174,85,.055);
+  border-color:rgba(214,174,85,.34);
+}
+
+.nexus-pos-premium-v21 .paid-badge{
+  color:var(--nx-gold-light);
+}
+
+.nexus-pos-premium-v21 .progress{
+  background:rgba(255,255,255,.07);
+}
+
+.nexus-pos-premium-v21 .progress span{
+  background:
+    linear-gradient(90deg,#b98931,#f0d58a);
+}
+
+/* =========================================================
+   RESPONSIVO
+   ========================================================= */
+
+@media(max-width:1180px){
+
+  .nexus-pos-premium-v21 .products{
+    grid-template-columns:
+      repeat(auto-fill,minmax(160px,1fr));
+  }
+
+  .nexus-pos-premium-v21 .nx-product-media{
+    height:112px;
+  }
+
+}
+
+@media(max-width:850px){
+
+  .nexus-pos-premium-v21 .cart{
+    position:relative;
+    top:auto;
+    max-height:none;
+  }
+
+  .nexus-pos-premium-v21 .products{
+    grid-template-columns:
+      repeat(2,minmax(0,1fr));
+  }
+
+}

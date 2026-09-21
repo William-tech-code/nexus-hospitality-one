@@ -31,6 +31,44 @@ function hashToken(value){
 
 function ensureSchema(){
 
+  /*
+   * NEXUS Hospitality One
+   * Ticket Customer Core Schema
+   *
+   * Esta tabela precisa existir antes das migracoes
+   * complementares do Event Experience V3.0.
+   */
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ticket_customers(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+      full_name TEXT NOT NULL,
+      document TEXT,
+      email TEXT,
+      phone TEXT,
+      birth_date TEXT,
+
+      access_token_hash TEXT,
+      access_token_created_at TEXT,
+
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS
+      idx_ticket_customers_document
+      ON ticket_customers(document)
+      WHERE document IS NOT NULL
+        AND trim(document) <> '';
+
+    CREATE UNIQUE INDEX IF NOT EXISTS
+      idx_ticket_customers_email
+      ON ticket_customers(lower(email))
+      WHERE email IS NOT NULL
+        AND trim(email) <> '';
+  `);
+
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS event_experience_audit(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -447,4 +485,5 @@ export function eventExperienceStatus(orderId){
 console.log(
   "NEXUS EVENT EXPERIENCE V3.0 ENGINE ONLINE"
 );
+
 

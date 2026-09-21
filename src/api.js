@@ -1,11 +1,29 @@
-﻿const API=(import.meta.env.VITE_API_URL||'/api').replace(/\/+$/,'');
+const API=(import.meta.env.VITE_API_URL||'/api').replace(/\/+$/,'');
 let token=localStorage.getItem('nexus_hospitality_token')||'';
 export function setAuthToken(v){token=v||'';if(token)localStorage.setItem('nexus_hospitality_token',token);else localStorage.removeItem('nexus_hospitality_token')}
-async function request(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(token)headers.Authorization=`Bearer ${token}`;let res;try{res=await fetch(`${API}${path}`,{...options,headers})}catch(cause){const e=new Error('API do NEXUS Hospitality indisponÃƒÂ­vel. Confirme que o servidor estÃƒÂ¡ ativo na porta 8989.');e.code='API_UNREACHABLE';e.cause=cause;throw e}const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.message||data.error||`Erro HTTP ${res.status}`);e.code=data.error;e.status=res.status;throw e}return data}
+async function request(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(token)headers.Authorization=`Bearer ${token}`;let res;try{res=await fetch(`${API}${path}`,{...options,headers})}catch(cause){const e=new Error('API do NEXUS Hospitality indisponível. Confirme que o servidor está ativo na porta 8989.');e.code='API_UNREACHABLE';e.cause=cause;throw e}const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.message||data.error||`Erro HTTP ${res.status}`);e.code=data.error;e.status=res.status;throw e}return data}
 export const api={
+  inventoryV49Summary:()=>request('/v49/inventory/summary'),
+  inventoryV49Alerts:()=>request('/v49/inventory/alerts'),
+  inventoryV49Product:id=>request(`/v49/inventory/products/${id}`),
+  inventoryV49Entry:(id,body)=>request(`/v49/inventory/products/${id}/entry`,{method:'POST',body:JSON.stringify(body)}),
+  inventoryV49Exit:(id,body)=>request(`/v49/inventory/products/${id}/exit`,{method:'POST',body:JSON.stringify(body)}),
+  inventoryV49Loss:(id,body)=>request(`/v49/inventory/products/${id}/loss`,{method:'POST',body:JSON.stringify(body)}),
+  inventoryV49Count:(id,body)=>request(`/v49/inventory/products/${id}/count`,{method:'POST',body:JSON.stringify(body)}),
+  inventoryV49AlertsSeen:keys=>request('/v49/inventory/alerts/seen',{method:'POST',body:JSON.stringify({keys})}),
   paymentConfigV15:()=>request('/v15/payments/config'),saveAsaasV15:body=>request('/v15/payments/config',{method:'PUT',body:JSON.stringify(body)}),testAsaasV15:()=>request('/v15/payments/test',{method:'POST'}),
   salesRecentV14:()=>request('/v14/sales/recent'),saleV14:id=>request(`/v14/sales/${id}`),createSaleV14:body=>request('/v14/sales',{method:'POST',body:JSON.stringify(body)}),releaseSaleV14:id=>request(`/v14/sales/${id}/release`,{method:'POST'}),changeCorrectionV14:(id,body)=>request(`/v14/sales/${id}/change-correction`,{method:'POST',body:JSON.stringify(body)}),returnSaleV14:(id,body)=>request(`/v14/sales/${id}/return`,{method:'POST',body:JSON.stringify(body)}),printSaleV14:(id,type)=>request(`/v14/sales/${id}/print`,{method:'POST',body:JSON.stringify({type})}),paymentConfigV14:()=>request('/v14/payment-config'),
-  salesV13:()=>request('/v13/sales/recent'),cancelSaleV13:(id,reason)=>request(`/v13/sales/${id}/cancel`,{method:'POST',body:JSON.stringify({reason})}),splitPaymentV13:body=>request('/v13/sales/split-payment',{method:'POST',body:JSON.stringify(body)}),withdrawalAdviceV13:()=>request('/v13/cash/withdrawal-advice'),pricingV13:()=>request('/v13/pricing'),priceProductV13:(id,body)=>request(`/v13/pricing/product/${id}`,{method:'PATCH',body:JSON.stringify(body)}),quotesV13:()=>request('/v13/quotes'),createQuoteV13:body=>request('/v13/quotes',{method:'POST',body:JSON.stringify(body)}),quoteAnalysisV13:id=>request(`/v13/quotes/${id}/analysis`),finalizeQuoteV13:(id,supplier_id)=>request(`/v13/quotes/${id}/finalize`,{method:'POST',body:JSON.stringify({supplier_id})}),publicSupplierQuoteV13:token=>request(`/public/supplier-quote/${token}`),submitSupplierQuoteV13:(token,body)=>request(`/public/supplier-quote/${token}`,{method:'POST',body:JSON.stringify(body)}),
+  salesV13:()=>request('/v13/sales/recent'),cancelSaleV13:(id,reason)=>request(`/v13/sales/${id}/cancel`,{method:'POST',body:JSON.stringify({reason})}),splitPaymentV13:body=>request('/v13/sales/split-payment',{method:'POST',body:JSON.stringify(body)}),withdrawalAdviceV13:()=>request('/v13/cash/withdrawal-advice'),pricingV13:()=>request('/v13/pricing'),priceProductV13:(id,body)=>request(`/v13/pricing/product/${id}`,{method:'PATCH',body:JSON.stringify(body)}),
+  purchaseOrdersV49C:()=>request('/v49c/purchase-orders'),
+  purchaseOrderV49C:id=>request(`/v49c/purchase-orders/${id}`),
+  receivePurchaseOrderV49C:(id,body)=>request(`/v49c/purchase-orders/${id}/receive`,{method:'POST',body:JSON.stringify(body)}),
+  procurementNeedV49B:()=>request('/v49b/procurement/need'),
+smartQuoteAnalysisV49B:id=>request(`/v49b/quotes/${id}/smart-analysis`),
+finalizeSmartQuoteV49B:id=>request(`/v49b/quotes/${id}/finalize-smart`,{method:'POST'}),
+  supplierDispatchesV49D:()=>request('/v49d/dispatches'),
+  supplierDispatchV49D:id=>request(`/v49d/dispatches/${id}`),
+  markSupplierDispatchSentV49D:(id,body)=>request(`/v49d/dispatches/${id}/sent`,{method:'POST',body:JSON.stringify(body||{})}),
+quotesV13:()=>request('/v13/quotes'),createQuoteV13:body=>request('/v13/quotes',{method:'POST',body:JSON.stringify(body)}),quoteAnalysisV13:id=>request(`/v13/quotes/${id}/analysis`),finalizeQuoteV13:(id,supplier_id)=>request(`/v13/quotes/${id}/finalize`,{method:'POST',body:JSON.stringify({supplier_id})}),publicSupplierQuoteV13:token=>request(`/public/supplier-quote/${token}`),submitSupplierQuoteV13:(token,body)=>request(`/public/supplier-quote/${token}`,{method:'POST',body:JSON.stringify(body)}),
 
   publicStore:()=>request('/public/store'),publicCreateOrder:body=>request('/public/orders',{method:'POST',body:JSON.stringify(body)}),publicOrder:code=>request(`/public/orders/${code}`),publicEvents:()=>request('/public/events'),publicEvent:id=>request(`/public/events/${id}`),publicBuyTicket:(id,body)=>request(`/public/events/${id}/buy`,{method:'POST',body:JSON.stringify(body)}),publicTicketOrder:code=>request(`/public/ticket-orders/${code}`),growthV12:()=>request('/v12/growth'),updateEventV12:(id,body)=>request(`/v12/events/${id}`,{method:'PATCH',body:JSON.stringify(body)}),
   ticketDashboardV25:id=>request(`/v25/tickets/dashboard/${id}`),ticketOrdersV25:id=>request(`/v25/tickets/orders/${id}`),ticketAccessV25:id=>request(`/v25/tickets/access/${id}`),ticketSearchV25:(id,q)=>request(`/v25/tickets/search/${id}?q=${encodeURIComponent(q)}`),createPresentialTicketV25:body=>request('/v25/tickets/presential',{method:'POST',body:JSON.stringify(body)}),checkinV25:async code=>{const result=await request('/v25/tickets/checkin',{method:'POST',body:JSON.stringify({code})});window.dispatchEvent(new CustomEvent('nexus:ticket-checkin',{detail:result}));return result},publicMenu:()=>request('/public/menu'),ticketEvents:()=>request('/v11/tickets/events'),ticketLots:id=>request(`/v11/tickets/lots/${id}`),createTicketLot:body=>request('/v11/tickets/lots',{method:'POST',body:JSON.stringify(body)}),tickets:id=>request(`/v11/tickets/${id}`),createTicket:body=>request('/v11/tickets',{method:'POST',body:JSON.stringify(body)}),checkin:code=>request('/v11/access/checkin',{method:'POST',body:JSON.stringify({code})}),menuAdmin:()=>request('/v11/menu'),updateMenuItem:(id,body)=>request(`/v11/menu/${id}`,{method:'PATCH',body:JSON.stringify(body)}),salon:()=>request('/v11/salon'),updateTableV11:(id,body)=>request(`/v11/tables/${id}`,{method:'PATCH',body:JSON.stringify(body)}),deliveryV11:()=>request('/v11/delivery'),deliveryOneV11:id=>request(`/v11/delivery/${id}`),createDeliveryV11:body=>request('/v11/delivery',{method:'POST',body:JSON.stringify(body)}),deliveryStatusV11:(id,status)=>request(`/v11/delivery/${id}/status`,{method:'PATCH',body:JSON.stringify({status})}),
@@ -26,7 +44,7 @@ export const api={
   beverageControl:()=>request('/beverage-control'),updateBeverage:(id,body)=>request(`/products/${id}/beverage`,{method:'PATCH',body:JSON.stringify(body)}),adjustStock:(id,body)=>request(`/products/${id}/stock-adjust`,{method:'POST',body:JSON.stringify(body)}),
   suppliersV03:()=>request('/suppliers-v03'),createSupplierV03:body=>request('/suppliers-v03',{method:'POST',body:JSON.stringify(body)}),quotesV03:()=>request('/quotes-v03'),createQuoteV03:body=>request('/quotes-v03',{method:'POST',body:JSON.stringify(body)}),quoteV03:id=>request(`/quotes-v03/${id}`),addQuoteItemV03:(id,body)=>request(`/quotes-v03/${id}/items`,{method:'POST',body:JSON.stringify(body)}),bestQuoteV03:id=>request(`/quotes-v03/${id}/best`),
   recipes:()=>request('/recipes'),recipe:id=>request(`/recipes/${id}`),saveRecipe:body=>request('/recipes',{method:'POST',body:JSON.stringify(body)}),addRecipeItem:(id,body)=>request(`/recipes/${id}/items`,{method:'POST',body:JSON.stringify(body)}),deleteRecipeItem:(id,itemId)=>request(`/recipes/${id}/items/${itemId}`,{method:'DELETE'}),stockCount:body=>request('/stock-counts',{method:'POST',body:JSON.stringify(body)}),smartClosing:()=>request('/smart-closing'),
-  orders:()=>request('/orders'),createOrder:body=>request('/orders',{method:'POST',body:JSON.stringify(body)}),expenses:()=>request('/expenses'),createExpense:body=>request('/expenses',{method:'POST',body:JSON.stringify(body)}),goals:()=>request('/goals'),createGoal:body=>request('/goals',{method:'POST',body:JSON.stringify(body)}),closingPlan:revenue=>request(`/closing-plan?revenue=${encodeURIComponent(revenue)}`),settings:()=>request('/settings'),updateSettings:body=>request('/settings',{method:'PUT',body:JSON.stringify(body)}),
+  orders:()=>request('/orders'),createOrder:body=>request('/orders',{method:'POST',body:JSON.stringify(body)}),expenses:()=>request('/expenses'),createExpense:body=>request('/expenses',{method:'POST',body:JSON.stringify(body)}),financialEntriesV50B:()=>request('/expenses'),createFinancialEntryV50B:body=>request('/expenses',{method:'POST',body:JSON.stringify(body)}),goals:()=>request('/goals'),createGoal:body=>request('/goals',{method:'POST',body:JSON.stringify(body)}),closingPlan:revenue=>request(`/closing-plan?revenue=${encodeURIComponent(revenue)}`),settings:()=>request('/settings'),updateSettings:body=>request('/settings',{method:'PUT',body:JSON.stringify(body)}),
   // ==================================================
   // NEXUS HOSPITALITY ONE V1.6
   // Operational Checkout & Audit
@@ -337,3 +355,91 @@ export function financialNetOverview(){
   "/api/v25/intelligence/net-overview"
  );
 }
+
+/* NEXUS V5.0B-R1A ESM EXPORT BRIDGE */
+export const financialEntriesV50B=()=>request('/expenses');
+export const createFinancialEntryV50B=body=>request('/expenses',{
+ method:'POST',
+ body:JSON.stringify(body)
+});
+
+/* NEXUS V5.0C FINANCIAL TRUTH API */
+export const financialTruthV50C=
+ ()=>request('/v50c/financial-truth');
+
+export const financialDebtsV50C=
+ ()=>request('/v50c/debts');
+
+export const createFinancialDebtV50C=
+ body=>request(
+  '/v50c/debts',
+  {
+   method:'POST',
+   body:JSON.stringify(body)
+  }
+ );
+
+export const payFinancialDebtV50C=
+ (id,body)=>request(
+  `/v50c/debts/${id}/payment`,
+  {
+   method:'POST',
+   body:JSON.stringify(body)
+  }
+ );
+
+/* NEXUS V5.0C-R3 DEBT MANAGEMENT API */
+
+export const updateFinancialDebtV50C=
+ (id,body)=>request(
+  `/v50c/debts/${id}`,
+  {
+   method:'PUT',
+   body:JSON.stringify(body)
+  }
+ );
+
+export const financialDebtPaymentsV50C=
+ id=>request(
+  `/v50c/debts/${id}/payments`
+ );
+
+export const registerFinancialDebtPaymentV50C=
+ (id,body)=>request(
+  `/v50c/debts/${id}/pay`,
+  {
+   method:'POST',
+   body:JSON.stringify(body)
+  }
+ );
+
+export const financialPayoffStrategyV50C=
+ ()=>request(
+  '/v50c/payoff-strategy'
+ );
+
+/* NEXUS V5.0C-R4 FINANCIAL CALENDAR API */
+export const financialCalendarV50C=
+  ()=>request('/v50c/financial-calendar');
+
+
+/* NEXUS V5.0C-R5 CASH FLOW + DRE */
+export const cashFlowDREV50C=
+  ()=>request('/v50c/cash-flow-dre');
+
+
+/* NEXUS V5.0C-R6 FINANCIAL FORECAST API */
+export const financialForecastV50C=
+  ()=>request('/v50c/financial-forecast');
+
+
+/* NEXUS V5.0C-R7 FINANCIAL MENTOR API */
+export const financialMentorV50C=
+  ()=>request('/v50c/financial-mentor');
+
+
+
+/* NEXUS V5.0C MASTER FINAL R8-R18 API */
+export const hospitalityFinalIntelligenceV50C =
+  () => request('/v50c/final-intelligence');
+

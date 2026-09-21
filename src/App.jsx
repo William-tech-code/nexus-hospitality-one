@@ -1,8 +1,9 @@
-﻿import EventCommandCenterV38 from "./EventCommandCenterV38.jsx";
+import EventCommandCenterV38 from "./EventCommandCenterV38.jsx";
 import PublicEventsPremiumV33 from "./PublicEventsPremiumV33.jsx";
 import EventMagicAccessV32 from "./EventMagicAccessV32.jsx";
 import FinancialGrowthDashboardV25 from "./FinancialGrowthDashboardV25.jsx";
 import CustomerWalletV26 from "./CustomerWalletV26.jsx";
+import InventoryV49A from './InventoryV49A.jsx';
 import React,{useEffect,useMemo,useState}from'react';import{api,setAuthToken}from'./api.js';import OperationalV03 from './OperationalV03.jsx';import RecipeV04 from './RecipeV04.jsx';import {AIPulse} from './PremiumV05.jsx';import {InventoryV06,CustomersV06,ReservationsV06,DeliveryV06,EventsV06,FiscalV06,ReportsV06} from './SuiteV06.jsx';import SmartPOSV16 from './SmartPOSV16.jsx';import {MenuV11,PublicMenuV11,SalonV11,DeliveryV11} from './OperationsV11.jsx';
 import TicketsV15 from './TicketsV15.jsx';import TicketOrderCenterV25 from './TicketOrderCenterV25.jsx';import GateScannerV25 from './GateScannerV25.jsx';import {PublicCommerceV12,PublicEventsV12,GrowthCenterV12,EventsAdminV12,GateScannerV12} from './GrowthV12.jsx';import {SupplierQuotePublicV13} from './BusinessV13.jsx';
 import BusinessV15 from './BusinessV15.jsx';
@@ -59,7 +60,7 @@ class RecentSalesErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
-const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2,maximumFractionDigits:2});const pct=v=>`${Number(v||0).toLocaleString('pt-BR',{maximumFractionDigits:1})}%`;const numBR=v=>Number(v||0).toLocaleString('pt-BR',{maximumFractionDigits:2});const roleLabel={OWNER:'ProprietÃ¡rio',MANAGER:'Gerente',FINANCE:'Financeiro',EVENTS:'Eventos',STOCK:'Estoque',CASHIER:'Caixa',WAITER:'GarÃ§om',KITCHEN:'Cozinha'};const roleLevel={OWNER:100,MANAGER:80,FINANCE:70,EVENTS:60,STOCK:55,CASHIER:50,WAITER:40,KITCHEN:30};
+const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2,maximumFractionDigits:2});const pct=v=>`${Number(v||0).toLocaleString('pt-BR',{maximumFractionDigits:1})}%`;const numBR=v=>Number(v||0).toLocaleString('pt-BR',{maximumFractionDigits:2});const roleLabel={OWNER:'Proprietário',MANAGER:'Gerente',FINANCE:'Financeiro',EVENTS:'Eventos',STOCK:'Estoque',CASHIER:'Caixa',WAITER:'Garçom',KITCHEN:'Cozinha'};const roleLevel={OWNER:100,MANAGER:80,FINANCE:70,EVENTS:60,STOCK:55,CASHIER:50,WAITER:40,KITCHEN:30};
 const icons={negocio:'?',crescimento:'?',ingressos:'?',dashboard:'?',caixa:'?',comandas:'?',mesas:'?',cozinha:'?',bebidas:'?',receitas:'?',compras:'?',estoque:'?',financeiro:'?',performance:'?',equipe:'?',cardapio:'?',metas:'?',ia:'?',eventos:'?',fiscal:'?',clientes:'?',reservas:'?',delivery:'?',relatorios:'?',configuracoes:'?'};
 export default function App(){
 
@@ -115,20 +116,94 @@ const cleanPath=location.pathname.replace(/\/+$/,'')||'/';const eventMatch=clean
  useEffect(()=>{load()},[user]);
  async function doLogin(email,password){const r=await api.login({email,password});setAuthToken(r.token);setUser(r.user)}async function doLogout(){try{await api.logout()}catch{}setAuthToken('');setUser(null);setData(null);setIntroDone(false)}
  if(!introDone)return <CinematicIntro ready={!authChecking} onEnter={()=>setIntroDone(true)}/>;if(authChecking)return <Boot/>;if(!user)return <Login onLogin={doLogin}/>;if(loading&&!data)return <Boot/>;
- const level=roleLevel[user.role]||0;const nav=[['dashboard','VisÃ£o Geral',0],['negocio','InteligÃªncia & Crescimento',50],['crescimento','Crescimento & Compras',55],['caixa','Caixa Inteligente',40],['vendas','Ultimas Vendas',40],['mesas','Mesas & SalÃ£o',30],['ingressos','Ingressos & Acesso',40],['comandas','Comandas',30],['cozinha','Cozinha KDS',30],['bebidas','Bebidas & Doses',55],['receitas','Fichas & Drinks',55],['estoque','Estoque Inteligente',55],['compras','Compras & CotaÃ§Ãµes',55],['financeiro','Financeiro',70],['clientes','Clientes & CRM',40],['reservas','Reservas',40],['delivery','Delivery & Retirada',40],['performance','Performance & Rewards',80],['equipe','Equipe & Acessos',80],['cardapio','CardÃ¡pio & QR',40],['metas','Metas & Conquistas',40],['eventos','Eventos - legado',999],['ia','NEXUS AI',80],['fiscal','Fiscal & Smart Capture',70],['relatorios','RelatÃ³rios',50],['configuracoes','ConfiguraÃ§Ãµes',80]].filter(([, ,min])=>level>=min);
- return <div className="app-shell"><aside className="sidebar"><div className="brand"><div className="brand-mark">N</div><div><strong>NEXUS</strong><small>HOSPITALITY ONE</small></div></div><nav>{nav.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={tab===k?'active':''}><span>{icons[k]}</span>{l}</button>)}</nav><div className="side-foot"><span><i className="live-dot"/> OPERATIONAL CORE</span><small>Real Operation Core â€¢ v1.4.0</small></div></aside><main><header className="topbar"><div><small>{greeting().toUpperCase()} â€¢ {roleLabel[user.role]||user.role}</small><h1>{data?.businessName||'NEXUS Hospitality One'}</h1></div><div className="top-actions"><span className="user-pill"><b>{initials(user.name)}</b><span>{user.name}<small>{roleLabel[user.role]||user.role}</small></span></span><button className="ghost" onClick={doLogout}>Sair</button><button className="primary" onClick={()=>setTab('caixa')}>+ Nova venda</button></div></header>
- {tab==='negocio'&&<FinancialGrowthDashboardV25/>} {tab==='crescimento'&&<GrowthCenterV12/>} {tab==='dashboard'&&<><Dashboard data={data} closing={closing} cash={cash}/><div className="v05-ai-wrap"><AIPulse onNavigate={setTab}/></div></>} {tab==='caixa'&&<SmartPOSV16 products={products} employees={employees} cash={cash} user={user} onDone={load}/>} {tab==='vendas'&&<RecentSalesErrorBoundary><RecentSalesV16 user={user}/></RecentSalesErrorBoundary>}{tab==='mesas'&&<SalonV11 products={products} employees={employees}/>} {tab==='ingressos'&&<EventCommandCenterV38/>} {tab==='comandas'&&<OperationalV03 mode="orders" products={products} employees={employees} onDone={load}/>} {tab==='cozinha'&&<OperationalV03 mode="kds" products={products} employees={employees} onDone={load}/>} {tab==='bebidas'&&<OperationalV03 mode="beverages" products={products} employees={employees} onDone={load}/>} {tab==='receitas'&&<RecipeV04 products={products} onDone={load}/>} {tab==='estoque'&&<InventoryV06 onDone={load}/>} {tab==='compras'&&<OperationalV03 mode="procurement" products={products} employees={employees} onDone={load}/>} {tab==='financeiro'&&<Finance expenses={expenses} closing={closing} onDone={load}/>} {tab==='clientes'&&<CustomersV06/>} {tab==='reservas'&&<ReservationsV06/>} {tab==='delivery'&&<DeliveryV11 products={products}/>} {tab==='performance'&&<Performance data={performance} products={products} employees={employees} onDone={load}/>} {tab==='equipe'&&<Team user={user} employees={employees} onDone={load}/>} {tab==='cardapio'&&<MenuV11/>} {tab==='metas'&&<Goals goals={goals} snapshot={data?.snapshot} employees={employees} onDone={load}/>} {tab==='eventos'&&<EventsAdminV12/>} {tab==='ia'&&<OwnerAI data={data} closing={closing} performance={performance}/>} {tab==='fiscal'&&<FiscalV06/>} {tab==='relatorios'&&<ReportsV06/>} {tab==='configuracoes'&&<Settings user={user} onDone={load}/>}</main></div>
+ const level=roleLevel[user.role]||0;const nav=[['dashboard','Visão Geral',0],['negocio','Inteligência & Crescimento',50],['crescimento','Crescimento & Compras',55],['caixa','Caixa Inteligente',40],['vendas','Ultimas Vendas',40],['mesas','Mesas & Salão',30],['ingressos','Ingressos & Acesso',40],['comandas','Comandas',30],['cozinha','Cozinha KDS',30],['bebidas','Bebidas & Doses',55],['receitas','Fichas & Drinks',55],['estoque','Estoque Inteligente',55],['compras','Compras & Cotações',55],['financeiro','Financeiro',70],['clientes','Clientes & CRM',40],['reservas','Reservas',40],['delivery','Delivery & Retirada',40],['performance','Performance & Rewards',80],['equipe','Equipe & Acessos',80],['cardapio','Cardápio & QR',40],['metas','Metas & Conquistas',40],['eventos','Eventos - legado',999],['ia','NEXUS AI',80],['fiscal','Fiscal & Smart Capture',70],['relatorios','Relatórios',50],['configuracoes','Configurações',80]].filter(([, ,min])=>level>=min);
+ return <div className="app-shell"><aside className="sidebar nexus-sidebar-v42"><div className="brand"><div className="brand-mark">N</div><div><strong>NEXUS</strong><small>HOSPITALITY ONE</small></div></div><nav className="nxv42-nav">
+  {nav.filter(([k])=>k==='dashboard').map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={tab===k?'active nxv42-home':'nxv42-home'}><span>{icons[k]}</span>{l}</button>)}
+  {[
+    ['OPERAÇÃO',['caixa','vendas','mesas','comandas','cozinha']],
+    ['EVENTOS',['ingressos']],
+    ['PRODUTOS & ESTOQUE',['bebidas','receitas','estoque','compras']],
+    ['CLIENTES & VENDAS',['clientes','reservas','delivery','cardapio']],
+    ['GESTÃO',['financeiro','performance','equipe','metas']],
+    ['INTELIGÊNCIA & SISTEMA',['negocio','crescimento','ia','fiscal','relatorios','configuracoes']]
+  ].map(([group,keys],gi)=>{const items=nav.filter(([k])=>keys.includes(k));if(!items.length)return null;const active=items.some(([k])=>k===tab);return <details className={`nxv42-group ${active?'has-active':''}`} name="nexus-sidebar-v43" key={group} open={active?true:undefined}><summary><span>{group}</span><i>+</i></summary><div className="nxv42-items">{items.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={tab===k?'active':''}><span>{icons[k]}</span>{l}</button>)}</div></details>})}
+</nav><div className="side-foot"><span><i className="live-dot"/> OPERATIONAL CORE</span><small>Real Operation Core • v1.4.0</small></div></aside><main><header className="topbar"><div><small>{greeting().toUpperCase()} • {roleLabel[user.role]||user.role}</small><h1>{data?.businessName||'NEXUS Hospitality One'}</h1></div><div className="top-actions"><span className="user-pill"><b>{initials(user.name)}</b><span>{user.name}<small>{roleLabel[user.role]||user.role}</small></span></span><button className="ghost" onClick={doLogout}>Sair</button><button className="primary" onClick={()=>setTab('caixa')}>+ Nova venda</button></div></header>
+ {tab==='negocio'&&<GrowthCenterV12/>} {tab==='crescimento'&&<GrowthCenterV12/>} {tab==='dashboard'&&<><Dashboard data={data} closing={closing} cash={cash}/><div className="v05-ai-wrap"><AIPulse onNavigate={setTab}/></div></>} {tab==='caixa'&&<SmartPOSV16 products={products} employees={employees} cash={cash} user={user} onDone={load}/>} {tab==='vendas'&&<RecentSalesErrorBoundary><RecentSalesV16 user={user}/></RecentSalesErrorBoundary>}{tab==='mesas'&&<SalonV11 products={products} employees={employees}/>} {tab==='ingressos'&&<EventCommandCenterV38/>} {tab==='comandas'&&<OperationalV03 mode="orders" products={products} employees={employees} onDone={load}/>} {tab==='cozinha'&&<OperationalV03 mode="kds" products={products} employees={employees} onDone={load}/>} {tab==='bebidas'&&<OperationalV03 mode="beverages" products={products} employees={employees} onDone={load}/>} {tab==='receitas'&&<RecipeV04 products={products} onDone={load}/>} {tab==='estoque'&&<InventoryV49A onDone={load}/>}  {tab==='compras'&&<OperationalV03 mode="procurement" products={products} employees={employees} onDone={load}/>} {tab==='financeiro'&&<Finance expenses={expenses} closing={closing} onDone={load}/>} {tab==='clientes'&&<CustomersV06/>} {tab==='reservas'&&<ReservationsV06/>} {tab==='delivery'&&<DeliveryV11 products={products}/>} {tab==='performance'&&<Performance data={performance} products={products} employees={employees} onDone={load}/>} {tab==='equipe'&&<Team user={user} employees={employees} onDone={load}/>} {tab==='cardapio'&&<MenuV11/>} {tab==='metas'&&<Goals goals={goals} snapshot={data?.snapshot} employees={employees} onDone={load}/>} {tab==='eventos'&&<EventsAdminV12/>} {tab==='ia'&&<OwnerAI data={data} closing={closing} performance={performance}/>} {tab==='fiscal'&&<FiscalV06/>} {tab==='relatorios'&&<ReportsV06/>} {tab==='configuracoes'&&<Settings user={user} onDone={load}/>}</main></div>
 }
 function greeting(){const h=new Date().getHours();return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'}function initials(n=''){return n.split(' ').filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()}
 function Boot(){return <div className="boot"><div className="orb"/><b>NEXUS</b><span>sincronizando Enterprise Foundation</span></div>}
-function CinematicIntro({ready,onEnter}){const[stage,setStage]=useState(0);useEffect(()=>{const t=[setTimeout(()=>setStage(1),650),setTimeout(()=>setStage(2),1550),setTimeout(()=>setStage(3),2600),setTimeout(()=>setStage(4),3750)];return()=>t.forEach(clearTimeout)},[]);return <div className={`cinematic-intro stage-${stage}`}><div className="cinema-vignette"/><div className="cinema-grid"/><div className="cinema-beam beam-a"/><div className="cinema-beam beam-b"/><div className="cinema-particles">{Array.from({length:28},(_,i)=><i key={i} style={{left:`${(i*37)%100}%`,top:`${(i*61)%100}%`,'--i':i}}/>)}</div><div className="cinema-scan"/><div className="cinema-content"><div className="cinema-kicker"><span/> NEXORA TECHNOLOGY <span/></div><div className="nexus-core"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="orbit orbit-three"/><div className="core-halo"/><div className="core-mark">N</div></div><div className="cinema-title-wrap"><h1>NEXUS</h1><h2>HOSPITALITY ONE</h2><p className="cinema-os">ENTERPRISE GROWTH OPERATING SYSTEM</p></div><div className="cinema-message"><strong>OPERAÃ‡ÃƒO <b>â€¢</b> INTELIGÃŠNCIA <b>â€¢</b> CRESCIMENTO</strong><p>Uma plataforma para operar, proteger, medir e expandir experiÃªncias de hospitalidade.</p></div><div className="cinema-entry"><div className="system-line"><i className={ready?'online':''}/><span>{ready?'NÃšCLEO DE IDENTIDADE PRONTO':'ATIVANDO NÃšCLEO DE IDENTIDADE'}</span></div><button onClick={onEnter} className="cinema-enter"><span>INICIAR EXPERIÃŠNCIA</span><b>â†’</b></button><small>POWERED BY NEXUS INTELLIGENCE</small></div></div><button className="cinema-skip" onClick={onEnter}>PULAR INTRO</button></div>}
-function Login({onLogin}){const[email,setEmail]=useState('admin@nexus.local'),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);async function go(e){e.preventDefault();setBusy(true);setError('');try{await onLogin(email,password)}catch(err){setError(err.message)}finally{setBusy(false)}}return <div className="login-scene"><div className="login-grid"/><div className="login-card"><div className="login-brand"><div className="brand-mark big">N</div><div><span>NEXORA TECHNOLOGY</span><h1>NEXUS</h1><p>HOSPITALITY ONE</p></div></div><div className="security-badge">IDENTITY CORE â€¢ SECURE ACCESS</div><h2>{greeting()}, acesso autorizado comeÃ§a aqui.</h2><p className="muted">Identifique-se para carregar seu perfil, permissÃµes, caixa, metas e trilha de auditoria.</p><form onSubmit={go}><label>E-mail<input value={email} onChange={e=>setEmail(e.target.value)} autoComplete="username"/></label><label>Senha<input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password"/></label>{error&&<div className="error-box">{error}</div>}<button className="primary wide login-btn" disabled={busy}>{busy?'AUTENTICANDO...':'ENTRAR NO NEXUS â†’'}</button></form><div className="bio-prep"><span>â—‰</span><div><b>Biometria / Passkeys</b><small>Base preparada para Windows Hello, Face ID e Touch ID via autenticaÃ§Ã£o do dispositivo.</small></div><em>PRÃ“XIMA CAMADA</em></div><small className="first-access">Primeiro acesso local: admin@nexus.local â€¢ altere a senha depois do login.</small></div></div>}
-function Dashboard({data,closing,cash}){if(!data)return null;const s=data.snapshot,g=data.growth;return <section className="page"><div className="hero neural"><div><div className="eyebrow">NEXUS GROWTH INTELLIGENCE</div><h2>Seu negÃ³cio nÃ£o precisa apenas funcionar.<br/><em>Ele precisa crescer.</em></h2><p>{g.headline}. Caixa, margem, estoque, equipe e metas formam uma Ãºnica leitura operacional.</p></div><div className="score-ring"><b>{g.score}</b><span>Growth Score</span></div></div><div className="status-strip"><span className={cash?'ok':'warn'}>â—Â CAIXA {cash?'ABERTO':'FECHADO'}</span><span>IDENTIDADE ATIVA</span><span>AUDITORIA ATIVA</span><span>PERFORMANCE ENGINE</span></div><div className="kpis"><Kpi label="Faturamento hoje" value={money(s.todayRevenue)} sub={`${pct(s.goalProgress)} da meta`}/><Kpi label="Lucro bruto estimado" value={money(s.grossProfitToday)} sub="antes das despesas"/><Kpi label="Ticket mÃ©dio" value={money(s.averageTicket)} sub={`${s.salesCount} venda(s)`}/><Kpi label="Faturamento mÃªs" value={money(s.monthRevenue)} sub={`despesas ${money(s.monthExpenses)}`}/></div><div className="grid two"><div className="panel"><PanelTitle over="FECHAMENTO INTELIGENTE" title="Para onde vai o dinheiro de hoje"/><Allocation closing={closing}/></div><div className="panel"><PanelTitle over="OWNER AI BRIEFING" title="O que merece sua atenÃ§Ã£o"/>{g.notes.map((n,i)=><div className="brief-row" key={i}><span>0{i+1}</span><p>{n}</p></div>)}</div></div><div className="grid two"><div className="panel"><PanelTitle over="ESTOQUE" title="Alerta de reposiÃ§Ã£o"/>{s.lowStock.length?s.lowStock.map(x=><div className="list-row" key={x.id}><div><b>{x.name}</b><small>{x.category}</small></div><strong>{numBR(x.stock)} / mÃ­n. {numBR(x.minimum_stock)}</strong></div>):<Empty text="Nenhum item abaixo do mÃ­nimo."/>}</div><div className="panel"><PanelTitle over="PERFORMANCE" title="Equipe e incentivos"/>{data.performance?.length?data.performance.slice(0,5).map(x=><div className="rank-row" key={x.id}><span>â—Â</span><div><b>{x.name}</b><small>{x.role_label}</small></div><strong>{money(x.total_due)}</strong></div>):<Empty text="Sem dados de performance ainda."/>}</div></div></section>}
-function Cashier({products,employees,cash,onDone}){const[cart,setCart]=useState([]),[payment,setPayment]=useState('PIX'),[employee,setEmployee]=useState(''),[tip,setTip]=useState('0'),[opening,setOpening]=useState('0'),[closingAmount,setClosingAmount]=useState('0'),[msg,setMsg]=useState('');const total=useMemo(()=>cart.reduce((s,x)=>s+x.price*x.qty,0),[cart]);function add(p){setCart(c=>{const e=c.find(x=>x.id===p.id);return e?c.map(x=>x.id===p.id?{...x,qty:x.qty+1}:x):[...c,{...p,qty:1}]})}async function open(){await api.openCash({opening_amount:Number(opening)});setMsg('Caixa aberto.');onDone()}async function close(){const r=await api.closeCash(cash.id,{closing_amount:Number(closingAmount)});setMsg(`Caixa fechado. DiferenÃ§a: ${money(r.difference)}`);onDone()}async function finish(){if(!cart.length)return;try{await api.createSale({payment_method:payment,employee_id:employee||null,tip_amount:Number(tip||0),items:cart.map(x=>({product_id:x.id,qty:x.qty}))});setCart([]);setTip('0');setMsg('Venda concluÃ­da com estoque, auditoria e performance atualizados.');await onDone()}catch(e){setMsg(e.message)}}return <section className="page"><PageHead over="CAIXA INTELIGENTE" title="SessÃ£o, venda, gorjeta, comissÃ£o e estoque em uma operaÃ§Ã£o"/>{!cash?<div className="panel cash-session"><div><b>CAIXA FECHADO</b><p>Abra uma sessÃ£o antes de registrar vendas.</p></div><input type="number" step="0.01" value={opening} onChange={e=>setOpening(e.target.value)} placeholder="Fundo de caixa"/><button className="primary" onClick={open}>Abrir caixa</button></div>:<div className="panel cash-session open"><div><b>CAIXA ABERTO #{cash.id}</b><p>Operador: {cash.user_name} â€¢ abertura {money(cash.opening_amount)}</p></div><input type="number" step="0.01" value={closingAmount} onChange={e=>setClosingAmount(e.target.value)} placeholder="Contagem fÃ­sica"/><button className="ghost" onClick={close}>Fechar caixa</button></div>}{msg&&<div className="notice">{msg}</div>}<div className="cash-grid"><div className="panel product-pad">{products.map(p=><button key={p.id} onClick={()=>add(p)} disabled={!cash}><b>{p.name}</b><small>{p.category} â€¢ estoque {p.stock}</small><strong>{money(p.price)}</strong></button>)}</div><div className="panel cart"><h3>Venda atual</h3>{cart.length?cart.map(x=><div className="cart-row" key={x.id}><span>{x.qty}Ã—</span><b>{x.name}</b><strong>{money(x.qty*x.price)}</strong></div>):<Empty text="Toque em um produto para adicionar."/>}<div className="total"><span>Total</span><b>{money(total+Number(tip||0))}</b></div><select value={employee} onChange={e=>setEmployee(e.target.value)}><option value="">Atendente do usuÃ¡rio atual</option>{employees.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><div className="split-fields"><select value={payment} onChange={e=>setPayment(e.target.value)}><option>PIX</option><option>DINHEIRO</option><option>CARTAO</option><option>COMANDA</option></select><input type="number" step="0.01" value={tip} onChange={e=>setTip(e.target.value)} placeholder="Gorjeta"/></div><button className="primary wide" disabled={!cash} onClick={finish}>Finalizar venda</button></div></div></section>}
-function Orders({orders,employees,onDone}){const[label,setLabel]=useState(''),[emp,setEmp]=useState('');async function create(){if(!label.trim())return;await api.createOrder({label,employee_id:emp||null});setLabel('');onDone()}return <section className="page"><PageHead over="COMANDAS ONLINE" title="Mesas, balcÃ£o, clientes e atendimento identificado"/><div className="panel form-inline"><input placeholder="Ex.: Mesa 07 / JoÃ£o" value={label} onChange={e=>setLabel(e.target.value)}/><select value={emp} onChange={e=>setEmp(e.target.value)}><option value="">Sem atendente</option>{employees.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><button className="primary" onClick={create}>Abrir comanda</button></div><div className="cards">{orders.map(o=><div className="mini-card" key={o.id}><span>ABERTA</span><h3>{o.label}</h3><p>{o.customer_name||'Sem cliente identificado'}</p><b>{money(o.subtotal)}</b></div>)}{!orders.length&&<Empty text="Nenhuma comanda aberta."/>}</div></section>}
-function Inventory({products}){return <section className="page"><PageHead over="ESTOQUE INTELIGENTE" title="Unidade, dose, custo, margem e ruptura"/><div className="panel table-wrap"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Unidade</th><th>Estoque</th><th>MÃ­nimo</th><th>Custo</th><th>Venda</th><th>Margem</th></tr></thead><tbody>{products.map(p=><tr key={p.id}><td><b>{p.name}</b></td><td>{p.category}</td><td>{p.unit_type}{p.dose_ml?` â€¢ ${p.dose_ml}ml/dose`:''}</td><td>{p.stock}</td><td>{p.minimum_stock}</td><td>{money(p.cost)}</td><td>{money(p.price)}</td><td>{p.price?pct((p.price-p.cost)/p.price*100):'0%'}</td></tr>)}</tbody></table></div></section>}
-function Finance({expenses,closing,onDone}){const[form,setForm]=useState({description:'',category:'Contas',amount:'',due_date:''});async function save(){await api.createExpense({...form,amount:Number(form.amount)});setForm({description:'',category:'Contas',amount:'',due_date:''});onDone()}return <section className="page"><PageHead over="FINANCEIRO" title="ObrigaÃ§Ãµes, reservas e destino do caixa"/><div className="grid two"><div className="panel"><PanelTitle over="ALOCAÃ‡ÃƒO" title="Plano do fechamento"/><Allocation closing={closing}/></div><div className="panel"><PanelTitle over="NOVA OBRIGAÃ‡ÃƒO" title="Registrar conta"/><div className="form-stack"><input placeholder="DescriÃ§Ã£o" value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/><select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option>Contas</option><option>SalÃ¡rios</option><option>Fornecedor</option><option>Impostos</option><option>Investimento</option></select><input type="number" placeholder="Valor" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/><input type="date" value={form.due_date} onChange={e=>setForm({...form,due_date:e.target.value})}/><button className="primary" onClick={save}>Registrar</button></div></div></div><div className="panel table-wrap"><table><thead><tr><th>DescriÃ§Ã£o</th><th>Categoria</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead><tbody>{expenses.map(x=><tr key={x.id}><td>{x.description}</td><td>{x.category}</td><td>{money(x.amount)}</td><td>{x.due_date||'â€”'}</td><td>{x.paid?'Pago':'Pendente'}</td></tr>)}</tbody></table></div></section>}
-function Performance({data,products,employees,onDone}){const[form,setForm]=useState({title:'',scope:'ANY',scope_value:'',reward_type:'FIXED_PER_UNIT',reward_value:''}),[tip,setTip]=useState({employee_id:'',amount:''});if(!data)return null;async function rule(){await api.createIncentive({...form,reward_value:Number(form.reward_value)});setForm({...form,title:'',reward_value:''});onDone()}async function addTip(){await api.createTip({employee_id:Number(tip.employee_id),amount:Number(tip.amount)});setTip({employee_id:'',amount:''});onDone()}return <section className="page"><PageHead over="NEXUS PERFORMANCE & REWARDS" title="Metas, gorjetas, comissÃ£o e incentivo que a equipe consegue acompanhar"/><div className="kpis"><Kpi label="Gorjetas pendentes" value={money(data.pendingTips)} sub="a repassar"/><Kpi label="Incentivos pendentes" value={money(data.pendingRewards)} sub="comissÃµes e bÃ´nus"/><Kpi label="Regras ativas" value={String(data.rules.length)} sub="campanhas"/><Kpi label="Equipe ativa" value={String(data.employees.length)} sub="pessoas"/></div><div className="grid two"><div className="panel"><PanelTitle over="RANKING" title="Performance do mÃªs"/>{data.employees.map((x,i)=><div className="performance-row" key={x.id}><span>{String(i+1).padStart(2,'0')}</span><div><b>{x.name}</b><small>Vendas {money(x.sales)} â€¢ gorjetas {money(x.tips)}</small></div><strong>{money(x.total_due)}</strong></div>)}</div><div className="panel"><PanelTitle over="NOVA CAMPANHA" title="ComissÃ£o por venda"/><div className="form-stack"><input placeholder="Ex.: Campanha Combo Gin" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/><select value={form.scope} onChange={e=>setForm({...form,scope:e.target.value,scope_value:''})}><option value="ANY">Qualquer produto</option><option value="PRODUCT">Produto especÃ­fico</option><option value="CATEGORY">Categoria</option></select>{form.scope==='PRODUCT'&&<select value={form.scope_value} onChange={e=>setForm({...form,scope_value:e.target.value})}><option value="">Selecione</option>{products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>}{form.scope==='CATEGORY'&&<input placeholder="Categoria" value={form.scope_value} onChange={e=>setForm({...form,scope_value:e.target.value})}/>}<select value={form.reward_type} onChange={e=>setForm({...form,reward_type:e.target.value})}><option value="FIXED_PER_UNIT">R$ por unidade</option><option value="PERCENT_SALE">% da venda</option></select><input type="number" step="0.01" placeholder="Valor do incentivo" value={form.reward_value} onChange={e=>setForm({...form,reward_value:e.target.value})}/><button className="primary" onClick={rule}>Ativar campanha</button></div></div></div><div className="grid two"><div className="panel"><PanelTitle over="GORJETA MANUAL" title="Creditar Ã  equipe"/><div className="form-inline"><select value={tip.employee_id} onChange={e=>setTip({...tip,employee_id:e.target.value})}><option value="">FuncionÃ¡rio</option>{employees.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input type="number" step="0.01" placeholder="Valor" value={tip.amount} onChange={e=>setTip({...tip,amount:e.target.value})}/><button className="primary" onClick={addTip}>Creditar</button></div></div><div className="panel"><PanelTitle over="REGRAS ATIVAS" title="Campanhas em execuÃ§Ã£o"/>{data.rules.map(x=><div className="list-row" key={x.id}><div><b>{x.title}</b><small>{x.scope} â€¢ {x.reward_type}</small></div><strong>{x.reward_type==='PERCENT_SALE'?`${x.reward_value}%`:money(x.reward_value)}</strong></div>)}</div></div></section>}
+function CinematicIntro({ready,onEnter}){const[stage,setStage]=useState(0);useEffect(()=>{const t=[setTimeout(()=>setStage(1),650),setTimeout(()=>setStage(2),1550),setTimeout(()=>setStage(3),2600),setTimeout(()=>setStage(4),3750)];return()=>t.forEach(clearTimeout)},[]);return <div className={`cinematic-intro stage-${stage}`}><div className="cinema-vignette"/><div className="cinema-grid"/><div className="cinema-beam beam-a"/><div className="cinema-beam beam-b"/><div className="cinema-particles">{Array.from({length:28},(_,i)=><i key={i} style={{left:`${(i*37)%100}%`,top:`${(i*61)%100}%`,'--i':i}}/>)}</div><div className="cinema-scan"/><div className="cinema-content"><div className="cinema-kicker"><span/> NEXORA TECHNOLOGY <span/></div><div className="nexus-core"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="orbit orbit-three"/><div className="core-halo"/><div className="core-mark">N</div></div><div className="cinema-title-wrap"><h1>NEXUS</h1><h2>HOSPITALITY ONE</h2><p className="cinema-os">ENTERPRISE GROWTH OPERATING SYSTEM</p></div><div className="cinema-message"><strong>OPERAÇÃO <b>•</b> INTELIGÊNCIA <b>•</b> CRESCIMENTO</strong><p>Uma plataforma para operar, proteger, medir e expandir experiências de hospitalidade.</p></div><div className="cinema-entry"><div className="system-line"><i className={ready?'online':''}/><span>{ready?'NÚCLEO DE IDENTIDADE PRONTO':'ATIVANDO NÚCLEO DE IDENTIDADE'}</span></div><button onClick={onEnter} className="cinema-enter"><span>INICIAR EXPERIÊNCIA</span><b>→</b></button><small>POWERED BY NEXUS INTELLIGENCE</small></div></div><button className="cinema-skip" onClick={onEnter}>PULAR INTRO</button></div>}
+function Login({onLogin}){const[email,setEmail]=useState('admin@nexus.local'),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);async function go(e){e.preventDefault();setBusy(true);setError('');try{await onLogin(email,password)}catch(err){setError(err.message)}finally{setBusy(false)}}return <div className="login-scene"><div className="login-grid"/><div className="login-card"><div className="login-brand"><div className="brand-mark big">N</div><div><span>NEXORA TECHNOLOGY</span><h1>NEXUS</h1><p>HOSPITALITY ONE</p></div></div><div className="security-badge">IDENTITY CORE • SECURE ACCESS</div><h2>{greeting()}, acesso autorizado começa aqui.</h2><p className="muted">Identifique-se para carregar seu perfil, permissões, caixa, metas e trilha de auditoria.</p><form onSubmit={go}><label>E-mail<input value={email} onChange={e=>setEmail(e.target.value)} autoComplete="username"/></label><label>Senha<input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password"/></label>{error&&<div className="error-box">{error}</div>}<button className="primary wide login-btn" disabled={busy}>{busy?'AUTENTICANDO...':'ENTRAR NO NEXUS →'}</button></form><div className="bio-prep"><span>◉</span><div><b>Biometria / Passkeys</b><small>Base preparada para Windows Hello, Face ID e Touch ID via autenticação do dispositivo.</small></div><em>PRÓXIMA CAMADA</em></div><small className="first-access">Primeiro acesso local: admin@nexus.local • altere a senha depois do login.</small></div></div>}
+function Dashboard({data,closing,cash}){
+  if(!data)return null;
+  const s=data.snapshot||{},g=data.growth||{};
+  const score=Math.max(0,Math.min(100,Number(g.score||0)));
+  const goal=Math.max(0,Math.min(100,Number(s.goalProgress||0)));
+  const notes=Array.isArray(g.notes)?g.notes:[];
+  const lowStock=Array.isArray(s.lowStock)?s.lowStock:[];
+  const perf=Array.isArray(data.performance)?data.performance:[];
+  const netMonth=Number(s.monthRevenue||0)-Number(s.monthExpenses||0);
+  const health=score>=75?'FORTE':score>=50?'ATENÇÃO':'AÇÃO NECESSÁRIA';
+  return <section className="page nx-dash-v3">
+    <div className="nxv3-command">
+      <div className="nxv3-command-copy">
+        <div className="eyebrow">NEXUS EXECUTIVE COMMAND CENTER</div>
+        <h2>Visão executiva do negócio.<br/><em>Operação, caixa e crescimento em uma tela.</em></h2>
+        <p>{g.headline||'Leitura consolidada da operação.'}</p>
+        <div className="nxv3-health">
+          <span className={cash?'online':'offline'}><i/> CAIXA {cash?'ABERTO':'FECHADO'}</span>
+          <span>IDENTIDADE ATIVA</span><span>AUDITORIA ATIVA</span><span>INTELLIGENCE CORE</span>
+        </div>
+      </div>
+      <div className="nxv3-score" style={{'--score':score}}>
+        <div><b>{score}</b><span>GROWTH SCORE</span><small>{health}</small></div>
+      </div>
+    </div>
+
+    <div className="nxv3-kpis">
+      <div className="nxv3-kpi primary-metric"><span>FATURAMENTO HOJE</span><b>{money(s.todayRevenue)}</b><small>{pct(s.goalProgress)} da meta diária</small><i className="nxv3-progress"><u style={{width:`${goal}%`}}/></i></div>
+      <div className="nxv3-kpi"><span>LUCRO BRUTO ESTIMADO</span><b>{money(s.grossProfitToday)}</b><small>antes das despesas</small></div>
+      <div className="nxv3-kpi"><span>TICKET MÉDIO</span><b>{money(s.averageTicket)}</b><small>{s.salesCount||0} venda(s) hoje</small></div>
+      <div className="nxv3-kpi"><span>FATURAMENTO DO MÊS</span><b>{money(s.monthRevenue)}</b><small>despesas {money(s.monthExpenses)}</small></div>
+      <div className="nxv3-kpi"><span>SALDO OPERACIONAL MÊS</span><b>{money(netMonth)}</b><small>receita menos despesas registradas</small></div>
+    </div>
+
+    <div className="nxv3-grid nxv3-main-grid">
+      <div className="panel nxv3-panel nxv3-allocation">
+        <PanelTitle over="FECHAMENTO INTELIGENTE" title="Destino do caixa de hoje"/>
+        <p className="nxv3-panel-lead">Distribuição calculada pelas regras financeiras configuradas.</p>
+        <Allocation closing={closing}/>
+      </div>
+      <div className="panel nxv3-panel nxv3-brief">
+        <div className="nxv3-panel-head"><PanelTitle over="OWNER AI BRIEFING" title="Prioridades da operação"/><span className="nxv3-live">LIVE</span></div>
+        {notes.length?notes.slice(0,4).map((n,i)=><div className="nxv3-brief-row" key={i}><span>{String(i+1).padStart(2,'0')}</span><p>{n}</p></div>):<Empty text="Nenhum alerta estratégico no momento."/>}
+      </div>
+    </div>
+
+    <div className="nxv3-grid nxv3-lower-grid">
+      <div className="panel nxv3-panel">
+        <div className="nxv3-panel-head"><PanelTitle over="ESTOQUE CRÍTICO" title="Reposição prioritária"/><span className={lowStock.length?'nxv3-count warn':'nxv3-count'}>{lowStock.length}</span></div>
+        {lowStock.length?lowStock.slice(0,6).map(x=><div className="nxv3-stock-row" key={x.id}><div><b>{x.name}</b><small>{x.category}</small></div><div className="nxv3-stock-value"><strong>{numBR(x.stock)}</strong><small>mín. {numBR(x.minimum_stock)}</small></div></div>):<Empty text="Nenhum item abaixo do estoque mínimo."/>}
+      </div>
+      <div className="panel nxv3-panel">
+        <div className="nxv3-panel-head"><PanelTitle over="PERFORMANCE" title="Equipe e incentivos"/><span className="nxv3-count">{perf.length}</span></div>
+        {perf.length?perf.slice(0,6).map((x,i)=><div className="nxv3-team-row" key={x.id}><span>{String(i+1).padStart(2,'0')}</span><div><b>{x.name}</b><small>{x.role_label}</small></div><strong>{money(x.total_due)}</strong></div>):<Empty text="Sem dados de performance ainda."/>}
+      </div>
+      <div className="panel nxv3-panel nxv3-status-card">
+        <PanelTitle over="OPERATIONAL STATUS" title="Núcleo NEXUS"/>
+        <div className="nxv3-system-row"><span><i className={cash?'on':''}/>Caixa</span><b>{cash?'ONLINE':'FECHADO'}</b></div>
+        <div className="nxv3-system-row"><span><i className="on"/>Identidade</span><b>ATIVA</b></div>
+        <div className="nxv3-system-row"><span><i className="on"/>Auditoria</span><b>ATIVA</b></div>
+        <div className="nxv3-system-row"><span><i className="on"/>Performance</span><b>ATIVA</b></div>
+      </div>
+    </div>
+  </section>
+}
+function Cashier({products,employees,cash,onDone}){const[cart,setCart]=useState([]),[payment,setPayment]=useState('PIX'),[employee,setEmployee]=useState(''),[tip,setTip]=useState('0'),[opening,setOpening]=useState('0'),[closingAmount,setClosingAmount]=useState('0'),[msg,setMsg]=useState('');const total=useMemo(()=>cart.reduce((s,x)=>s+x.price*x.qty,0),[cart]);function add(p){setCart(c=>{const e=c.find(x=>x.id===p.id);return e?c.map(x=>x.id===p.id?{...x,qty:x.qty+1}:x):[...c,{...p,qty:1}]})}async function open(){await api.openCash({opening_amount:Number(opening)});setMsg('Caixa aberto.');onDone()}async function close(){const r=await api.closeCash(cash.id,{closing_amount:Number(closingAmount)});setMsg(`Caixa fechado. Diferença: ${money(r.difference)}`);onDone()}async function finish(){if(!cart.length)return;try{await api.createSale({payment_method:payment,employee_id:employee||null,tip_amount:Number(tip||0),items:cart.map(x=>({product_id:x.id,qty:x.qty}))});setCart([]);setTip('0');setMsg('Venda concluída com estoque, auditoria e performance atualizados.');await onDone()}catch(e){setMsg(e.message)}}return <section className="page"><PageHead over="CAIXA INTELIGENTE" title="Sessão, venda, gorjeta, comissão e estoque em uma operação"/>{!cash?<div className="panel cash-session"><div><b>CAIXA FECHADO</b><p>Abra uma sessão antes de registrar vendas.</p></div><input type="number" step="0.01" value={opening} onChange={e=>setOpening(e.target.value)} placeholder="Fundo de caixa"/><button className="primary" onClick={open}>Abrir caixa</button></div>:<div className="panel cash-session open"><div><b>CAIXA ABERTO #{cash.id}</b><p>Operador: {cash.user_name} • abertura {money(cash.opening_amount)}</p></div><input type="number" step="0.01" value={closingAmount} onChange={e=>setClosingAmount(e.target.value)} placeholder="Contagem física"/><button className="ghost" onClick={close}>Fechar caixa</button></div>}{msg&&<div className="notice">{msg}</div>}<div className="cash-grid"><div className="panel product-pad">{products.map(p=><button key={p.id} onClick={()=>add(p)} disabled={!cash}><b>{p.name}</b><small>{p.category} • estoque {p.stock}</small><strong>{money(p.price)}</strong></button>)}</div><div className="panel cart"><h3>Venda atual</h3>{cart.length?cart.map(x=><div className="cart-row" key={x.id}><span>{x.qty}×</span><b>{x.name}</b><strong>{money(x.qty*x.price)}</strong></div>):<Empty text="Toque em um produto para adicionar."/>}<div className="total"><span>Total</span><b>{money(total+Number(tip||0))}</b></div><select value={employee} onChange={e=>setEmployee(e.target.value)}><option value="">Atendente do usuário atual</option>{employees.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><div className="split-fields"><select value={payment} onChange={e=>setPayment(e.target.value)}><option>PIX</option><option>DINHEIRO</option><option>CARTAO</option><option>COMANDA</option></select><input type="number" step="0.01" value={tip} onChange={e=>setTip(e.target.value)} placeholder="Gorjeta"/></div><button className="primary wide" disabled={!cash} onClick={finish}>Finalizar venda</button></div></div></section>}
+function Orders({orders,employees,onDone}){const[label,setLabel]=useState(''),[emp,setEmp]=useState('');async function create(){if(!label.trim())return;await api.createOrder({label,employee_id:emp||null});setLabel('');onDone()}return <section className="page"><PageHead over="COMANDAS ONLINE" title="Mesas, balcão, clientes e atendimento identificado"/><div className="panel form-inline"><input placeholder="Ex.: Mesa 07 / João" value={label} onChange={e=>setLabel(e.target.value)}/><select value={emp} onChange={e=>setEmp(e.target.value)}><option value="">Sem atendente</option>{employees.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><button className="primary" onClick={create}>Abrir comanda</button></div><div className="cards">{orders.map(o=><div className="mini-card" key={o.id}><span>ABERTA</span><h3>{o.label}</h3><p>{o.customer_name||'Sem cliente identificado'}</p><b>{money(o.subtotal)}</b></div>)}{!orders.length&&<Empty text="Nenhuma comanda aberta."/>}</div></section>}
+function Inventory({products}){return <section className="page"><PageHead over="ESTOQUE INTELIGENTE" title="Unidade, dose, custo, margem e ruptura"/><div className="panel table-wrap"><table><thead><tr><th>Produto</th><th>Categoria</th><th>Unidade</th><th>Estoque</th><th>Mínimo</th><th>Custo</th><th>Venda</th><th>Margem</th></tr></thead><tbody>{products.map(p=><tr key={p.id}><td><b>{p.name}</b></td><td>{p.category}</td><td>{p.unit_type}{p.dose_ml?` • ${p.dose_ml}ml/dose`:''}</td><td>{p.stock}</td><td>{p.minimum_stock}</td><td>{money(p.cost)}</td><td>{money(p.price)}</td><td>{p.price?pct((p.price-p.cost)/p.price*100):'0%'}</td></tr>)}</tbody></table></div></section>}
+function Finance({expenses,closing,onDone}){const[form,setForm]=useState({description:'',category:'Contas',amount:'',due_date:''});async function save(){await api.createExpense({...form,amount:Number(form.amount)});setForm({description:'',category:'Contas',amount:'',due_date:''});onDone()}return <section className="page"><PageHead over="FINANCEIRO" title="Obrigações, reservas e destino do caixa"/><div className="grid two"><div className="panel"><PanelTitle over="ALOCAÇÃO" title="Plano do fechamento"/><Allocation closing={closing}/></div><div className="panel"><PanelTitle over="NOVA OBRIGAÇÃO" title="Registrar conta"/><div className="form-stack"><input placeholder="Descrição" value={form.description} onChange={e=>setForm({...form,description:e.target.value})}/><select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}><option>Contas</option><option>Salários</option><option>Fornecedor</option><option>Impostos</option><option>Investimento</option></select><input type="number" placeholder="Valor" value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/><input type="date" value={form.due_date} onChange={e=>setForm({...form,due_date:e.target.value})}/><button className="primary" onClick={save}>Registrar</button></div></div></div><div className="panel table-wrap"><table><thead><tr><th>Descrição</th><th>Categoria</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead><tbody>{expenses.map(x=><tr key={x.id}><td>{x.description}</td><td>{x.category}</td><td>{money(x.amount)}</td><td>{x.due_date||'—'}</td><td>{x.paid?'Pago':'Pendente'}</td></tr>)}</tbody></table></div></section>}
+function Performance({data,products,employees,onDone}){const[form,setForm]=useState({title:'',scope:'ANY',scope_value:'',reward_type:'FIXED_PER_UNIT',reward_value:''}),[tip,setTip]=useState({employee_id:'',amount:''});if(!data)return null;async function rule(){await api.createIncentive({...form,reward_value:Number(form.reward_value)});setForm({...form,title:'',reward_value:''});onDone()}async function addTip(){await api.createTip({employee_id:Number(tip.employee_id),amount:Number(tip.amount)});setTip({employee_id:'',amount:''});onDone()}return <section className="page"><PageHead over="NEXUS PERFORMANCE & REWARDS" title="Metas, gorjetas, comissão e incentivo que a equipe consegue acompanhar"/><div className="kpis"><Kpi label="Gorjetas pendentes" value={money(data.pendingTips)} sub="a repassar"/><Kpi label="Incentivos pendentes" value={money(data.pendingRewards)} sub="comissões e bônus"/><Kpi label="Regras ativas" value={String(data.rules.length)} sub="campanhas"/><Kpi label="Equipe ativa" value={String(data.employees.length)} sub="pessoas"/></div><div className="grid two"><div className="panel"><PanelTitle over="RANKING" title="Performance do mês"/>{data.employees.map((x,i)=><div className="performance-row" key={x.id}><span>{String(i+1).padStart(2,'0')}</span><div><b>{x.name}</b><small>Vendas {money(x.sales)} • gorjetas {money(x.tips)}</small></div><strong>{money(x.total_due)}</strong></div>)}</div><div className="panel"><PanelTitle over="NOVA CAMPANHA" title="Comissão por venda"/><div className="form-stack"><input placeholder="Ex.: Campanha Combo Gin" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/><select value={form.scope} onChange={e=>setForm({...form,scope:e.target.value,scope_value:''})}><option value="ANY">Qualquer produto</option><option value="PRODUCT">Produto específico</option><option value="CATEGORY">Categoria</option></select>{form.scope==='PRODUCT'&&<select value={form.scope_value} onChange={e=>setForm({...form,scope_value:e.target.value})}><option value="">Selecione</option>{products.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select>}{form.scope==='CATEGORY'&&<input placeholder="Categoria" value={form.scope_value} onChange={e=>setForm({...form,scope_value:e.target.value})}/>}<select value={form.reward_type} onChange={e=>setForm({...form,reward_type:e.target.value})}><option value="FIXED_PER_UNIT">R$ por unidade</option><option value="PERCENT_SALE">% da venda</option></select><input type="number" step="0.01" placeholder="Valor do incentivo" value={form.reward_value} onChange={e=>setForm({...form,reward_value:e.target.value})}/><button className="primary" onClick={rule}>Ativar campanha</button></div></div></div><div className="grid two"><div className="panel"><PanelTitle over="GORJETA MANUAL" title="Creditar à equipe"/><div className="form-inline"><select value={tip.employee_id} onChange={e=>setTip({...tip,employee_id:e.target.value})}><option value="">Funcionário</option>{employees.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select><input type="number" step="0.01" placeholder="Valor" value={tip.amount} onChange={e=>setTip({...tip,amount:e.target.value})}/><button className="primary" onClick={addTip}>Creditar</button></div></div><div className="panel"><PanelTitle over="REGRAS ATIVAS" title="Campanhas em execução"/>{data.rules.map(x=><div className="list-row" key={x.id}><div><b>{x.title}</b><small>{x.scope} • {x.reward_type}</small></div><strong>{x.reward_type==='PERCENT_SALE'?`${x.reward_value}%`:money(x.reward_value)}</strong></div>)}</div></div></section>}
 function Team({user,employees:initialEmployees,onDone}){
   const [name,setName]=useState('');
   const [role,setRole]=useState('Atendimento');
@@ -171,7 +246,7 @@ function Team({user,employees:initialEmployees,onDone}){
       }
     }catch(err){
       console.error('IDENTITY_LOAD_ERROR',err);
-      setError(err?.message||'NÃ£o foi possÃ­vel carregar o Identity & Access.');
+      setError(err?.message||'Não foi possível carregar o Identity & Access.');
     }finally{
       setLoading(false);
     }
@@ -192,12 +267,12 @@ function Team({user,employees:initialEmployees,onDone}){
     const roleLabel=role.trim();
 
     if(!employeeName){
-      setError('Informe o nome do funcionÃ¡rio.');
+      setError('Informe o nome do funcionário.');
       return;
     }
 
     if(!roleLabel){
-      setError('Informe a funÃ§Ã£o do funcionÃ¡rio.');
+      setError('Informe a função do funcionário.');
       return;
     }
 
@@ -212,7 +287,7 @@ function Team({user,employees:initialEmployees,onDone}){
       });
 
       setName('');
-      setSuccess('FuncionÃ¡rio adicionado com sucesso.');
+      setSuccess('Funcionário adicionado com sucesso.');
 
       await loadIdentity();
 
@@ -221,7 +296,7 @@ function Team({user,employees:initialEmployees,onDone}){
       }
     }catch(err){
       console.error('IDENTITY_CREATE_EMPLOYEE_ERROR',err);
-      setError(err?.message||'NÃ£o foi possÃ­vel adicionar o funcionÃ¡rio.');
+      setError(err?.message||'Não foi possível adicionar o funcionário.');
     }finally{
       setSaving(false);
     }
@@ -229,7 +304,7 @@ function Team({user,employees:initialEmployees,onDone}){
 
   async function addUser(){
     if(!canCreateUser){
-      setError('Somente o proprietÃ¡rio pode criar novos acessos.');
+      setError('Somente o proprietário pode criar novos acessos.');
       return;
     }
 
@@ -240,12 +315,12 @@ function Team({user,employees:initialEmployees,onDone}){
     };
 
     if(!payload.name||!payload.email||!payload.password){
-      setError('Preencha nome, e-mail e senha temporÃ¡ria.');
+      setError('Preencha nome, e-mail e senha temporária.');
       return;
     }
 
     if(payload.password.length<10){
-      setError('A senha temporÃ¡ria deve possuir pelo menos 10 caracteres.');
+      setError('A senha temporária deve possuir pelo menos 10 caracteres.');
       return;
     }
 
@@ -272,7 +347,7 @@ function Team({user,employees:initialEmployees,onDone}){
       }
     }catch(err){
       console.error('IDENTITY_CREATE_USER_ERROR',err);
-      setError(err?.message||'NÃ£o foi possÃ­vel criar o acesso.');
+      setError(err?.message||'Não foi possível criar o acesso.');
     }finally{
       setSaving(false);
     }
@@ -281,7 +356,7 @@ function Team({user,employees:initialEmployees,onDone}){
   return <section className="page">
     <PageHead
       over="IDENTITY & ACCESS"
-      title="Pessoas, funÃ§Ãµes, permissÃµes e rastreabilidade"
+      title="Pessoas, funções, permissões e rastreabilidade"
     />
 
     {error&&<div className="error-box">{error}</div>}
@@ -292,7 +367,7 @@ function Team({user,employees:initialEmployees,onDone}){
       : <>
         <div className="grid two">
           <div className="panel">
-            <PanelTitle over="EQUIPE" title="FuncionÃ¡rios ativos"/>
+            <PanelTitle over="EQUIPE" title="Funcionários ativos"/>
 
             {employees.length
               ? employees.map(x=>
@@ -304,7 +379,7 @@ function Team({user,employees:initialEmployees,onDone}){
                     <strong>{x.active===0?'INATIVO':'ATIVO'}</strong>
                   </div>
                 )
-              : <Empty text="Nenhum funcionÃ¡rio cadastrado."/>
+              : <Empty text="Nenhum funcionário cadastrado."/>
             }
 
             {canManage&&
@@ -316,7 +391,7 @@ function Team({user,employees:initialEmployees,onDone}){
                 />
 
                 <input
-                  placeholder="FunÃ§Ã£o"
+                  placeholder="Função"
                   value={role}
                   onChange={e=>setRole(e.target.value)}
                 />
@@ -334,17 +409,17 @@ function Team({user,employees:initialEmployees,onDone}){
 
           <div className="panel">
             <PanelTitle
-              over="SEGURANÃ‡A"
-              title="Passkeys e autenticaÃ§Ã£o do dispositivo"
+              over="SEGURANÇA"
+              title="Passkeys e autenticação do dispositivo"
             />
 
             <div className="bio-card">
-              <div className="fingerprint">â—Ž</div>
+              <div className="fingerprint">◎</div>
 
               <div>
                 <b>Camada preparada</b>
                 <p>
-                  Windows Hello, Face ID e Touch ID serÃ£o integrados
+                  Windows Hello, Face ID e Touch ID serão integrados
                   via passkeys/WebAuthn sem armazenar biometria bruta
                   na NEXUS.
                 </p>
@@ -356,7 +431,7 @@ function Team({user,employees:initialEmployees,onDone}){
         {canCreateUser&&
           <div className="grid two">
             <div className="panel">
-              <PanelTitle over="NOVO ACESSO" title="Criar usuÃ¡rio"/>
+              <PanelTitle over="NOVO ACESSO" title="Criar usuário"/>
 
               <div className="form-stack">
                 <input
@@ -373,7 +448,7 @@ function Team({user,employees:initialEmployees,onDone}){
 
                 <input
                   type="password"
-                  placeholder="Senha temporÃ¡ria (10+ caracteres)"
+                  placeholder="Senha temporária (10+ caracteres)"
                   value={newUser.password}
                   onChange={e=>setNewUser({...newUser,password:e.target.value})}
                 />
@@ -400,7 +475,7 @@ function Team({user,employees:initialEmployees,onDone}){
             </div>
 
             <div className="panel">
-              <PanelTitle over="USUÃRIOS" title="Contas do sistema"/>
+              <PanelTitle over="USUÁRIOS" title="Contas do sistema"/>
 
               {users.length
                 ? users.map(x=>
@@ -425,7 +500,7 @@ function Team({user,employees:initialEmployees,onDone}){
           <div className="panel table-wrap">
             <PanelTitle
               over="AUDITORIA"
-              title="Ãšltimas aÃ§Ãµes registradas"
+              title="Últimas ações registradas"
             />
 
             {audit.length
@@ -433,8 +508,8 @@ function Team({user,employees:initialEmployees,onDone}){
                   <thead>
                     <tr>
                       <th>Quando</th>
-                      <th>UsuÃ¡rio</th>
-                      <th>AÃ§Ã£o</th>
+                      <th>Usuário</th>
+                      <th>Ação</th>
                       <th>Entidade</th>
                     </tr>
                   </thead>
@@ -452,7 +527,7 @@ function Team({user,employees:initialEmployees,onDone}){
                     )}
                   </tbody>
                 </table>
-              : <Empty text="Nenhuma aÃ§Ã£o registrada ainda."/>
+              : <Empty text="Nenhuma ação registrada ainda."/>
             }
           </div>
         }
@@ -460,12 +535,14 @@ function Team({user,employees:initialEmployees,onDone}){
     }
   </section>
 }
-function Menu({products}){return <section className="page"><PageHead over="CARDÃPIO DIGITAL" title="Base pronta para QR, autoatendimento e pedido online"/><div className="cards">{products.map(p=><div className="menu-card" key={p.id}><div className="menu-image">{p.image_url?<img src={p.image_url}/>:<span>âœ¦</span>}</div><small>{p.category}</small><h3>{p.name}</h3><p>{p.description||'Produto disponÃ­vel no estabelecimento.'}</p><b>{money(p.price)}</b><button>Adicionar</button></div>)}</div></section>}
-function Goals({goals,snapshot,employees,onDone}){const[form,setForm]=useState({title:'',type:'BUSINESS',target_value:'',deadline:'',employee_id:''});async function create(){await api.createGoal({...form,target_value:Number(form.target_value),employee_id:form.employee_id||null});setForm({title:'',type:'BUSINESS',target_value:'',deadline:'',employee_id:''});onDone()}return <section className="page"><PageHead over="METAS & CONQUISTAS" title="Do fechamento de hoje aos objetivos do proprietÃ¡rio e da equipe"/><div className="hero goal-hero"><div><span>Meta diÃ¡ria</span><h2>{money(snapshot?.todayRevenue)} <small>/ {money(snapshot?.dailyGoal)}</small></h2><div className="progress"><i style={{width:`${Math.min(100,snapshot?.goalProgress||0)}%`}}/></div></div><b>{pct(snapshot?.goalProgress)}</b></div><div className="panel form-inline"><input placeholder="Ex.: Comprar nova geladeira" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value="BUSINESS">NegÃ³cio</option><option value="PERSONAL">Pessoal</option><option value="TEAM">Equipe</option></select>{form.type==='TEAM'&&<select value={form.employee_id} onChange={e=>setForm({...form,employee_id:e.target.value})}><option value="">Equipe geral</option>{employees.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select>}<input type="number" placeholder="Valor meta" value={form.target_value} onChange={e=>setForm({...form,target_value:e.target.value})}/><input type="date" value={form.deadline} onChange={e=>setForm({...form,deadline:e.target.value})}/><button className="primary" onClick={create}>Criar meta</button></div><div className="cards">{goals.map(g=><div className="mini-card" key={g.id}><span>{g.type}</span><h3>{g.title}</h3><p>{g.deadline||'Sem prazo definido'}</p><b>{money(g.current_value)} / {money(g.target_value)}</b></div>)}</div></section>}
-function OwnerAI({data,closing,performance}){return <section className="page"><PageHead over="NEXUS INTELLIGENCE" title="InteligÃªncia operacional que transforma dados em decisÃµes e aÃ§Ãµes"/><div className="ai-stage"><div className="ai-orb"><i/><i/><i/><b>N</b></div><div><span>INTELLIGENCE CORE</span><h2>{data?.growth?.headline}</h2>{data?.growth?.notes?.map((n,i)=><p key={i}>{n}</p>)}<div className="ai-command">â€œPosso tirar dinheiro do caixa hoje?â€ <em>â†’ motor avanÃ§ado de fluxo projetado entra na prÃ³xima camada.</em></div></div></div><div className="grid two"><div className="panel"><PanelTitle over="FECHAMENTO" title="AlocaÃ§Ã£o atual"/><Allocation closing={closing}/></div><div className="panel"><PanelTitle over="EQUIPE" title="Compromissos de performance"/><p className="big-number">{money(Number(performance?.pendingTips||0)+Number(performance?.pendingRewards||0))}</p><small>gorjetas + incentivos pendentes</small></div></div></section>}
-function Settings({user,onDone}){const[form,setForm]=useState(null),[pwd,setPwd]=useState({current_password:'',new_password:''}),[msg,setMsg]=useState('');useEffect(()=>{api.settings().then(setForm)},[]);if(!form)return <Boot/>;async function save(){await api.updateSettings(form);setMsg('ConfiguraÃ§Ãµes salvas.');onDone()}async function change(){try{await api.changePassword(pwd);setPwd({current_password:'',new_password:''});setMsg('Senha alterada com sucesso.')}catch(e){setMsg(e.message)}}return <section className="page"><PageHead over="CONFIGURAÃ‡Ã•ES" title="Regras financeiras, identidade e seguranÃ§a"/><div className="grid two"><div className="panel form-stack"><h3>NegÃ³cio e fechamento</h3><label>Nome<input value={form.business_name} onChange={e=>setForm({...form,business_name:e.target.value})}/></label><label>Meta diÃ¡ria<input type="number" value={form.daily_goal} onChange={e=>setForm({...form,daily_goal:e.target.value})}/></label>{[['reserve_percent','Reserva %'],['tax_percent','Impostos %'],['salary_percent','SalÃ¡rios %'],['owner_percent','Retirada %'],['reinvest_percent','Reinvestimento %']].map(([k,l])=><label key={k}>{l}<input type="number" value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/></label>)}<button className="primary" onClick={save}>Salvar regras</button></div><div className="panel form-stack"><h3>SeguranÃ§a da conta</h3><p className="muted">UsuÃ¡rio: {user.email}</p><input type="password" placeholder="Senha atual" value={pwd.current_password} onChange={e=>setPwd({...pwd,current_password:e.target.value})}/><input type="password" placeholder="Nova senha (10+ caracteres)" value={pwd.new_password} onChange={e=>setPwd({...pwd,new_password:e.target.value})}/><button className="primary" onClick={change}>Alterar senha</button><div className="bio-prep compact"><span>â—Ž</span><div><b>Passkey / biometria</b><small>Preparado para ativaÃ§Ã£o WebAuthn.</small></div></div></div></div>{msg&&<div className="notice">{msg}</div>}</section>}
-function Allocation({closing}){if(!closing)return <Empty text="Sem fechamento para calcular."/>;const rows=[['Reserva',closing.reserve],['Impostos',closing.taxes],['SalÃ¡rios',closing.payroll],['Retirada proprietÃ¡rio',closing.owner],['Reinvestimento',closing.reinvest],['Caixa operacional',closing.operating]];return <div className="allocation">{rows.map(([l,v])=><div key={l}><span>{l}</span><b>{money(v)}</b></div>)}</div>}
-function Kpi({label,value,sub}){return <div className="kpi"><span>{label}</span><b>{value}</b><small>{sub}</small></div>}function PanelTitle({over,title}){return <div className="panel-title"><span>{over}</span><h3>{title}</h3></div>}function PageHead({over,title}){return <div className="page-head"><span>{over}</span><h2>{title}</h2></div>}function Empty({text}){return <div className="empty">{text}</div>}function Coming({title,text}){return <section className="page"><PageHead over="PRÃ“XIMA CAMADA" title={title}/><div className="panel coming"><div className="coming-orb">N</div><h3>FundaÃ§Ã£o preparada</h3><p>{text}</p></div></section>}
+function Menu({products}){return <section className="page"><PageHead over="CARDÁPIO DIGITAL" title="Base pronta para QR, autoatendimento e pedido online"/><div className="cards">{products.map(p=><div className="menu-card" key={p.id}><div className="menu-image">{p.image_url?<img src={p.image_url}/>:<span>✦</span>}</div><small>{p.category}</small><h3>{p.name}</h3><p>{p.description||'Produto disponível no estabelecimento.'}</p><b>{money(p.price)}</b><button>Adicionar</button></div>)}</div></section>}
+function Goals({goals,snapshot,employees,onDone}){const[form,setForm]=useState({title:'',type:'BUSINESS',target_value:'',deadline:'',employee_id:''});async function create(){await api.createGoal({...form,target_value:Number(form.target_value),employee_id:form.employee_id||null});setForm({title:'',type:'BUSINESS',target_value:'',deadline:'',employee_id:''});onDone()}return <section className="page"><PageHead over="METAS & CONQUISTAS" title="Do fechamento de hoje aos objetivos do proprietário e da equipe"/><div className="hero goal-hero"><div><span>Meta diária</span><h2>{money(snapshot?.todayRevenue)} <small>/ {money(snapshot?.dailyGoal)}</small></h2><div className="progress"><i style={{width:`${Math.min(100,snapshot?.goalProgress||0)}%`}}/></div></div><b>{pct(snapshot?.goalProgress)}</b></div><div className="panel form-inline"><input placeholder="Ex.: Comprar nova geladeira" value={form.title} onChange={e=>setForm({...form,title:e.target.value})}/><select value={form.type} onChange={e=>setForm({...form,type:e.target.value})}><option value="BUSINESS">Negócio</option><option value="PERSONAL">Pessoal</option><option value="TEAM">Equipe</option></select>{form.type==='TEAM'&&<select value={form.employee_id} onChange={e=>setForm({...form,employee_id:e.target.value})}><option value="">Equipe geral</option>{employees.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select>}<input type="number" placeholder="Valor meta" value={form.target_value} onChange={e=>setForm({...form,target_value:e.target.value})}/><input type="date" value={form.deadline} onChange={e=>setForm({...form,deadline:e.target.value})}/><button className="primary" onClick={create}>Criar meta</button></div><div className="cards">{goals.map(g=><div className="mini-card" key={g.id}><span>{g.type}</span><h3>{g.title}</h3><p>{g.deadline||'Sem prazo definido'}</p><b>{money(g.current_value)} / {money(g.target_value)}</b></div>)}</div></section>}
+function OwnerAI({data,closing,performance}){return <section className="page"><PageHead over="NEXUS INTELLIGENCE" title="Inteligência operacional que transforma dados em decisões e ações"/><div className="ai-stage"><div className="ai-orb"><i/><i/><i/><b>N</b></div><div><span>INTELLIGENCE CORE</span><h2>{data?.growth?.headline}</h2>{data?.growth?.notes?.map((n,i)=><p key={i}>{n}</p>)}<div className="ai-command">“Posso tirar dinheiro do caixa hoje?” <em>→ motor avançado de fluxo projetado entra na próxima camada.</em></div></div></div><div className="grid two"><div className="panel"><PanelTitle over="FECHAMENTO" title="Alocação atual"/><Allocation closing={closing}/></div><div className="panel"><PanelTitle over="EQUIPE" title="Compromissos de performance"/><p className="big-number">{money(Number(performance?.pendingTips||0)+Number(performance?.pendingRewards||0))}</p><small>gorjetas + incentivos pendentes</small></div></div></section>}
+function Settings({user,onDone}){const[form,setForm]=useState(null),[pwd,setPwd]=useState({current_password:'',new_password:''}),[msg,setMsg]=useState('');useEffect(()=>{api.settings().then(setForm)},[]);if(!form)return <Boot/>;async function save(){await api.updateSettings(form);setMsg('Configurações salvas.');onDone()}async function change(){try{await api.changePassword(pwd);setPwd({current_password:'',new_password:''});setMsg('Senha alterada com sucesso.')}catch(e){setMsg(e.message)}}return <section className="page"><PageHead over="CONFIGURAÇÕES" title="Regras financeiras, identidade e segurança"/><div className="grid two"><div className="panel form-stack"><h3>Negócio e fechamento</h3><label>Nome<input value={form.business_name} onChange={e=>setForm({...form,business_name:e.target.value})}/></label><label>Meta diária<input type="number" value={form.daily_goal} onChange={e=>setForm({...form,daily_goal:e.target.value})}/></label>{[['reserve_percent','Reserva %'],['tax_percent','Impostos %'],['salary_percent','Salários %'],['owner_percent','Retirada %'],['reinvest_percent','Reinvestimento %']].map(([k,l])=><label key={k}>{l}<input type="number" value={form[k]} onChange={e=>setForm({...form,[k]:e.target.value})}/></label>)}<button className="primary" onClick={save}>Salvar regras</button></div><div className="panel form-stack"><h3>Segurança da conta</h3><p className="muted">Usuário: {user.email}</p><input type="password" placeholder="Senha atual" value={pwd.current_password} onChange={e=>setPwd({...pwd,current_password:e.target.value})}/><input type="password" placeholder="Nova senha (10+ caracteres)" value={pwd.new_password} onChange={e=>setPwd({...pwd,new_password:e.target.value})}/><button className="primary" onClick={change}>Alterar senha</button><div className="bio-prep compact"><span>◎</span><div><b>Passkey / biometria</b><small>Preparado para ativação WebAuthn.</small></div></div></div></div>{msg&&<div className="notice">{msg}</div>}</section>}
+function Allocation({closing}){if(!closing)return <Empty text="Sem fechamento para calcular."/>;const rows=[['Reserva',closing.reserve],['Impostos',closing.taxes],['Salários',closing.payroll],['Retirada proprietário',closing.owner],['Reinvestimento',closing.reinvest],['Caixa operacional',closing.operating]];return <div className="allocation">{rows.map(([l,v])=><div key={l}><span>{l}</span><b>{money(v)}</b></div>)}</div>}
+function Kpi({label,value,sub}){return <div className="kpi"><span>{label}</span><b>{value}</b><small>{sub}</small></div>}function PanelTitle({over,title}){return <div className="panel-title"><span>{over}</span><h3>{title}</h3></div>}function PageHead({over,title}){return <div className="page-head"><span>{over}</span><h2>{title}</h2></div>}function Empty({text}){return <div className="empty">{text}</div>}function Coming({title,text}){return <section className="page"><PageHead over="PRÓXIMA CAMADA" title={title}/><div className="panel coming"><div className="coming-orb">N</div><h3>Fundação preparada</h3><p>{text}</p></div></section>}
+
+
 
 
 

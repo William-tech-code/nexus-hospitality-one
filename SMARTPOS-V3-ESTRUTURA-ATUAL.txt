@@ -1,0 +1,2322 @@
+============================================================
+ NEXUS HOSPITALITY ONE
+ SMART POS V3 - ESTRUTURA ATUAL COMPLETA
+ GERADO: 2026-09-17 13:11:48
+============================================================
+
+ARQUIVO ORIGINAL:
+C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\src\SmartPOSV16.jsx
+
+LINHAS:
+2304
+
+TAMANHO:
+42665 bytes
+
+============================================================
+ SMARTPOSV16.JSX COMPLETO
+============================================================
+00001: import React,{useMemo,useState}from'react';
+00002: import './SmartPOSPremiumV21.css';
+00003: import{api}from'./api.js';
+00004: 
+00005: const brl=v=>Number(v||0).toLocaleString(
+00006:   'pt-BR',
+00007:   {style:'currency',currency:'BRL'}
+00008: );
+00009: 
+00010: const round=v=>
+00011:   Math.round((Number(v||0)+Number.EPSILON)*100)/100;
+00012: 
+00013: const num=v=>{
+00014:   const raw=String(v??'').trim();
+00015: 
+00016:   if(!raw)return 0;
+00017: 
+00018:   const normalized=
+00019:     raw.includes(',') ? raw.replace(/\./g,'').replace(',','.') : raw;
+00020: 
+00021:   const value=Number(normalized);
+00022: 
+00023:   return Number.isFinite(value)?value:0;
+00024: };
+00025: 
+00026: const METHODS=[
+00027:   {id:'PIX',label:'PIX'},
+00028:   {id:'DINHEIRO',label:'DINHEIRO'},
+00029:   {id:'DEBITO',label:'DÃ‰BITO'},
+00030:   {id:'CREDITO',label:'CRÃ‰DITO'}
+00031: ];
+00032: 
+00033: function splitTotal(total,count){
+00034: 
+00035:   const people=Math.max(1,Number(count)||1);
+00036:   const cents=Math.round(Number(total||0)*100);
+00037: 
+00038:   const base=Math.floor(cents/people);
+00039:   const remainder=cents-(base*people);
+00040: 
+00041:   return Array.from(
+00042:     {length:people},
+00043:     (_,index)=>
+00044:       (base+(index<remainder?1:0))/100
+00045:   );
+00046: }
+00047: 
+00048: export default function SmartPOSV16({
+00049:   products=[],
+00050:   cash,
+00051:   onDone,
+00052:   user
+00053: }){
+00054: 
+00055:   const[cart,setCart]=useState([]);
+00056:   const[category,setCategory]=useState('TODOS');
+00057:   const[search,setSearch]=useState('');
+00058: 
+00059:   const[paymentOpen,setPaymentOpen]=useState(false);
+00060:   const[paymentMode,setPaymentMode]=useState('');
+00061: 
+00062:   const[singleMethod,setSingleMethod]=useState('');
+00063:   const[singleReceived,setSingleReceived]=useState('');
+00064: 
+00065:   const[peopleCount,setPeopleCount]=useState(2);
+00066:   const[people,setPeople]=useState([]);
+00067: 
+00068:   const[opening,setOpening]=useState('');
+00069:   const[busy,setBusy]=useState(false);
+00070:   const[msg,setMsg]=useState('');
+00071:   const[success,setSuccess]=useState(null);
+00072: 
+00073:   const categories=[
+00074:     'TODOS',
+00075:     ...new Set(
+00076:       products.map(
+00077:         p=>p.category||'OUTROS'
+00078:       )
+00079:     )
+00080:   ];
+00081: 
+00082:   const visibleProducts=useMemo(
+00083:     ()=>products.filter(p=>
+00084:       (
+00085:         category==='TODOS'||
+00086:         (p.category||'OUTROS')===category
+00087:       )&&
+00088:       String(p.name||'')
+00089:         .toLowerCase()
+00090:         .includes(search.toLowerCase())
+00091:     ),
+00092:     [products,category,search]
+00093:   );
+00094: 
+00095:   const total=round(
+00096:     cart.reduce(
+00097:       (sum,item)=>
+00098:         sum+
+00099:         Number(item.price||0)*
+00100:         Number(item.qty||0),
+00101:       0
+00102:     )
+00103:   );
+00104: 
+00105:   const singleReceivedValue=
+00106:     num(singleReceived);
+00107: 
+00108:   const singleChange=
+00109:     singleMethod==='DINHEIRO' ? Math.max(
+00110:           0,
+00111:           round(singleReceivedValue-total)
+00112:         )
+00113:       : 0;
+00114: 
+00115:   function add(product){
+00116: 
+00117:     setCart(current=>{
+00118: 
+00119:       const found=
+00120:         current.find(
+00121:           item=>item.id===product.id
+00122:         );
+00123: 
+00124:       if(found){
+00125: 
+00126:         return current.map(
+00127:           item=>
+00128:             item.id===product.id ? {...item,qty:item.qty+1} : item
+00129:         );
+00130:       }
+00131: 
+00132:       return[
+00133:         ...current,
+00134:         {...product,qty:1}
+00135:       ];
+00136:     });
+00137:   }
+00138: 
+00139:   function qty(id,delta){
+00140: 
+00141:     setCart(current=>
+00142:       current
+00143:         .map(item=>
+00144:           item.id===id ? {...item,qty:item.qty+delta} : item
+00145:         )
+00146:         .filter(item=>item.qty>0)
+00147:     );
+00148:   }
+00149: 
+00150:   function closePayment(){
+00151: 
+00152:     if(busy)return;
+00153: 
+00154:     setPaymentOpen(false);
+00155:     setPaymentMode('');
+00156:     setSingleMethod('');
+00157:     setSingleReceived('');
+00158:     setPeople([]);
+00159:     setMsg('');
+00160:   }
+00161: 
+00162:   function openPayment(){
+00163: 
+00164:     if(!cart.length){
+00165:       setMsg('Adicione pelo menos um produto.');
+00166:       return;
+00167:     }
+00168: 
+00169:     setPaymentOpen(true);
+00170:     setPaymentMode('');
+00171:     setSingleMethod('');
+00172:     setSingleReceived('');
+00173:     setPeople([]);
+00174:     setMsg('');
+00175:   }
+00176: 
+00177:   function chooseSingle(){
+00178: 
+00179:     setPaymentMode('SINGLE');
+00180:     setSingleMethod('');
+00181:     setSingleReceived('');
+00182:     setMsg('');
+00183:   }
+00184: 
+00185:   function chooseSplit(){
+00186: 
+00187:     const count=2;
+00188:     const values=splitTotal(total,count);
+00189: 
+00190:     setPeopleCount(count);
+00191: 
+00192:     setPeople(
+00193:       values.map(
+00194:         (amount,index)=>({
+00195:           id:index+1,
+00196:           amount,
+00197:           method:'',
+00198:           received:'',
+00199:           paid:false
+00200:         })
+00201:       )
+00202:     );
+00203: 
+00204:     setPaymentMode('SPLIT');
+00205:     setMsg('');
+00206:   }
+00207: 
+00208:   function rebuildPeople(nextCount){
+00209: 
+00210:     const count=
+00211:       Math.min(
+00212:         20,
+00213:         Math.max(
+00214:           2,
+00215:           Number(nextCount)||2
+00216:         )
+00217:       );
+00218: 
+00219:     const values=
+00220:       splitTotal(total,count);
+00221: 
+00222:     setPeopleCount(count);
+00223: 
+00224:     setPeople(
+00225:       values.map(
+00226:         (amount,index)=>({
+00227:           id:index+1,
+00228:           amount,
+00229:           method:'',
+00230:           received:'',
+00231:           paid:false
+00232:         })
+00233:       )
+00234:     );
+00235: 
+00236:     setMsg('');
+00237:   }
+00238: 
+00239:   function updatePerson(index,patch){
+00240: 
+00241:     setPeople(current=>
+00242:       current.map(
+00243:         (person,i)=>
+00244:           i===index ? {...person,...patch} : person
+00245:       )
+00246:     );
+00247:   }
+00248: 
+00249:   function selectPersonMethod(index,method){
+00250: 
+00251:     updatePerson(
+00252:       index,
+00253:       {
+00254:         method,
+00255:         received:'',
+00256:         paid:method!=='DINHEIRO'
+00257:       }
+00258:     );
+00259:   }
+00260: 
+00261:   function confirmCashPerson(index){
+00262: 
+00263:     const person=people[index];
+00264: 
+00265:     if(!person)return;
+00266: 
+00267:     const received=num(person.received);
+00268: 
+00269:     if(received<person.amount){
+00270: 
+00271:       setMsg(
+00272:         `Pessoa ${index+1}: valor entregue menor que ${brl(person.amount)}.`
+00273:       );
+00274: 
+00275:       return;
+00276:     }
+00277: 
+00278:     updatePerson(
+00279:       index,
+00280:       {paid:true}
+00281:     );
+00282: 
+00283:     setMsg('');
+00284:   }
+00285: 
+00286:   function personChange(person){
+00287: 
+00288:     if(person.method!=='DINHEIRO')return 0;
+00289: 
+00290:     return Math.max(
+00291:       0,
+00292:       round(
+00293:         num(person.received)-person.amount
+00294:       )
+00295:     );
+00296:   }
+00297: 
+00298:   const peoplePaid=
+00299:     people.filter(
+00300:       person=>person.paid&&person.method
+00301:     ).length;
+00302: 
+00303:   const allPeoplePaid=
+00304:     people.length>0&&
+00305:     people.every(
+00306:       person=>person.paid&&person.method
+00307:     );
+00308: 
+00309:   function buildSplitPayments(){
+00310: 
+00311:     const grouped={};
+00312: 
+00313:     for(const person of people){
+00314: 
+00315:       grouped[person.method]=round(
+00316:         (grouped[person.method]||0)+
+00317:         person.amount
+00318:       );
+00319:     }
+00320: 
+00321:     return Object.entries(grouped)
+00322:       .filter(([,amount])=>amount>0)
+00323:       .map(([method,amount])=>({
+00324:         method,
+00325:         amount
+00326:       }));
+00327:   }
+00328: 
+00329:   function splitCashReceived(){
+00330: 
+00331:     return round(
+00332:       people
+00333:         .filter(
+00334:           person=>person.method==='DINHEIRO'
+00335:         )
+00336:         .reduce(
+00337:           (sum,person)=>
+00338:             sum+num(person.received),
+00339:           0
+00340:         )
+00341:     );
+00342:   }
+00343: 
+00344:   async function postSaleFlow(sale){
+00345: 
+00346:     /*
+00347:       NEXUS HOSPITALITY ONE V2.1.6
+00348: 
+00349:       Venda confirmada = venda concluida.
+00350: 
+00351:       Depois do pagamento, registramos automaticamente:
+00352: 
+00353:       - ficha do cliente
+00354:       - ficha de producao
+00355:       - comprovante
+00356: 
+00357:       Nenhum desses documentos bloqueia a retirada.
+00358: 
+00359:       Neste momento usamos SIMULATION:
+00360:       a fila e os documentos sao reais,
+00361:       mas ainda nao enviamos fisicamente
+00362:       para a impressora termica.
+00363: 
+00364:       A camada Electron/thermal printer sera
+00365:       conectada na proxima evolucao.
+00366:     */
+00367: 
+00368:     try{
+00369: 
+00370:       const printResult =
+00371:         await api.queueSaleDocumentsV16(
+00372:           sale.id,
+00373:           'SIMULATION'
+00374:         );
+00375: 
+00376:       return{
+00377:         ...sale,
+00378:         print_jobs:
+00379:           printResult?.jobs || [],
+00380:         documents_queued:true
+00381:       };
+00382: 
+00383:     }catch(printError){
+00384: 
+00385:       console.warn(
+00386:         '[NEXUS][POS] Documentos operacionais nao enfileirados:',
+00387:         printError
+00388:       );
+00389: 
+00390:       /*
+00391:         Falha documental NAO desfaz a venda.
+00392:         A venda ja foi confirmada pelo backend.
+00393:       */
+00394: 
+00395:       return{
+00396:         ...sale,
+00397:         documents_queued:false,
+00398:         print_warning:
+00399:           printError?.message ||
+00400:           'Venda concluida, mas os documentos nao foram enfileirados.'
+00401:       };
+00402:     }
+00403:   }
+00404: 
+00405:   async function finishSingle(){
+00406: 
+00407:     if(!singleMethod){
+00408: 
+00409:       setMsg(
+00410:         'Escolha a forma de pagamento.'
+00411:       );
+00412: 
+00413:       return;
+00414:     }
+00415: 
+00416:     if(
+00417:       singleMethod==='DINHEIRO'&&
+00418:       singleReceivedValue<total
+00419:     ){
+00420: 
+00421:       setMsg(
+00422:         `Informe pelo menos ${brl(total)} recebidos em dinheiro.`
+00423:       );
+00424: 
+00425:       return;
+00426:     }
+00427: 
+00428:     setBusy(true);
+00429:     setMsg('');
+00430: 
+00431:     try{
+00432: 
+00433:       const body={
+00434: 
+00435:         items:
+00436:           cart.map(item=>({
+00437:             product_id:item.id,
+00438:             qty:item.qty,
+00439:             mode:'UNIT'
+00440:           })),
+00441: 
+00442:         payments:[
+00443:           {
+00444:             method:singleMethod,
+00445:             amount:total
+00446:           }
+00447:         ],
+00448: 
+00449:         payment_method:singleMethod,
+00450: 
+00451:         received_amount:
+00452:           singleMethod==='DINHEIRO' ? singleReceivedValue : total,
+00453: 
+00454:         customer_name:null,
+00455:         employee_id:null,
+00456:         tip_amount:0
+00457:       };
+00458: 
+00459:       const sale=
+00460:         await api.createSaleV14(body);
+00461: 
+00462:       let finalSale=sale;
+00463: 
+00464:       try{
+00465: 
+00466:         finalSale=
+00467:           await postSaleFlow(sale);
+00468: 
+00469:       }catch(flowError){
+00470: 
+00471:         setSuccess({
+00472:           sale,
+00473:           warning:
+00474:             'Venda registrada, mas a ficha/liberaÃ§Ã£o automÃ¡tica precisa de atenÃ§Ã£o: '+
+00475:             (flowError.message||'erro operacional')
+00476:         });
+00477: 
+00478:         setPaymentOpen(false);
+00479:         setCart([]);
+00480: 
+00481:         await onDone?.();
+00482: 
+00483:         return;
+00484:       }
+00485: 
+00486:       setSuccess({
+00487:         sale:finalSale,
+00488:         warning:''
+00489:       });
+00490: 
+00491:       setPaymentOpen(false);
+00492:       setCart([]);
+00493: 
+00494:       await onDone?.();
+00495: 
+00496:       setTimeout(()=>{
+00497:         setSuccess(null);
+00498:       },1800);
+00499: 
+00500:     }catch(e){
+00501: 
+00502:       setMsg(
+00503:         e.message||
+00504:         'NÃ£o foi possÃ­vel concluir a venda.'
+00505:       );
+00506: 
+00507:     }finally{
+00508: 
+00509:       setBusy(false);
+00510:     }
+00511:   }
+00512: 
+00513:   async function finishSplit(){
+00514: 
+00515:     if(!allPeoplePaid){
+00516: 
+00517:       setMsg(
+00518:         'Confirme o pagamento de todas as pessoas antes de finalizar.'
+00519:       );
+00520: 
+00521:       return;
+00522:     }
+00523: 
+00524:     const payments=
+00525:       buildSplitPayments();
+00526: 
+00527:     const paymentTotal=
+00528:       round(
+00529:         payments.reduce(
+00530:           (sum,p)=>sum+p.amount,
+00531:           0
+00532:         )
+00533:       );
+00534: 
+00535:     if(
+00536:       Math.abs(paymentTotal-total)>.01
+00537:     ){
+00538: 
+00539:       setMsg(
+00540:         `A divisÃ£o nÃ£o fechou o total da venda. ${brl(paymentTotal)} de ${brl(total)}.`
+00541:       );
+00542: 
+00543:       return;
+00544:     }
+00545: 
+00546:     setBusy(true);
+00547:     setMsg('');
+00548: 
+00549:     try{
+00550: 
+00551:       const cashAmount=
+00552:         payments
+00553:           .filter(p=>p.method==='DINHEIRO')
+00554:           .reduce(
+00555:             (sum,p)=>sum+p.amount,
+00556:             0
+00557:           );
+00558: 
+00559:       const receivedCash=
+00560:         splitCashReceived();
+00561: 
+00562:       const body={
+00563: 
+00564:         items:
+00565:           cart.map(item=>({
+00566:             product_id:item.id,
+00567:             qty:item.qty,
+00568:             mode:'UNIT'
+00569:           })),
+00570: 
+00571:         payments,
+00572: 
+00573:         payment_method:
+00574:           payments.length>1 ? 'MISTO' : payments[0].method,
+00575: 
+00576:         received_amount:
+00577:           cashAmount>0 ? receivedCash : total,
+00578: 
+00579:         customer_name:null,
+00580:         employee_id:null,
+00581:         tip_amount:0
+00582:       };
+00583: 
+00584:       const sale=
+00585:         await api.createSaleV14(body);
+00586: 
+00587:       let finalSale=sale;
+00588: 
+00589:       try{
+00590: 
+00591:         finalSale=
+00592:           await postSaleFlow(sale);
+00593: 
+00594:       }catch(flowError){
+00595: 
+00596:         setSuccess({
+00597:           sale,
+00598:           warning:
+00599:             'Venda registrada, mas a ficha/liberaÃ§Ã£o automÃ¡tica precisa de atenÃ§Ã£o: '+
+00600:             (flowError.message||'erro operacional')
+00601:         });
+00602: 
+00603:         setPaymentOpen(false);
+00604:         setCart([]);
+00605: 
+00606:         await onDone?.();
+00607: 
+00608:         return;
+00609:       }
+00610: 
+00611:       setSuccess({
+00612:         sale:finalSale,
+00613:         warning:''
+00614:       });
+00615: 
+00616:       setPaymentOpen(false);
+00617:       setCart([]);
+00618: 
+00619:       await onDone?.();
+00620: 
+00621:       setTimeout(()=>{
+00622:         setSuccess(null);
+00623:       },1800);
+00624: 
+00625:     }catch(e){
+00626: 
+00627:       setMsg(
+00628:         e.message||
+00629:         'NÃ£o foi possÃ­vel concluir a venda.'
+00630:       );
+00631: 
+00632:     }finally{
+00633: 
+00634:       setBusy(false);
+00635:     }
+00636:   }
+00637: 
+00638:   async function openCash(){
+00639: 
+00640:     try{
+00641: 
+00642:       setBusy(true);
+00643:       setMsg('');
+00644: 
+00645:       await api.openCash({
+00646:         opening_amount:num(opening),
+00647:         notes:'Abertura Smart POS V2.1'
+00648:       });
+00649: 
+00650:       await onDone?.();
+00651: 
+00652:     }catch(e){
+00653: 
+00654:       setMsg(e.message);
+00655: 
+00656:     }finally{
+00657: 
+00658:       setBusy(false);
+00659:     }
+00660:   }
+00661: 
+00662:   if(!cash){
+00663: 
+00664:     return(
+00665:       <section className="fastpos open-page">
+00666: 
+00667:         <style>{styles}</style>
+00668: 
+00669:         <div className="open-card nexus-pos-premium-v21">
+00670: 
+00671:           <span className="eyebrow">
+00672:             NEXUS HOSPITALITY ONE
+00673:           </span>
+00674: 
+00675:           <h1>Abrir caixa</h1>
+00676: 
+00677:           <p>
+00678:             Operador: <b>{user?.name||'UsuÃ¡rio'}</b>
+00679:           </p>
+00680: 
+00681:           <label>Saldo inicial</label>
+00682: 
+00683:           <div className="money-input">
+00684:             <span>R$</span>
+00685: 
+00686:             <input
+00687:               value={opening}
+00688:               onChange={
+00689:                 e=>setOpening(e.target.value)
+00690:               }
+00691:               placeholder="0,00"
+00692:             />
+00693:           </div>
+00694: 
+00695:           <button
+00696:             className="primary"
+00697:             disabled={busy}
+00698:             onClick={openCash}
+00699:           >
+00700:             ABRIR CAIXA
+00701:           </button>
+00702: 
+00703:           {msg&&(
+00704:             <div className="message">
+00705:               {msg}
+00706:             </div>
+00707:           )}
+00708: 
+00709:         </div>
+00710: 
+00711:       </section>
+00712:     );
+00713:   }
+00714: 
+00715:   return(
+00716:     <section className="fastpos nexus-pos-premium-v21">
+00717: 
+00718:       <style>{styles}</style>
+00719: 
+00720:       <header className="top">
+00721: 
+00722:         <div className="brand">
+00723: 
+00724:           <strong>NEXUS</strong>
+00725: 
+00726:           <span>
+00727:             HOSPITALITY ONE â€¢ FAST CHECKOUT
+00728:           </span>
+00729: 
+00730:         </div>
+00731: 
+00732:         <div className="operator">
+00733: 
+00734:           <div>
+00735:             <small>OPERADOR</small>
+00736:             <strong>{user?.name||'UsuÃ¡rio'}</strong>
+00737:           </div>
+00738: 
+00739:           <em>â— CAIXA ABERTO</em>
+00740: 
+00741:         </div>
+00742: 
+00743:       </header>
+00744: 
+00745:       <div className="layout">
+00746: 
+00747:         <main className="catalog">
+00748: 
+00749:           <div className="catalog-top">
+00750: 
+00751:             <input
+00752:               className="search"
+00753:               value={search}
+00754:               onChange={
+00755:                 e=>setSearch(e.target.value)
+00756:               }
+00757:               placeholder="Buscar produto..."
+00758:             />
+00759: 
+00760:             <div className="categories">
+00761: 
+00762:               {categories.map(c=>(
+00763:                 <button
+00764:                   key={c}
+00765:                   className={
+00766:                     'category '+
+00767:                     (category===c?'active':'')
+00768:                   }
+00769:                   onClick={()=>setCategory(c)}
+00770:                 >
+00771:                   {c}
+00772:                 </button>
+00773:               ))}
+00774: 
+00775:             </div>
+00776: 
+00777:           </div>
+00778: 
+00779:           <div className="products">
+00780: 
+00781:             {visibleProducts.map(product=>(
+00782:               <button
+00783:                 className="product"
+00784:                 key={product.id}
+00785:                 onClick={()=>add(product)}
+00786:               >
+00787: 
+00788:                 <div className="nx-product-media">
+00789: 
+00790:                   {product.image_url ? (
+00791:                     <img
+00792:                       src={product.image_url}
+00793:                       alt={product.name}
+00794:                       loading="lazy"
+00795:                     />
+00796:                   ) : (
+00797:                     <div className="nx-product-placeholder">
+00798:                       <span>◆</span>
+00799:                       <small>NEXUS</small>
+00800:                     </div>
+00801:                   )}
+00802: 
+00803:                   <div className="nx-product-stock">
+00804:                     {Number(product.stock || 0)} em estoque
+00805:                   </div>
+00806: 
+00807:                 </div>
+00808: 
+00809:                 <div className="nx-product-content">
+00810: 
+00811:                   <small className="nx-product-category">
+00812:                     {product.category||'PRODUTO'}
+00813:                   </small>
+00814: 
+00815:                   <strong className="nx-product-name">
+00816:                     {product.name}
+00817:                   </strong>
+00818: 
+00819:                   <div className="nx-product-bottom">
+00820: 
+00821:                     <b className="nx-product-price">
+00822:                       {brl(product.price)}
+00823:                     </b>
+00824: 
+00825:                     <span className="nx-product-add">
+00826:                       +
+00827:                     </span>
+00828: 
+00829:                   </div>
+00830: 
+00831:                 </div>
+00832: 
+00833:               </button>
+00834:             ))}
+00835: 
+00836:           </div>
+00837: 
+00838:         </main>
+00839: 
+00840:         <aside className="cart">
+00841: 
+00842:           <div className="cart-title">
+00843: 
+00844:             <div>
+00845:               <small>PEDIDO ATUAL</small>
+00846: 
+00847:               <strong>
+00848:                 {cart.reduce(
+00849:                   (sum,item)=>sum+item.qty,
+00850:                   0
+00851:                 )}{' '}
+00852:                 item(ns)
+00853:               </strong>
+00854:             </div>
+00855: 
+00856:             {!!cart.length&&(
+00857:               <button
+00858:                 className="clear"
+00859:                 onClick={()=>setCart([])}
+00860:               >
+00861:                 LIMPAR
+00862:               </button>
+00863:             )}
+00864: 
+00865:           </div>
+00866: 
+00867:           <div className="cart-items">
+00868: 
+00869:             {!cart.length&&(
+00870:               <div className="empty">
+00871: 
+00872:                 <div className="empty-icon">
+00873:                   +
+00874:                 </div>
+00875: 
+00876:                 <strong>
+00877:                   Novo pedido
+00878:                 </strong>
+00879: 
+00880:                 <span>
+00881:                   Selecione os produtos ao lado.
+00882:                 </span>
+00883: 
+00884:               </div>
+00885:             )}
+00886: 
+00887:             {cart.map(item=>(
+00888:               <div
+00889:                 className="cart-item"
+00890:                 key={item.id}
+00891:               >
+00892: 
+00893:                 <div className="item-name">
+00894: 
+00895:                   <strong>
+00896:                     {item.name}
+00897:                   </strong>
+00898: 
+00899:                   <small>
+00900:                     {brl(item.price)}
+00901:                   </small>
+00902: 
+00903:                 </div>
+00904: 
+00905:                 <div className="qty">
+00906: 
+00907:                   <button
+00908:                     onClick={()=>
+00909:                       qty(item.id,-1)
+00910:                     }
+00911:                   >
+00912:                     âˆ’
+00913:                   </button>
+00914: 
+00915:                   <b>{item.qty}</b>
+00916: 
+00917:                   <button
+00918:                     onClick={()=>
+00919:                       qty(item.id,1)
+00920:                     }
+00921:                   >
+00922:                     +
+00923:                   </button>
+00924: 
+00925:                 </div>
+00926: 
+00927:                 <strong>
+00928:                   {brl(
+00929:                     item.price*item.qty
+00930:                   )}
+00931:                 </strong>
+00932: 
+00933:               </div>
+00934:             ))}
+00935: 
+00936:           </div>
+00937: 
+00938:           <div className="checkout">
+00939: 
+00940:             <div className="total">
+00941: 
+00942:               <span>TOTAL</span>
+00943: 
+00944:               <strong>
+00945:                 {brl(total)}
+00946:               </strong>
+00947: 
+00948:             </div>
+00949: 
+00950:             <button
+00951:               className="pay"
+00952:               disabled={!cart.length}
+00953:               onClick={openPayment}
+00954:             >
+00955:               PAGAR
+00956:               <span>{brl(total)}</span>
+00957:             </button>
+00958: 
+00959:           </div>
+00960: 
+00961:         </aside>
+00962: 
+00963:       </div>
+00964: 
+00965:       {paymentOpen&&(
+00966:         <div className="overlay">
+00967: 
+00968:           <div className="modal">
+00969: 
+00970:             <button
+00971:               className="close"
+00972:               onClick={closePayment}
+00973:             >
+00974:               Ã—
+00975:             </button>
+00976: 
+00977:             <span className="eyebrow">
+00978:               FINALIZAR PEDIDO
+00979:             </span>
+00980: 
+00981:             <div className="pay-total">
+00982:               {brl(total)}
+00983:             </div>
+00984: 
+00985:             {!paymentMode&&(
+00986:               <>
+00987: 
+00988:                 <h2>
+00989:                   Como serÃ¡ o pagamento?
+00990:                 </h2>
+00991: 
+00992:                 <div className="choice-grid">
+00993: 
+00994:                   <button
+00995:                     className="choice"
+00996:                     onClick={chooseSingle}
+00997:                   >
+00998: 
+00999:                     <span className="choice-icon">
+01000:                       1
+01001:                     </span>
+01002: 
+01003:                     <strong>
+01004:                       PAGAR SOZINHO
+01005:                     </strong>
+01006: 
+01007:                     <small>
+01008:                       Uma Ãºnica pessoa paga a conta
+01009:                     </small>
+01010: 
+01011:                   </button>
+01012: 
+01013:                   <button
+01014:                     className="choice"
+01015:                     onClick={chooseSplit}
+01016:                   >
+01017: 
+01018:                     <span className="choice-icon">
+01019:                       Ã·
+01020:                     </span>
+01021: 
+01022:                     <strong>
+01023:                       DIVIDIR CONTA
+01024:                     </strong>
+01025: 
+01026:                     <small>
+01027:                       O NEXUS calcula automaticamente
+01028:                     </small>
+01029: 
+01030:                   </button>
+01031: 
+01032:                 </div>
+01033: 
+01034:               </>
+01035:             )}
+01036: 
+01037:             {paymentMode==='SINGLE'&&(
+01038:               <>
+01039: 
+01040:                 <button
+01041:                   className="back"
+01042:                   onClick={()=>{
+01043:                     setPaymentMode('');
+01044:                     setSingleMethod('');
+01045:                     setSingleReceived('');
+01046:                     setMsg('');
+01047:                   }}
+01048:                 >
+01049:                   â† VOLTAR
+01050:                 </button>
+01051: 
+01052:                 <h2>
+01053:                   Escolha a forma de pagamento
+01054:                 </h2>
+01055: 
+01056:                 <div className="methods">
+01057: 
+01058:                   {METHODS.map(method=>(
+01059:                     <button
+01060:                       key={method.id}
+01061:                       className={
+01062:                         'method '+
+01063:                         (
+01064:                           singleMethod===method.id ? 'selected' : ''
+01065:                         )
+01066:                       }
+01067:                       onClick={()=>{
+01068:                         setSingleMethod(method.id);
+01069:                         setSingleReceived('');
+01070:                         setMsg('');
+01071:                       }}
+01072:                     >
+01073:                       {method.label}
+01074:                     </button>
+01075:                   ))}
+01076: 
+01077:                 </div>
+01078: 
+01079:                 {singleMethod==='DINHEIRO'&&(
+01080:                   <>
+01081: 
+01082:                     <label className="field-label">
+01083:                       Valor entregue pelo cliente
+01084:                     </label>
+01085: 
+01086:                     <div className="money-input large">
+01087: 
+01088:                       <span>R$</span>
+01089: 
+01090:                       <input
+01091:                         autoFocus
+01092:                         value={singleReceived}
+01093:                         onChange={
+01094:                           e=>
+01095:                             setSingleReceived(
+01096:                               e.target.value
+01097:                             )
+01098:                         }
+01099:                         placeholder="0,00"
+01100:                       />
+01101: 
+01102:                     </div>
+01103: 
+01104:                     <div className="cash-buttons">
+01105: 
+01106:                       <button
+01107:                         onClick={()=>
+01108:                           setSingleReceived(
+01109:                             total.toFixed(2)
+01110:                           )
+01111:                         }
+01112:                       >
+01113:                         EXATO
+01114:                       </button>
+01115: 
+01116:                       {[10,20,50,100,200]
+01117:                         .filter(v=>v>=total)
+01118:                         .map(v=>(
+01119:                           <button
+01120:                             key={v}
+01121:                             onClick={()=>
+01122:                               setSingleReceived(
+01123:                                 String(v)
+01124:                               )
+01125:                             }
+01126:                           >
+01127:                             R$ {v}
+01128:                           </button>
+01129:                         ))}
+01130: 
+01131:                     </div>
+01132: 
+01133:                     <div className="change">
+01134: 
+01135:                       <span>TROCO</span>
+01136: 
+01137:                       <strong>
+01138:                         {brl(singleChange)}
+01139:                       </strong>
+01140: 
+01141:                     </div>
+01142: 
+01143:                   </>
+01144:                 )}
+01145: 
+01146:                 <button
+01147:                   className="finish"
+01148:                   disabled={
+01149:                     busy||
+01150:                     !singleMethod||
+01151:                     (
+01152:                       singleMethod==='DINHEIRO'&&
+01153:                       singleReceivedValue<total
+01154:                     )
+01155:                   }
+01156:                   onClick={finishSingle}
+01157:                 >
+01158:                   {busy ? 'FINALIZANDO...' : 'CONFIRMAR E FINALIZAR'}
+01159:                 </button>
+01160: 
+01161:               </>
+01162:             )}
+01163: 
+01164:             {paymentMode==='SPLIT'&&(
+01165:               <>
+01166: 
+01167:                 <button
+01168:                   className="back"
+01169:                   onClick={()=>{
+01170:                     setPaymentMode('');
+01171:                     setPeople([]);
+01172:                     setMsg('');
+01173:                   }}
+01174:                 >
+01175:                   â† VOLTAR
+01176:                 </button>
+01177: 
+01178:                 <div className="split-head">
+01179: 
+01180:                   <div>
+01181:                     <small>
+01182:                       DIVIDIR ENTRE
+01183:                     </small>
+01184: 
+01185:                     <strong>
+01186:                       Quantas pessoas?
+01187:                     </strong>
+01188:                   </div>
+01189: 
+01190:                   <div className="people-control">
+01191: 
+01192:                     <button
+01193:                       onClick={()=>
+01194:                         rebuildPeople(
+01195:                           peopleCount-1
+01196:                         )
+01197:                       }
+01198:                       disabled={peopleCount<=2}
+01199:                     >
+01200:                       âˆ’
+01201:                     </button>
+01202: 
+01203:                     <b>
+01204:                       {peopleCount}
+01205:                     </b>
+01206: 
+01207:                     <button
+01208:                       onClick={()=>
+01209:                         rebuildPeople(
+01210:                           peopleCount+1
+01211:                         )
+01212:                       }
+01213:                     >
+01214:                       +
+01215:                     </button>
+01216: 
+01217:                   </div>
+01218: 
+01219:                 </div>
+01220: 
+01221:                 <div className="split-summary">
+01222: 
+01223:                   <span>
+01224:                     {peopleCount} pessoas
+01225:                   </span>
+01226: 
+01227:                   <strong>
+01228:                     {peopleCount>0 ? `${brl(total/peopleCount)} em mÃ©dia` : brl(total)
+01229:                     }
+01230:                   </strong>
+01231: 
+01232:                 </div>
+01233: 
+01234:                 <div className="people-list">
+01235: 
+01236:                   {people.map(
+01237:                     (person,index)=>(
+01238:                       <div
+01239:                         className={
+01240:                           'person '+
+01241:                           (
+01242:                             person.paid ? 'paid' : ''
+01243:                           )
+01244:                         }
+01245:                         key={person.id}
+01246:                       >
+01247: 
+01248:                         <div className="person-head">
+01249: 
+01250:                           <div>
+01251: 
+01252:                             <small>
+01253:                               PESSOA {index+1}
+01254:                             </small>
+01255: 
+01256:                             <strong>
+01257:                               {brl(person.amount)}
+01258:                             </strong>
+01259: 
+01260:                           </div>
+01261: 
+01262:                           {person.paid&&(
+01263:                             <span className="paid-badge">
+01264:                               âœ“ PAGO
+01265:                             </span>
+01266:                           )}
+01267: 
+01268:                         </div>
+01269: 
+01270:                         <div className="person-methods">
+01271: 
+01272:                           {METHODS.map(method=>(
+01273:                             <button
+01274:                               key={method.id}
+01275:                               className={
+01276:                                 person.method===method.id ? 'selected' : ''
+01277:                               }
+01278:                               onClick={()=>
+01279:                                 selectPersonMethod(
+01280:                                   index,
+01281:                                   method.id
+01282:                                 )
+01283:                               }
+01284:                             >
+01285:                               {method.label}
+01286:                             </button>
+01287:                           ))}
+01288: 
+01289:                         </div>
+01290: 
+01291:                         {person.method==='DINHEIRO'&&(
+01292:                           <div className="person-cash">
+01293: 
+01294:                             <label>
+01295:                               Entregou
+01296:                             </label>
+01297: 
+01298:                             <div className="mini-money">
+01299: 
+01300:                               <span>R$</span>
+01301: 
+01302:                               <input
+01303:                                 value={person.received}
+01304:                                 onChange={
+01305:                                   e=>
+01306:                                     updatePerson(
+01307:                                       index,
+01308:                                       {
+01309:                                         received:e.target.value,
+01310:                                         paid:false
+01311:                                       }
+01312:                                     )
+01313:                                 }
+01314:                                 placeholder="0,00"
+01315:                               />
+01316: 
+01317:                             </div>
+01318: 
+01319:                             <div className="person-cash-bottom">
+01320: 
+01321:                               <span>
+01322:                                 Troco:
+01323:                                 {' '}
+01324:                                 <b>
+01325:                                   {brl(
+01326:                                     personChange(person)
+01327:                                   )}
+01328:                                 </b>
+01329:                               </span>
+01330: 
+01331:                               <button
+01332:                                 onClick={()=>
+01333:                                   confirmCashPerson(index)
+01334:                                 }
+01335:                               >
+01336:                                 CONFIRMAR
+01337:                               </button>
+01338: 
+01339:                             </div>
+01340: 
+01341:                           </div>
+01342:                         )}
+01343: 
+01344:                       </div>
+01345:                     )
+01346:                   )}
+01347: 
+01348:                 </div>
+01349: 
+01350:                 <div className="paid-progress">
+01351: 
+01352:                   <div>
+01353:                     <small>
+01354:                       PAGAMENTOS CONFIRMADOS
+01355:                     </small>
+01356: 
+01357:                     <strong>
+01358:                       {peoplePaid}/{people.length}
+01359:                     </strong>
+01360:                   </div>
+01361: 
+01362:                   <div className="progress">
+01363: 
+01364:                     <span
+01365:                       style={{
+01366:                         width:
+01367:                           `${
+01368:                             people.length ? (peoplePaid/people.length)*100 : 0
+01369:                           }%`
+01370:                       }}
+01371:                     />
+01372: 
+01373:                   </div>
+01374: 
+01375:                 </div>
+01376: 
+01377:                 <button
+01378:                   className="finish"
+01379:                   disabled={
+01380:                     busy||
+01381:                     !allPeoplePaid
+01382:                   }
+01383:                   onClick={finishSplit}
+01384:                 >
+01385:                   {busy ? 'FINALIZANDO...' : allPeoplePaid ? 'FINALIZAR VENDA' : `AGUARDANDO ${people.length-peoplePaid} PAGAMENTO(S)`}
+01386:                 </button>
+01387: 
+01388:               </>
+01389:             )}
+01390: 
+01391:             {msg&&(
+01392:               <div className="message">
+01393:                 {msg}
+01394:               </div>
+01395:             )}
+01396: 
+01397:           </div>
+01398: 
+01399:         </div>
+01400:       )}
+01401: 
+01402:       {success&&(
+01403:         <div className="toast-success">
+01404: 
+01405:           <div className="success-check">
+01406:             âœ“
+01407:           </div>
+01408: 
+01409:           <div>
+01410: 
+01411:             <small>
+01412:               VENDA FINALIZADA
+01413:             </small>
+01414: 
+01415:             <strong>
+01416:               Pedido #{success.sale?.id}
+01417:             </strong>
+01418: 
+01419:             <span>
+01420:               {success.warning||
+01421:                'Venda concluÃ­da â€¢ Ficha de retirada gerada â€¢ Caixa pronto'}
+01422:             </span>
+01423: 
+01424:           </div>
+01425: 
+01426:         </div>
+01427:       )}
+01428: 
+01429:     </section>
+01430:   );
+01431: }
+01432: 
+01433: const styles=`
+01434: .fastpos{
+01435:   --bg:#08090b;
+01436:   --panel:#111318;
+01437:   --panel2:#171a20;
+01438:   --line:#292e37;
+01439:   --text:#f5f6f8;
+01440:   --muted:#9096a0;
+01441:   --gold:#e6b94e;
+01442:   --green:#59d99c;
+01443:   --red:#ff657d;
+01444:   min-height:100vh;
+01445:   padding:20px;
+01446:   box-sizing:border-box;
+01447:   color:var(--text);
+01448:   background:
+01449:     radial-gradient(circle at 12% 0%,#1b170d 0,transparent 26%),
+01450:     linear-gradient(135deg,#08090b,#101218);
+01451:   font-family:Inter,Segoe UI,Arial,sans-serif
+01452: }
+01453: 
+01454: .fastpos *{
+01455:   box-sizing:border-box
+01456: }
+01457: 
+01458: .fastpos button,
+01459: .fastpos input{
+01460:   font:inherit
+01461: }
+01462: 
+01463: .fastpos button{
+01464:   cursor:pointer
+01465: }
+01466: 
+01467: .top{
+01468:   max-width:1500px;
+01469:   margin:0 auto 16px;
+01470:   display:flex;
+01471:   justify-content:space-between;
+01472:   align-items:center;
+01473:   gap:16px
+01474: }
+01475: 
+01476: .brand strong{
+01477:   display:block;
+01478:   font-size:21px;
+01479:   letter-spacing:3px
+01480: }
+01481: 
+01482: .brand span{
+01483:   display:block;
+01484:   margin-top:4px;
+01485:   color:var(--gold);
+01486:   font-size:10px;
+01487:   letter-spacing:2px
+01488: }
+01489: 
+01490: .operator{
+01491:   display:flex;
+01492:   align-items:center;
+01493:   gap:18px;
+01494:   padding:10px 14px;
+01495:   border:1px solid var(--line);
+01496:   border-radius:13px;
+01497:   background:var(--panel)
+01498: }
+01499: 
+01500: .operator small,
+01501: .operator strong{
+01502:   display:block
+01503: }
+01504: 
+01505: .operator small{
+01506:   color:var(--muted);
+01507:   font-size:9px
+01508: }
+01509: 
+01510: .operator em{
+01511:   color:var(--green);
+01512:   font-size:10px;
+01513:   font-style:normal
+01514: }
+01515: 
+01516: .layout{
+01517:   max-width:1500px;
+01518:   margin:auto;
+01519:   display:grid;
+01520:   grid-template-columns:minmax(0,1fr) 390px;
+01521:   gap:16px;
+01522:   align-items:start
+01523: }
+01524: 
+01525: .catalog{
+01526:   min-width:0
+01527: }
+01528: 
+01529: .catalog-top{
+01530:   position:sticky;
+01531:   top:0;
+01532:   z-index:5;
+01533:   padding-bottom:10px;
+01534:   background:linear-gradient(#0b0c10 80%,transparent)
+01535: }
+01536: 
+01537: .search{
+01538:   width:100%;
+01539:   padding:14px 16px;
+01540:   border:1px solid var(--line);
+01541:   border-radius:12px;
+01542:   outline:0;
+01543:   background:#111318;
+01544:   color:#fff
+01545: }
+01546: 
+01547: .categories{
+01548:   display:flex;
+01549:   gap:7px;
+01550:   overflow:auto;
+01551:   padding-top:9px
+01552: }
+01553: 
+01554: .category{
+01555:   flex:none;
+01556:   padding:8px 13px;
+01557:   border:1px solid var(--line);
+01558:   border-radius:999px;
+01559:   background:#121419;
+01560:   color:#999
+01561: }
+01562: 
+01563: .category.active{
+01564:   border-color:var(--gold);
+01565:   background:var(--gold);
+01566:   color:#111;
+01567:   font-weight:900
+01568: }
+01569: 
+01570: .products{
+01571:   display:grid;
+01572:   grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+01573:   gap:10px
+01574: }
+01575: 
+01576: .product{
+01577:   min-height:132px;
+01578:   padding:15px;
+01579:   display:flex;
+01580:   flex-direction:column;
+01581:   justify-content:space-between;
+01582:   text-align:left;
+01583:   border:1px solid var(--line);
+01584:   border-radius:16px;
+01585:   background:linear-gradient(145deg,#171a20,#101217);
+01586:   color:#fff;
+01587:   transition:.15s
+01588: }
+01589: 
+01590: .product:hover{
+01591:   transform:translateY(-2px);
+01592:   border-color:#665634
+01593: }
+01594: 
+01595: .product small{
+01596:   color:#777;
+01597:   font-size:9px
+01598: }
+01599: 
+01600: .product strong{
+01601:   font-size:15px
+01602: }
+01603: 
+01604: .product b{
+01605:   color:var(--gold);
+01606:   font-size:19px
+01607: }
+01608: 
+01609: .product em{
+01610:   color:#999;
+01611:   font-size:9px;
+01612:   font-style:normal;
+01613:   letter-spacing:1px
+01614: }
+01615: 
+01616: .cart{
+01617:   position:sticky;
+01618:   top:15px;
+01619:   height:calc(100vh - 35px);
+01620:   min-height:560px;
+01621:   display:flex;
+01622:   flex-direction:column;
+01623:   border:1px solid var(--line);
+01624:   border-radius:20px;
+01625:   overflow:hidden;
+01626:   background:var(--panel);
+01627:   box-shadow:0 20px 50px rgba(0,0,0,.22)
+01628: }
+01629: 
+01630: .cart-title{
+01631:   padding:16px;
+01632:   display:flex;
+01633:   justify-content:space-between;
+01634:   align-items:center;
+01635:   border-bottom:1px solid var(--line)
+01636: }
+01637: 
+01638: .cart-title small{
+01639:   display:block;
+01640:   color:var(--muted);
+01641:   font-size:9px
+01642: }
+01643: 
+01644: .clear{
+01645:   border:0;
+01646:   background:transparent;
+01647:   color:#c49d45;
+01648:   font-size:10px
+01649: }
+01650: 
+01651: .cart-items{
+01652:   flex:1;
+01653:   overflow:auto;
+01654:   padding:0 15px
+01655: }
+01656: 
+01657: .empty{
+01658:   height:100%;
+01659:   min-height:280px;
+01660:   display:flex;
+01661:   flex-direction:column;
+01662:   justify-content:center;
+01663:   align-items:center;
+01664:   gap:6px;
+01665:   color:#777;
+01666:   text-align:center
+01667: }
+01668: 
+01669: .empty-icon{
+01670:   width:48px;
+01671:   height:48px;
+01672:   display:grid;
+01673:   place-items:center;
+01674:   border:1px solid #343942;
+01675:   border-radius:50%;
+01676:   font-size:25px
+01677: }
+01678: 
+01679: .empty span{
+01680:   font-size:12px
+01681: }
+01682: 
+01683: .cart-item{
+01684:   display:flex;
+01685:   align-items:center;
+01686:   gap:9px;
+01687:   padding:13px 0;
+01688:   border-bottom:1px solid #242831
+01689: }
+01690: 
+01691: .item-name{
+01692:   flex:1
+01693: }
+01694: 
+01695: .item-name strong,
+01696: .item-name small{
+01697:   display:block
+01698: }
+01699: 
+01700: .item-name small{
+01701:   margin-top:3px;
+01702:   color:var(--muted)
+01703: }
+01704: 
+01705: .qty{
+01706:   display:flex;
+01707:   align-items:center;
+01708:   gap:6px
+01709: }
+01710: 
+01711: .qty button{
+01712:   width:29px;
+01713:   height:29px;
+01714:   border:1px solid #373c45;
+01715:   border-radius:8px;
+01716:   background:#1b1e24;
+01717:   color:#fff
+01718: }
+01719: 
+01720: .checkout{
+01721:   padding:15px;
+01722:   border-top:1px solid var(--line);
+01723:   background:#0e1014
+01724: }
+01725: 
+01726: .total{
+01727:   display:flex;
+01728:   justify-content:space-between;
+01729:   align-items:end;
+01730:   margin-bottom:12px
+01731: }
+01732: 
+01733: .total span{
+01734:   color:var(--muted);
+01735:   font-size:11px
+01736: }
+01737: 
+01738: .total strong{
+01739:   font-size:30px
+01740: }
+01741: 
+01742: .pay{
+01743:   width:100%;
+01744:   padding:15px 18px;
+01745:   display:flex;
+01746:   justify-content:space-between;
+01747:   border:0;
+01748:   border-radius:12px;
+01749:   background:var(--gold);
+01750:   color:#111;
+01751:   font-weight:950
+01752: }
+01753: 
+01754: .pay:disabled{
+01755:   opacity:.35;
+01756:   cursor:not-allowed
+01757: }
+01758: 
+01759: .overlay{
+01760:   position:fixed;
+01761:   inset:0;
+01762:   z-index:9999;
+01763:   display:grid;
+01764:   place-items:center;
+01765:   padding:16px;
+01766:   background:rgba(0,0,0,.82);
+01767:   backdrop-filter:blur(9px)
+01768: }
+01769: 
+01770: .modal{
+01771:   position:relative;
+01772:   width:min(700px,100%);
+01773:   max-height:94vh;
+01774:   overflow:auto;
+01775:   padding:25px;
+01776:   border:1px solid #343a45;
+01777:   border-radius:22px;
+01778:   background:#111419;
+01779:   box-shadow:0 35px 100px #000
+01780: }
+01781: 
+01782: .close{
+01783:   position:absolute;
+01784:   right:13px;
+01785:   top:13px;
+01786:   width:35px;
+01787:   height:35px;
+01788:   border:1px solid var(--line);
+01789:   border-radius:50%;
+01790:   background:#1a1d23;
+01791:   color:#fff;
+01792:   font-size:21px
+01793: }
+01794: 
+01795: .eyebrow{
+01796:   color:var(--gold);
+01797:   font-size:9px;
+01798:   letter-spacing:2px
+01799: }
+01800: 
+01801: .pay-total{
+01802:   margin:5px 0 18px;
+01803:   font-size:43px;
+01804:   font-weight:900
+01805: }
+01806: 
+01807: .choice-grid{
+01808:   display:grid;
+01809:   grid-template-columns:1fr 1fr;
+01810:   gap:11px
+01811: }
+01812: 
+01813: .choice{
+01814:   min-height:150px;
+01815:   padding:20px;
+01816:   border:1px solid var(--line);
+01817:   border-radius:17px;
+01818:   background:#171a20;
+01819:   color:#fff;
+01820:   text-align:left
+01821: }
+01822: 
+01823: .choice:hover{
+01824:   border-color:var(--gold)
+01825: }
+01826: 
+01827: .choice-icon{
+01828:   width:40px;
+01829:   height:40px;
+01830:   margin-bottom:17px;
+01831:   display:grid;
+01832:   place-items:center;
+01833:   border-radius:11px;
+01834:   background:#25200f;
+01835:   color:var(--gold);
+01836:   font-size:22px;
+01837:   font-weight:900
+01838: }
+01839: 
+01840: .choice strong,
+01841: .choice small{
+01842:   display:block
+01843: }
+01844: 
+01845: .choice small{
+01846:   margin-top:7px;
+01847:   color:var(--muted)
+01848: }
+01849: 
+01850: .back{
+01851:   margin-bottom:12px;
+01852:   padding:0;
+01853:   border:0;
+01854:   background:transparent;
+01855:   color:var(--gold)
+01856: }
+01857: 
+01858: .methods{
+01859:   display:grid;
+01860:   grid-template-columns:repeat(2,1fr);
+01861:   gap:8px
+01862: }
+01863: 
+01864: .method,
+01865: .person-methods button{
+01866:   padding:13px;
+01867:   border:1px solid #333944;
+01868:   border-radius:11px;
+01869:   background:#181b21;
+01870:   color:#ddd
+01871: }
+01872: 
+01873: .method.selected,
+01874: .person-methods button.selected{
+01875:   border-color:var(--gold);
+01876:   background:#2a2414;
+01877:   color:#f1c85d;
+01878:   font-weight:900
+01879: }
+01880: 
+01881: .field-label{
+01882:   display:block;
+01883:   margin:17px 0 7px;
+01884:   color:#aaa
+01885: }
+01886: 
+01887: .money-input{
+01888:   display:flex;
+01889:   align-items:center;
+01890:   border:1px solid #383e48;
+01891:   border-radius:12px;
+01892:   padding:0 12px;
+01893:   background:#0d0f12
+01894: }
+01895: 
+01896: .money-input span{
+01897:   color:#777
+01898: }
+01899: 
+01900: .money-input input{
+01901:   width:100%;
+01902:   padding:13px;
+01903:   border:0;
+01904:   outline:0;
+01905:   background:transparent;
+01906:   color:#fff
+01907: }
+01908: 
+01909: .money-input.large input{
+01910:   font-size:29px;
+01911:   font-weight:900
+01912: }
+01913: 
+01914: .cash-buttons{
+01915:   display:flex;
+01916:   flex-wrap:wrap;
+01917:   gap:6px;
+01918:   margin-top:8px
+01919: }
+01920: 
+01921: .cash-buttons button{
+01922:   padding:8px 11px;
+01923:   border:1px solid #343a44;
+01924:   border-radius:8px;
+01925:   background:#1b1e24;
+01926:   color:#ddd
+01927: }
+01928: 
+01929: .change{
+01930:   margin-top:11px;
+01931:   padding:13px;
+01932:   display:flex;
+01933:   justify-content:space-between;
+01934:   align-items:center;
+01935:   border:1px solid #28543f;
+01936:   border-radius:12px;
+01937:   background:#10251c
+01938: }
+01939: 
+01940: .change span{
+01941:   color:#8ac9aa
+01942: }
+01943: 
+01944: .change strong{
+01945:   color:var(--green);
+01946:   font-size:26px
+01947: }
+01948: 
+01949: .finish{
+01950:   width:100%;
+01951:   margin-top:16px;
+01952:   padding:15px;
+01953:   border:0;
+01954:   border-radius:12px;
+01955:   background:var(--green);
+01956:   color:#07140e;
+01957:   font-weight:950
+01958: }
+01959: 
+01960: .finish:disabled{
+01961:   opacity:.35;
+01962:   cursor:not-allowed
+01963: }
+01964: 
+01965: .split-head{
+01966:   display:flex;
+01967:   justify-content:space-between;
+01968:   align-items:center;
+01969:   gap:15px;
+01970:   padding:14px;
+01971:   border:1px solid var(--line);
+01972:   border-radius:13px;
+01973:   background:#171a20
+01974: }
+01975: 
+01976: .split-head small,
+01977: .split-head strong{
+01978:   display:block
+01979: }
+01980: 
+01981: .split-head small{
+01982:   color:var(--muted);
+01983:   font-size:9px
+01984: }
+01985: 
+01986: .people-control{
+01987:   display:flex;
+01988:   align-items:center;
+01989:   gap:12px
+01990: }
+01991: 
+01992: .people-control button{
+01993:   width:38px;
+01994:   height:38px;
+01995:   border:1px solid #393f49;
+01996:   border-radius:10px;
+01997:   background:#202329;
+01998:   color:#fff;
+01999:   font-size:20px
+02000: }
+02001: 
+02002: .people-control b{
+02003:   min-width:28px;
+02004:   text-align:center;
+02005:   font-size:23px
+02006: }
+02007: 
+02008: .split-summary{
+02009:   margin:9px 0;
+02010:   padding:11px 14px;
+02011:   display:flex;
+02012:   justify-content:space-between;
+02013:   border-radius:11px;
+02014:   background:#0d0f12;
+02015:   color:#aaa
+02016: }
+02017: 
+02018: .split-summary strong{
+02019:   color:var(--gold)
+02020: }
+02021: 
+02022: .people-list{
+02023:   display:grid;
+02024:   gap:8px
+02025: }
+02026: 
+02027: .person{
+02028:   padding:13px;
+02029:   border:1px solid var(--line);
+02030:   border-radius:13px;
+02031:   background:#171a20
+02032: }
+02033: 
+02034: .person.paid{
+02035:   border-color:#28543f;
+02036:   background:#122219
+02037: }
+02038: 
+02039: .person-head{
+02040:   display:flex;
+02041:   justify-content:space-between;
+02042:   align-items:center;
+02043:   margin-bottom:10px
+02044: }
+02045: 
+02046: .person-head small,
+02047: .person-head strong{
+02048:   display:block
+02049: }
+02050: 
+02051: .person-head small{
+02052:   color:var(--muted);
+02053:   font-size:9px
+02054: }
+02055: 
+02056: .person-head strong{
+02057:   margin-top:2px;
+02058:   font-size:20px
+02059: }
+02060: 
+02061: .paid-badge{
+02062:   color:var(--green);
+02063:   font-size:10px;
+02064:   font-weight:900
+02065: }
+02066: 
+02067: .person-methods{
+02068:   display:grid;
+02069:   grid-template-columns:repeat(4,1fr);
+02070:   gap:5px
+02071: }
+02072: 
+02073: .person-methods button{
+02074:   padding:9px 5px;
+02075:   font-size:10px
+02076: }
+02077: 
+02078: .person-cash{
+02079:   margin-top:10px;
+02080:   padding:10px;
+02081:   border-radius:10px;
+02082:   background:#0d0f12
+02083: }
+02084: 
+02085: .person-cash label{
+02086:   display:block;
+02087:   margin-bottom:5px;
+02088:   color:#888;
+02089:   font-size:10px
+02090: }
+02091: 
+02092: .mini-money{
+02093:   display:flex;
+02094:   align-items:center;
+02095:   border:1px solid #343a44;
+02096:   border-radius:9px;
+02097:   padding:0 9px
+02098: }
+02099: 
+02100: .mini-money span{
+02101:   color:#777
+02102: }
+02103: 
+02104: .mini-money input{
+02105:   width:100%;
+02106:   padding:9px;
+02107:   border:0;
+02108:   outline:0;
+02109:   background:transparent;
+02110:   color:#fff
+02111: }
+02112: 
+02113: .person-cash-bottom{
+02114:   margin-top:7px;
+02115:   display:flex;
+02116:   justify-content:space-between;
+02117:   align-items:center
+02118: }
+02119: 
+02120: .person-cash-bottom span{
+02121:   color:#aaa;
+02122:   font-size:11px
+02123: }
+02124: 
+02125: .person-cash-bottom button{
+02126:   padding:7px 10px;
+02127:   border:0;
+02128:   border-radius:8px;
+02129:   background:var(--green);
+02130:   color:#07140e;
+02131:   font-size:9px;
+02132:   font-weight:900
+02133: }
+02134: 
+02135: .paid-progress{
+02136:   margin-top:11px;
+02137:   padding:12px;
+02138:   border:1px solid var(--line);
+02139:   border-radius:11px;
+02140:   background:#0d0f12
+02141: }
+02142: 
+02143: .paid-progress>div:first-child{
+02144:   display:flex;
+02145:   justify-content:space-between
+02146: }
+02147: 
+02148: .paid-progress small{
+02149:   color:#888
+02150: }
+02151: 
+02152: .progress{
+02153:   height:6px;
+02154:   margin-top:8px;
+02155:   overflow:hidden;
+02156:   border-radius:999px;
+02157:   background:#242830
+02158: }
+02159: 
+02160: .progress span{
+02161:   display:block;
+02162:   height:100%;
+02163:   border-radius:999px;
+02164:   background:var(--green);
+02165:   transition:.2s
+02166: }
+02167: 
+02168: .message{
+02169:   margin-top:11px;
+02170:   padding:11px;
+02171:   border:1px solid #594721;
+02172:   border-radius:10px;
+02173:   background:#251e10;
+02174:   color:#efc75e
+02175: }
+02176: 
+02177: .toast-success{
+02178:   position:fixed;
+02179:   right:22px;
+02180:   bottom:22px;
+02181:   z-index:10000;
+02182:   width:min(420px,calc(100% - 44px));
+02183:   display:flex;
+02184:   gap:13px;
+02185:   align-items:center;
+02186:   padding:16px;
+02187:   border:1px solid #28543f;
+02188:   border-radius:15px;
+02189:   background:#102219;
+02190:   box-shadow:0 20px 60px #000;
+02191:   animation:toastIn .2s ease
+02192: }
+02193: 
+02194: .success-check{
+02195:   flex:none;
+02196:   width:43px;
+02197:   height:43px;
+02198:   display:grid;
+02199:   place-items:center;
+02200:   border-radius:50%;
+02201:   background:#17442d;
+02202:   color:var(--green);
+02203:   font-size:22px;
+02204:   font-weight:900
+02205: }
+02206: 
+02207: .toast-success small,
+02208: .toast-success strong,
+02209: .toast-success span{
+02210:   display:block
+02211: }
+02212: 
+02213: .toast-success small{
+02214:   color:#77b996;
+02215:   font-size:8px;
+02216:   letter-spacing:1px
+02217: }
+02218: 
+02219: .toast-success strong{
+02220:   margin:2px 0;
+02221:   font-size:17px
+02222: }
+02223: 
+02224: .toast-success span{
+02225:   color:#a8c4b4;
+02226:   font-size:10px
+02227: }
+02228: 
+02229: .open-page{
+02230:   display:grid;
+02231:   place-items:center
+02232: }
+02233: 
+02234: .open-card{
+02235:   width:min(430px,100%);
+02236:   padding:27px;
+02237:   border:1px solid var(--line);
+02238:   border-radius:20px;
+02239:   background:var(--panel)
+02240: }
+02241: 
+02242: .open-card label{
+02243:   display:block;
+02244:   margin:18px 0 7px;
+02245:   color:#aaa
+02246: }
+02247: 
+02248: .primary{
+02249:   width:100%;
+02250:   margin-top:14px;
+02251:   padding:14px;
+02252:   border:0;
+02253:   border-radius:11px;
+02254:   background:var(--gold);
+02255:   color:#111;
+02256:   font-weight:900
+02257: }
+02258: 
+02259: @keyframes toastIn{
+02260:   from{
+02261:     transform:translateY(15px);
+02262:     opacity:0
+02263:   }
+02264:   to{
+02265:     transform:translateY(0);
+02266:     opacity:1
+02267:   }
+02268: }
+02269: 
+02270: @media(max-width:950px){
+02271:   .layout{
+02272:     grid-template-columns:1fr
+02273:   }
+02274: 
+02275:   .cart{
+02276:     position:relative;
+02277:     top:auto;
+02278:     height:auto;
+02279:     min-height:420px
+02280:   }
+02281: }
+02282: 
+02283: @media(max-width:600px){
+02284:   .fastpos{
+02285:     padding:11px
+02286:   }
+02287: 
+02288:   .products{
+02289:     grid-template-columns:1fr 1fr
+02290:   }
+02291: 
+02292:   .choice-grid{
+02293:     grid-template-columns:1fr
+02294:   }
+02295: 
+02296:   .person-methods{
+02297:     grid-template-columns:1fr 1fr
+02298:   }
+02299: 
+02300:   .modal{
+02301:     padding:20px 14px
+02302:   }
+02303: }
+02304: `;

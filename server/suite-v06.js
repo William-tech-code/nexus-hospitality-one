@@ -136,8 +136,388 @@ export function registerSuiteV06(app,minRole,audit){
   });
 
   app.patch('/api/inventory/:id/profile',minRole(55),(req,res)=>{
-    const id=n(req.params.id),cur=smartProfile(id);if(!cur)return res.status(404).json({error:'SMART_PROFILE_NOT_FOUND'});const b=req.body||{};
-    const next={...cur,...b};db.prepare(`UPDATE inventory_profiles SET purchase_unit=?,base_unit=?,content_base=?,purchase_qty=?,purchase_total=?,closed_units=?,open_base=?,dose_size=?,sale_dose_price=?,sale_package_price=?,sell_dose=?,sell_package=?,updated_at=CURRENT_TIMESTAMP WHERE product_id=?`).run(String(next.purchase_unit),String(next.base_unit),n(next.content_base),n(next.purchase_qty),n(next.purchase_total),n(next.closed_units),n(next.open_base),n(next.dose_size),n(next.sale_dose_price),n(next.sale_package_price),next.sell_dose?1:0,next.sell_package?1:0,id);syncProductStock(id,next);audit(req.user.id,'UPDATE','SMART_INVENTORY',id);res.json({ok:true});
+    const id=n(req.params.id);
+    const b=req.body||{};
+
+    const product=db.prepare(
+      'SELECT * FROM products WHERE id=? AND active=1'
+    ).get(id);
+
+    if(!product){
+      return res.status(404).json({
+        error:'PRODUCT_NOT_FOUND'
+      });
+    }
+
+    let cur=smartProfile(id);
+
+    if(!cur){
+      const contentBase=Math.max(
+        1,
+        n(b.content_base)||
+        n(product.package_ml)||
+        1
+      );
+
+      const doseSize=Math.max(
+        0,
+        n(b.dose_size)||
+        n(product.dose_ml)||
+        0
+      );
+
+      const baseUnit=String(
+        b.base_unit||
+        (
+          contentBase>1 || doseSize>0
+            ? 'ML'
+            : 'UNIT'
+        )
+      ).toUpperCase();
+
+      const closedUnits=Math.max(
+        0,
+        n(b.closed_units)
+      );
+
+      const openBase=Math.max(
+        0,
+        n(b.open_base)
+      );
+
+      const purchaseQty=Math.max(
+        0,
+        n(b.purchase_qty)||
+        closedUnits
+      );
+
+      const packageCost=Math.max(
+        0,
+        n(product.cost)
+      );
+
+      const purchaseTotal=Math.max(
+        0,
+        n(b.purchase_total)||
+        (
+          purchaseQty>0
+            ? packageCost*purchaseQty
+            : 0
+        )
+      );
+
+      const sellDose=
+        b.sell_dose!==undefined
+          ? (b.sell_dose?1:0)
+          : (doseSize>0?1:0);
+
+      const sellPackage=
+        b.sell_package!==undefined
+          ? (b.sell_package?1:0)
+          : (sellDose?0:1);
+
+      db.prepare(`
+        INSERT INTO inventory_profiles(
+          product_id,
+          purchase_unit,
+          base_unit,
+          content_base,
+          purchase_qty,
+          purchase_total,
+          closed_units,
+          open_base,
+          dose_size,
+          sale_dose_price,
+          sale_package_price,
+          sell_dose,
+          sell_package
+        )
+        VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `).run(
+        id,
+        String(
+          b.purchase_unit||
+          (
+            baseUnit==='ML'
+              ? 'GARRAFA'
+              : baseUnit==='G'
+                ? 'EMBALAGEM'
+                : 'UNIDADE'
+          )
+        ),
+        baseUnit,
+        contentBase,
+        purchaseQty,
+        purchaseTotal,
+        closedUnits,
+        openBase,
+        doseSize,
+        Math.max(
+          0,
+          n(b.sale_dose_price)||
+          (
+            sellDose
+              ? n(product.price)
+              : 0
+          )
+        ),
+        Math.max(
+          0,
+          n(b.sale_package_price)||
+          (
+            sellPackage
+              ? n(product.price)
+              : 0
+          )
+        ),
+        sellDose,
+        sellPackage
+      );
+
+      audit(
+        req.user.id,
+        'CREATE',
+        'SMART_INVENTORY',
+        id,
+        JSON.stringify({
+          source:'EXISTING_PRODUCT',
+          mode:sellDose?'FRACTION':'UNIT'
+        })
+      );
+
+      cur=smartProfile(id);
+    }
+
+    const next={
+      ...cur,
+      ...b
+    };
+
+    const baseUnit=String(
+      next.base_unit||'UNIT'
+    ).toUpperCase();
+
+    const contentBase=Math.max(
+      1,
+      n(next.content_base)
+    );
+
+    const doseSize=Math.max(
+      0,
+      n(next.dose_size)
+    );
+
+    const closedUnits=Math.max(
+      0,
+      n(next.closed_units)
+    );
+
+    const openBase=Math.max(
+      0,
+      n(next.open_base)
+    );
+
+    const purchaseQty=Math.max(
+      0,
+      n(next.purchase_qty)
+    );
+
+    const purchaseTotal=Math.max(
+      0,
+      n(next.purchase_total)
+    );
+
+    const saleDosePrice=Math.max(
+      0,
+      n(next.sale_dose_price)
+    );
+
+    const salePackagePrice=Math.max(
+      0,
+      n(next.sale_package_price)
+    );
+
+    const sellDose=next.sell_dose?1:0;
+    const sellPackage=next.sell_package?1:0;
+
+    if(
+      sellDose &&
+      baseUnit==='ML' &&
+      doseSize<=0
+    ){
+      return res.status(400).json({
+        error:'DOSE_SIZE_REQUIRED'
+      });
+    }
+
+    if(
+      sellDose &&
+      baseUnit==='ML' &&
+      doseSize>contentBase
+    ){
+      return res.status(400).json({
+        error:'DOSE_GREATER_THAN_PACKAGE'
+      });
+    }
+
+    if(
+      openBase>contentBase &&
+      baseUnit!=='UNIT'
+    ){
+      return res.status(400).json({
+        error:'OPEN_CONTENT_GREATER_THAN_PACKAGE'
+      });
+    }
+
+    db.prepare(`
+      UPDATE inventory_profiles
+      SET
+        purchase_unit=?,
+        base_unit=?,
+        content_base=?,
+        purchase_qty=?,
+        purchase_total=?,
+        closed_units=?,
+        open_base=?,
+        dose_size=?,
+        sale_dose_price=?,
+        sale_package_price=?,
+        sell_dose=?,
+        sell_package=?,
+        updated_at=CURRENT_TIMESTAMP
+      WHERE product_id=?
+    `).run(
+      String(next.purchase_unit||'UNIDADE'),
+      baseUnit,
+      contentBase,
+      purchaseQty,
+      purchaseTotal,
+      closedUnits,
+      openBase,
+      doseSize,
+      saleDosePrice,
+      salePackagePrice,
+      sellDose,
+      sellPackage,
+      id
+    );
+
+    /*
+      Metadados de fracionamento ficam sincronizados.
+      O preco principal do produto NAO e alterado aqui.
+    */
+    if(baseUnit==='ML'){
+      db.prepare(`
+        UPDATE products
+        SET
+          unit_type=?,
+          package_ml=?,
+          dose_ml=?,
+          stock_unit=?
+        WHERE id=?
+      `).run(
+        sellDose?'DOSE':'BOTTLE',
+        contentBase,
+        doseSize||null,
+        'GARRAFA',
+        id
+      );
+    }else{
+      db.prepare(`
+        UPDATE products
+        SET
+          unit_type='UNIT',
+          package_ml=NULL,
+          dose_ml=NULL,
+          stock_unit=?
+        WHERE id=?
+      `).run(
+        baseUnit==='G'
+          ? 'EMBALAGEM'
+          : 'UN',
+        id
+      );
+    }
+
+    const normalized={
+      ...next,
+      base_unit:baseUnit,
+      content_base:contentBase,
+      purchase_qty:purchaseQty,
+      purchase_total:purchaseTotal,
+      closed_units:closedUnits,
+      open_base:openBase,
+      dose_size:doseSize,
+      sale_dose_price:saleDosePrice,
+      sale_package_price:salePackagePrice,
+      sell_dose:sellDose,
+      sell_package:sellPackage
+    };
+
+    syncProductStock(id,normalized);
+
+    audit(
+      req.user.id,
+      'UPDATE',
+      'SMART_INVENTORY',
+      id,
+      JSON.stringify({
+        mode:sellDose?'FRACTION':'UNIT',
+        closed_units:closedUnits,
+        open_base:openBase,
+        content_base:contentBase,
+        dose_size:doseSize
+      })
+    );
+
+    const saved=smartProfile(id);
+
+    const packageCost=
+      n(saved.purchase_qty)>0
+        ? n(saved.purchase_total)/n(saved.purchase_qty)
+        : n(product.cost);
+
+    const dosesPerPackage=
+      n(saved.dose_size)>0
+        ? n(saved.content_base)/n(saved.dose_size)
+        : 0;
+
+    const costPerDose=
+      dosesPerPackage>0
+        ? packageCost/dosesPerPackage
+        : packageCost;
+
+    const currentMargin=
+      n(saved.sale_dose_price)>0
+        ? (
+            (
+              n(saved.sale_dose_price)-costPerDose
+            )/
+            n(saved.sale_dose_price)
+          )*100
+        : 0;
+
+    res.json({
+      ok:true,
+      profile:saved,
+      intelligence:{
+        mode:saved.sell_dose
+          ? 'FRACTION'
+          : 'UNIT',
+
+        doses_per_package:
+          round(dosesPerPackage,2),
+
+        package_cost:
+          round(packageCost,2),
+
+        cost_per_dose:
+          round(costPerDose,2),
+
+        current_margin:
+          round(currentMargin,2)
+      }
+    });
   });
 
   app.post('/api/cash-movements',minRole(50),(req,res)=>{const cs=db.prepare("SELECT * FROM cash_sessions WHERE status='OPEN' ORDER BY id DESC LIMIT 1").get();if(!cs)return res.status(409).json({error:'CASH_SESSION_REQUIRED'});const type=String(req.body?.type||'').toUpperCase();if(!['SUPRIMENTO','SANGRIA'].includes(type))return res.status(400).json({error:'INVALID_CASH_MOVEMENT'});const amount=Math.max(0,n(req.body?.amount));if(!amount)return res.status(400).json({error:'AMOUNT_REQUIRED'});const info=db.prepare('INSERT INTO cash_movements(cash_session_id,user_id,type,amount,description) VALUES(?,?,?,?,?)').run(cs.id,req.user.id,type,amount,String(req.body?.description||''));audit(req.user.id,'CREATE',type,info.lastInsertRowid,{amount});res.status(201).json({id:info.lastInsertRowid,ok:true})});

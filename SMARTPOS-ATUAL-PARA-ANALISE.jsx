@@ -1,4 +1,4 @@
-﻿import React,{useMemo,useState}from'react';
+import React,{useMemo,useState}from'react';
 import './SmartPOSPremiumV21.css';
 import{api}from'./api.js';
 
@@ -26,8 +26,8 @@ const num=v=>{
 const METHODS=[
   {id:'PIX',label:'PIX'},
   {id:'DINHEIRO',label:'DINHEIRO'},
-  {id:'DEBITO',label:'DÉBITO'},
-  {id:'CREDITO',label:'CRÉDITO'}
+  {id:'DEBITO',label:'DÃ‰BITO'},
+  {id:'CREDITO',label:'CRÃ‰DITO'}
 ];
 
 function splitTotal(total,count){
@@ -471,7 +471,7 @@ export default function SmartPOSV16({
         setSuccess({
           sale,
           warning:
-            'Venda registrada, mas a ficha/liberação automática precisa de atenção: '+
+            'Venda registrada, mas a ficha/liberaÃ§Ã£o automÃ¡tica precisa de atenÃ§Ã£o: '+
             (flowError.message||'erro operacional')
         });
 
@@ -501,7 +501,7 @@ export default function SmartPOSV16({
 
       setMsg(
         e.message||
-        'Não foi possível concluir a venda.'
+        'NÃ£o foi possÃ­vel concluir a venda.'
       );
 
     }finally{
@@ -537,7 +537,7 @@ export default function SmartPOSV16({
     ){
 
       setMsg(
-        `A divisão não fechou o total da venda. ${brl(paymentTotal)} de ${brl(total)}.`
+        `A divisÃ£o nÃ£o fechou o total da venda. ${brl(paymentTotal)} de ${brl(total)}.`
       );
 
       return;
@@ -596,7 +596,7 @@ export default function SmartPOSV16({
         setSuccess({
           sale,
           warning:
-            'Venda registrada, mas a ficha/liberação automática precisa de atenção: '+
+            'Venda registrada, mas a ficha/liberaÃ§Ã£o automÃ¡tica precisa de atenÃ§Ã£o: '+
             (flowError.message||'erro operacional')
         });
 
@@ -626,7 +626,7 @@ export default function SmartPOSV16({
 
       setMsg(
         e.message||
-        'Não foi possível concluir a venda.'
+        'NÃ£o foi possÃ­vel concluir a venda.'
       );
 
     }finally{
@@ -644,7 +644,7 @@ export default function SmartPOSV16({
 
       await api.openCash({
         opening_amount:num(opening),
-        notes:'Abertura Smart POS V3 Professional'
+        notes:'Abertura Smart POS V2.1'
       });
 
       await onDone?.();
@@ -675,7 +675,7 @@ export default function SmartPOSV16({
           <h1>Abrir caixa</h1>
 
           <p>
-            Operador: <b>{user?.name||'Usuário'}</b>
+            Operador: <b>{user?.name||'UsuÃ¡rio'}</b>
           </p>
 
           <label>Saldo inicial</label>
@@ -713,7 +713,7 @@ export default function SmartPOSV16({
   }
 
   return(
-    <section className="fastpos nexus-pos-premium-v21">
+    <section className="fastpos">
 
       <style>{styles}</style>
 
@@ -724,7 +724,7 @@ export default function SmartPOSV16({
           <strong>NEXUS</strong>
 
           <span>
-            HOSPITALITY ONE • FAST CHECKOUT
+            HOSPITALITY ONE â€¢ FAST CHECKOUT
           </span>
 
         </div>
@@ -733,10 +733,10 @@ export default function SmartPOSV16({
 
           <div>
             <small>OPERADOR</small>
-            <strong>{user?.name||'Usuário'}</strong>
+            <strong>{user?.name||'UsuÃ¡rio'}</strong>
           </div>
 
-          <em>● CAIXA ABERTO</em>
+          <em>â— CAIXA ABERTO</em>
 
         </div>
 
@@ -909,7 +909,7 @@ export default function SmartPOSV16({
                       qty(item.id,-1)
                     }
                   >
-                    −
+                    âˆ’
                   </button>
 
                   <b>{item.qty}</b>
@@ -971,7 +971,7 @@ export default function SmartPOSV16({
               className="close"
               onClick={closePayment}
             >
-              ×
+              Ã—
             </button>
 
             <span className="eyebrow">
@@ -986,7 +986,7 @@ export default function SmartPOSV16({
               <>
 
                 <h2>
-                  Como será o pagamento?
+                  Como serÃ¡ o pagamento?
                 </h2>
 
                 <div className="choice-grid">
@@ -1005,7 +1005,7 @@ export default function SmartPOSV16({
                     </strong>
 
                     <small>
-                      Uma única pessoa paga a conta
+                      Uma Ãºnica pessoa paga a conta
                     </small>
 
                   </button>
@@ -1016,7 +1016,7 @@ export default function SmartPOSV16({
                   >
 
                     <span className="choice-icon">
-                      ÷
+                      Ã·
                     </span>
 
                     <strong>
@@ -1046,7 +1046,7 @@ export default function SmartPOSV16({
                     setMsg('');
                   }}
                 >
-                  ← VOLTAR
+                  â† VOLTAR
                 </button>
 
                 <h2>
@@ -1172,7 +1172,7 @@ export default function SmartPOSV16({
                     setMsg('');
                   }}
                 >
-                  ← VOLTAR
+                  â† VOLTAR
                 </button>
 
                 <div className="split-head">
@@ -1197,7 +1197,7 @@ export default function SmartPOSV16({
                       }
                       disabled={peopleCount<=2}
                     >
-                      −
+                      âˆ’
                     </button>
 
                     <b>
@@ -1225,7 +1225,7 @@ export default function SmartPOSV16({
                   </span>
 
                   <strong>
-                    {peopleCount>0 ? `${brl(total/peopleCount)} em média` : brl(total)
+                    {peopleCount>0 ? `${brl(total/peopleCount)} em mÃ©dia` : brl(total)
                     }
                   </strong>
 
@@ -1261,7 +1261,7 @@ export default function SmartPOSV16({
 
                           {person.paid&&(
                             <span className="paid-badge">
-                              ✓ PAGO
+                              âœ“ PAGO
                             </span>
                           )}
 
@@ -1403,7 +1403,7 @@ export default function SmartPOSV16({
         <div className="toast-success">
 
           <div className="success-check">
-            ✓
+            âœ“
           </div>
 
           <div>
@@ -1418,7 +1418,7 @@ export default function SmartPOSV16({
 
             <span>
               {success.warning||
-               'Venda concluída • Ficha de retirada gerada • Caixa pronto'}
+               'Venda concluÃ­da â€¢ Ficha de retirada gerada â€¢ Caixa pronto'}
             </span>
 
           </div>
@@ -2301,317 +2301,4 @@ const styles=`
     padding:20px 14px
   }
 }
-
-
-/* NEXUS POS V4 FINAL OPERATIONAL EXPERIENCE */
-.fastpos.nexus-pos-premium-v21{
-  --gold:#d8ad58;
-  --gold2:#f0cb79;
-  --panel:#0e0e0d;
-  --panel2:#141310;
-  --line:#2c281f;
-  --muted:#a49b8d;
-  --green:#56dea1;
-  padding:18px 20px 22px;
-  background:
-    radial-gradient(circle at 78% 0%,rgba(216,173,88,.10),transparent 25%),
-    linear-gradient(145deg,#070706,#0b0a08 55%,#080808);
-}
-.fastpos.nexus-pos-premium-v21 .top{
-  max-width:none;
-  min-height:68px;
-  margin:0 0 16px;
-  padding:0 4px 13px;
-  border-bottom:1px solid #242018;
-}
-.fastpos.nexus-pos-premium-v21 .brand strong{font-size:24px;letter-spacing:4px}
-.fastpos.nexus-pos-premium-v21 .brand span{font-size:11px}
-.fastpos.nexus-pos-premium-v21 .operator{
-  min-width:280px;padding:11px 15px;border-color:#332d22;background:#0c0c0b
-}
-.fastpos.nexus-pos-premium-v21 .operator small{font-size:10px;letter-spacing:1px}
-.fastpos.nexus-pos-premium-v21 .operator strong{font-size:14px;margin-top:2px}
-.fastpos.nexus-pos-premium-v21 .operator em{font-size:11px;font-weight:800}
-.fastpos.nexus-pos-premium-v21 .layout{
-  max-width:none;
-  grid-template-columns:minmax(0,1fr) 430px;
-  gap:18px;
-}
-.fastpos.nexus-pos-premium-v21 .catalog-top{
-  top:0;padding:0 0 13px;background:linear-gradient(#080807 86%,transparent)
-}
-.fastpos.nexus-pos-premium-v21 .search{
-  min-height:52px;padding:15px 18px;border-color:#332e24;border-radius:14px;
-  background:#10100f;font-size:15px
-}
-.fastpos.nexus-pos-premium-v21 .search:focus{
-  border-color:#8d713d;box-shadow:0 0 0 3px rgba(216,173,88,.08)
-}
-.fastpos.nexus-pos-premium-v21 .categories{gap:8px;padding-top:10px}
-.fastpos.nexus-pos-premium-v21 .category{
-  min-height:38px;padding:9px 15px;border-color:#302b22;background:#11110f;
-  color:#b2aa9e;font-size:11px;font-weight:750
-}
-.fastpos.nexus-pos-premium-v21 .products{
-  grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:12px
-}
-.fastpos.nexus-pos-premium-v21 .product{
-  min-height:205px;padding:0;overflow:hidden;border-color:#2b271f;border-radius:17px;
-  background:linear-gradient(150deg,#151410,#0c0c0b)
-}
-.fastpos.nexus-pos-premium-v21 .product:hover{
-  transform:translateY(-2px);border-color:#856a37;box-shadow:0 15px 35px rgba(0,0,0,.28)
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-media{
-  position:relative;height:104px;display:grid;place-items:center;overflow:hidden;
-  border-bottom:1px solid #252118;background:radial-gradient(circle,#1d1910,#0d0d0c 68%)
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-media img{width:100%;height:100%;object-fit:cover}
-.fastpos.nexus-pos-premium-v21 .nx-product-placeholder{
-  display:grid;place-items:center;gap:5px;color:#a7803e
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-placeholder span{font-size:24px}
-.fastpos.nexus-pos-premium-v21 .nx-product-placeholder small{
-  color:#7f715c!important;font-size:8px!important;letter-spacing:2px
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-stock{
-  position:absolute;right:7px;bottom:7px;padding:4px 7px;border:1px solid #332c1f;
-  border-radius:999px;background:rgba(5,5,5,.86);color:#b9ad99;font-size:8px;font-weight:800
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-content{
-  min-height:99px;padding:12px 13px;display:flex;flex-direction:column
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-category{
-  color:#8f826f!important;font-size:8.5px!important;font-weight:800;letter-spacing:1px
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-name{
-  margin-top:4px;font-size:14px!important;line-height:1.2
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-bottom{
-  margin-top:auto;display:flex;justify-content:space-between;align-items:end;gap:8px
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-price{
-  color:var(--gold2)!important;font-size:19px!important
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-add{
-  width:31px;height:31px;display:grid;place-items:center;border:1px solid #66512c;
-  border-radius:9px;background:#211b0f;color:#efc86f;font-size:19px;font-weight:900
-}
-.fastpos.nexus-pos-premium-v21 .cart{
-  top:12px;height:calc(100vh - 30px);min-height:590px;border-color:#342e23;
-  border-radius:20px;background:#0d0d0c;box-shadow:0 25px 70px rgba(0,0,0,.36)
-}
-.fastpos.nexus-pos-premium-v21 .cart-title{padding:18px;border-color:#29251d}
-.fastpos.nexus-pos-premium-v21 .cart-title small{
-  color:#b0935f;font-size:9px;font-weight:850;letter-spacing:1.3px
-}
-.fastpos.nexus-pos-premium-v21 .cart-title strong{font-size:16px}
-.fastpos.nexus-pos-premium-v21 .clear{font-size:10px;font-weight:850}
-.fastpos.nexus-pos-premium-v21 .cart-items{padding:0 17px}
-.fastpos.nexus-pos-premium-v21 .cart-item{padding:15px 0;border-color:#242119}
-.fastpos.nexus-pos-premium-v21 .item-name strong{font-size:13px}
-.fastpos.nexus-pos-premium-v21 .item-name small{font-size:11px}
-.fastpos.nexus-pos-premium-v21 .qty button{
-  width:34px;height:34px;border-color:#393329;background:#171612;font-size:18px
-}
-.fastpos.nexus-pos-premium-v21 .qty b{min-width:18px;text-align:center;font-size:13px}
-.fastpos.nexus-pos-premium-v21 .checkout{
-  padding:17px;border-color:#2b271f;background:linear-gradient(180deg,#0d0d0c,#121009)
-}
-.fastpos.nexus-pos-premium-v21 .total span{font-size:10px;font-weight:850;letter-spacing:1.2px}
-.fastpos.nexus-pos-premium-v21 .total strong{font-size:34px;color:#fff}
-.fastpos.nexus-pos-premium-v21 .pay{
-  min-height:58px;padding:16px 18px;border-radius:13px;
-  background:linear-gradient(135deg,#c9963f,#edc76f);font-size:14px
-}
-.fastpos.nexus-pos-premium-v21 .pay span{font-size:17px}
-.fastpos.nexus-pos-premium-v21 .empty strong{font-size:15px;color:#aaa}
-.fastpos.nexus-pos-premium-v21 .empty span{font-size:12px}
-.fastpos.nexus-pos-premium-v21 .overlay{background:rgba(0,0,0,.88);backdrop-filter:blur(12px)}
-.fastpos.nexus-pos-premium-v21 .modal{
-  width:min(760px,100%);padding:28px;border-color:#3b3326;border-radius:23px;
-  background:linear-gradient(145deg,#12110e,#0d0d0c);box-shadow:0 40px 120px #000
-}
-.fastpos.nexus-pos-premium-v21 .modal h2{font-size:22px}
-.fastpos.nexus-pos-premium-v21 .eyebrow{font-size:10px;font-weight:850}
-.fastpos.nexus-pos-premium-v21 .pay-total{font-size:48px;color:#f7e5bc}
-.fastpos.nexus-pos-premium-v21 .choice{
-  min-height:165px;padding:22px;border-color:#332e25;background:#151410
-}
-.fastpos.nexus-pos-premium-v21 .choice strong{font-size:15px}
-.fastpos.nexus-pos-premium-v21 .choice small{font-size:12px;line-height:1.4}
-.fastpos.nexus-pos-premium-v21 .method{
-  min-height:52px;font-size:13px;font-weight:800
-}
-.fastpos.nexus-pos-premium-v21 .money-input.large input{font-size:32px}
-.fastpos.nexus-pos-premium-v21 .cash-buttons button{
-  min-height:39px;padding:9px 13px;font-size:11px;font-weight:800
-}
-.fastpos.nexus-pos-premium-v21 .change{padding:15px}
-.fastpos.nexus-pos-premium-v21 .change strong{font-size:29px}
-.fastpos.nexus-pos-premium-v21 .finish{min-height:55px;font-size:13px}
-.fastpos.nexus-pos-premium-v21 .person{padding:15px}
-.fastpos.nexus-pos-premium-v21 .person-methods button{min-height:39px;font-size:11px}
-.fastpos.nexus-pos-premium-v21 .toast-success{
-  width:min(470px,calc(100% - 44px));padding:18px;border-color:#327052;background:#0f281c
-}
-.fastpos.nexus-pos-premium-v21 .toast-success strong{font-size:18px}
-.fastpos.nexus-pos-premium-v21 .toast-success span{font-size:11px;line-height:1.35}
-.fastpos.nexus-pos-premium-v21.open-page .open-card{
-  width:min(470px,100%);padding:31px;border-color:#3b3326;background:#0f0f0d
-}
-.fastpos.nexus-pos-premium-v21.open-page .open-card h1{font-size:30px}
-.fastpos.nexus-pos-premium-v21.open-page .open-card p,
-.fastpos.nexus-pos-premium-v21.open-page .open-card label{font-size:13px}
-.fastpos.nexus-pos-premium-v21.open-page .primary{min-height:52px;font-size:13px}
-@media(max-width:1200px){
- .fastpos.nexus-pos-premium-v21 .layout{grid-template-columns:minmax(0,1fr) 380px}
- .fastpos.nexus-pos-premium-v21 .products{grid-template-columns:repeat(auto-fill,minmax(165px,1fr))}
-}
-@media(max-width:950px){
- .fastpos.nexus-pos-premium-v21 .layout{grid-template-columns:1fr}
- .fastpos.nexus-pos-premium-v21 .cart{position:relative;top:auto;height:auto;min-height:440px}
-}
-@media(max-width:600px){
- .fastpos.nexus-pos-premium-v21{padding:11px}
- .fastpos.nexus-pos-premium-v21 .top{align-items:flex-start}
- .fastpos.nexus-pos-premium-v21 .operator{min-width:0}
- .fastpos.nexus-pos-premium-v21 .products{grid-template-columns:1fr 1fr}
- .fastpos.nexus-pos-premium-v21 .product{min-height:180px}
- .fastpos.nexus-pos-premium-v21 .modal{padding:22px 14px}
-}
-/* NEXUS POS V4 FINAL OPERATIONAL EXPERIENCE END */
-
-
-
-/* =========================================================
-   NEXUS CAIXA V4.1 - OPERATIONAL POLISH
-   ========================================================= */
-.fastpos.nexus-pos-premium-v21 .products{
-  grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  gap:10px!important;
-}
-.fastpos.nexus-pos-premium-v21 .product{
-  min-height:184px!important;
-  border-radius:15px!important;
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-media{
-  height:86px!important;
-  min-height:86px!important;
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-media img{
-  width:100%!important;
-  height:100%!important;
-  object-fit:cover!important;
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-stock{
-  position:absolute!important;
-  top:7px!important;
-  right:7px!important;
-  bottom:auto!important;
-  left:auto!important;
-  width:auto!important;
-  min-width:0!important;
-  max-width:92px!important;
-  height:auto!important;
-  min-height:0!important;
-  padding:4px 7px!important;
-  margin:0!important;
-  display:inline-flex!important;
-  align-items:center!important;
-  justify-content:center!important;
-  border:1px solid #3a3122!important;
-  border-radius:999px!important;
-  background:rgba(8,8,7,.90)!important;
-  color:#c9b58e!important;
-  font-size:8px!important;
-  font-weight:850!important;
-  line-height:1!important;
-  letter-spacing:0!important;
-  white-space:nowrap!important;
-  box-shadow:none!important;
-  transform:none!important;
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-content{
-  min-height:98px!important;
-  padding:10px 12px 11px!important;
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-category{
-  font-size:8px!important;
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-name{
-  font-size:13px!important;
-  line-height:1.18!important;
-  margin-top:4px!important;
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-price{
-  font-size:18px!important;
-}
-.fastpos.nexus-pos-premium-v21 .nx-product-add{
-  width:34px!important;
-  height:34px!important;
-  min-width:34px!important;
-  min-height:34px!important;
-  font-size:20px!important;
-}
-.fastpos.nexus-pos-premium-v21 .cart{
-  min-height:590px!important;
-}
-.fastpos.nexus-pos-premium-v21 .cart-items{
-  padding:0 18px!important;
-}
-.fastpos.nexus-pos-premium-v21 .cart-item{
-  padding:16px 0!important;
-  gap:12px!important;
-}
-.fastpos.nexus-pos-premium-v21 .item-name strong{
-  font-size:13.5px!important;
-}
-.fastpos.nexus-pos-premium-v21 .qty{
-  gap:7px!important;
-}
-.fastpos.nexus-pos-premium-v21 .qty button{
-  width:38px!important;
-  height:38px!important;
-  min-width:38px!important;
-  min-height:38px!important;
-  border-radius:9px!important;
-  font-size:19px!important;
-}
-.fastpos.nexus-pos-premium-v21 .qty b{
-  min-width:22px!important;
-  font-size:14px!important;
-}
-.fastpos.nexus-pos-premium-v21 .checkout{
-  padding:18px 20px 20px!important;
-}
-.fastpos.nexus-pos-premium-v21 .total strong{
-  font-size:36px!important;
-}
-.fastpos.nexus-pos-premium-v21 .pay{
-  min-height:62px!important;
-  font-size:15px!important;
-}
-@media(max-width:1500px){
- .fastpos.nexus-pos-premium-v21 .products{
-   grid-template-columns:repeat(3,minmax(0,1fr))!important;
- }
-}
-@media(max-width:1120px){
- .fastpos.nexus-pos-premium-v21 .products{
-   grid-template-columns:repeat(2,minmax(0,1fr))!important;
- }
-}
-@media(max-width:950px){
- .fastpos.nexus-pos-premium-v21 .products{
-   grid-template-columns:repeat(3,minmax(0,1fr))!important;
- }
-}
-@media(max-width:700px){
- .fastpos.nexus-pos-premium-v21 .products{
-   grid-template-columns:repeat(2,minmax(0,1fr))!important;
- }
-}
-/* NEXUS CAIXA V4.1 OPERATIONAL POLISH END */
-
 `;

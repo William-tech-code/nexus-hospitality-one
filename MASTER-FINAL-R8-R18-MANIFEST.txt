@@ -1,0 +1,2120 @@
+﻿
+====================================================================
+NEXUS HOSPITALITY ONE
+MASTER FINAL R8-R18 — EXACT INSTALLATION MANIFEST
+====================================================================
+
+GENERATED = 2026-09-17 18:26:25
+BACKUP = C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\BACKUP-MASTER-FINAL-R8-R18-20260917-182623
+
+--------------------------------------------------------------------
+FROZEN FOUNDATION
+--------------------------------------------------------------------
+
+R1 FINANCIAL TRUTH      = PASS
+R2 CEO                  = PASS
+R3 DEBT                 = PASS
+R4 CALENDAR             = PASS
+R5 CASH FLOW + DRE      = PASS
+R6 FORECAST             = PASS
+R7 FINANCIAL MENTOR     = PASS
+
+--------------------------------------------------------------------
+R8 — GROWTH & EXPANSION INTELLIGENCE
+--------------------------------------------------------------------
+
+Growth Engine detected:
+True
+
+Expansion capability detected:
+True
+
+FINAL TARGET:
+- growth score based on real registered data
+- revenue trend
+- margin trend
+- debt pressure
+- inventory pressure
+- event opportunity
+- expansion readiness
+- scenario comparison
+- no automatic investment authorization
+- no claim of available capital without verified balance
+
+--------------------------------------------------------------------
+R9 — PRODUCT PROFITABILITY INTELLIGENCE
+--------------------------------------------------------------------
+
+Margin foundation:
+True
+
+Product ranking:
+True
+
+Menu engineering:
+False
+
+FINAL TARGET:
+- units sold
+- revenue by product
+- historical CMV
+- contribution
+- gross margin
+- category performance
+- top sellers
+- low-margin sellers
+- high-margin opportunities
+- menu engineering
+- price/cost evidence
+
+--------------------------------------------------------------------
+R10 — SALES INTELLIGENCE
+--------------------------------------------------------------------
+
+Average ticket:
+True
+
+Weekday intelligence:
+True
+
+Hourly intelligence:
+True
+
+FINAL TARGET:
+- average ticket
+- revenue by weekday
+- revenue by hour
+- sales count
+- strong periods
+- weak periods
+- operator context when available
+- customer context only when identifiable
+
+--------------------------------------------------------------------
+R11 — EVENT FINANCIAL BRIDGE
+--------------------------------------------------------------------
+
+Event core:
+True
+
+Ticketing:
+True
+
+Gate:
+True
+
+Financial bridge:
+False
+
+FINAL TARGET:
+- event dashboard bridge
+- ticket revenue only from identifiable source
+- event-linked costs only when identifiable
+- event result only when evidence supports attribution
+- attendance/ticket context
+- no invented event profitability
+
+--------------------------------------------------------------------
+R12 — INVENTORY FINANCIAL INTELLIGENCE
+--------------------------------------------------------------------
+
+Inventory core:
+True
+
+Inventory valuation:
+False
+
+Turnover:
+False
+
+FINAL TARGET:
+- estimated inventory value from registered cost
+- low-stock exposure
+- excess stock signal
+- inventory turnover
+- stock coverage
+- losses
+- working-capital signal
+- no claim that stock value equals cash
+
+--------------------------------------------------------------------
+R13 — GOALS & PERFORMANCE
+--------------------------------------------------------------------
+
+Goal capability:
+True
+
+FINAL TARGET:
+- daily target
+- weekly target
+- monthly target
+- actual
+- gap
+- required pace
+- current pace
+- forecast comparison
+- scenario context
+
+--------------------------------------------------------------------
+R14 — MULTI-UNIT FOUNDATION
+--------------------------------------------------------------------
+
+Existing multi-unit capability:
+False
+
+FINAL TARGET:
+- preserve current single-unit operation
+- future-ready unit context
+- BAR / EVENT / FUTURE UNIT model
+- no destructive unit_id retrofit
+- no rewriting historical records
+- explicit future migration path
+
+--------------------------------------------------------------------
+R15 — OWNER EXECUTIVE COCKPIT
+--------------------------------------------------------------------
+
+Owner Command Center:
+False
+
+CEO:
+True
+
+Mentor:
+True
+
+FINAL TARGET:
+ONE OWNER VIEW integrating:
+- sales
+- cash
+- DRE
+- debt
+- financial calendar
+- forecast
+- mentor
+- products
+- inventory
+- procurement
+- events
+- goals
+- growth
+- risk/attention queue
+
+--------------------------------------------------------------------
+R16 — FINAL INTELLIGENCE INTEGRATION
+--------------------------------------------------------------------
+
+Loading states:
+True
+
+Error states:
+True
+
+Responsive:
+True
+
+FINAL TARGET:
+- API normalization
+- shared presentation semantics
+- standardized loading/error
+- no duplicate calculations when existing engine can be reused
+- responsive desktop/mobile
+- preserve module boundaries
+- source-of-truth labels
+
+--------------------------------------------------------------------
+R17 — SECURITY & AUDIT FINAL
+--------------------------------------------------------------------
+
+Authentication:
+True
+
+Roles:
+True
+
+Audit:
+True
+
+Cancellation:
+True
+
+Return/refund:
+True
+
+FINAL TARGET:
+- authenticated operator
+- permission by role
+- sensitive-action authorization
+- user
+- date/time
+- reason
+- before/after where supported
+- cancellation audit
+- return/refund audit
+- debt payment audit
+- procurement approval audit
+- no silent high-impact action
+
+--------------------------------------------------------------------
+R18 — PRODUCTION READINESS
+--------------------------------------------------------------------
+
+Package:
+nexus-hospitality-one
+
+Version:
+1.5.4
+
+Build:
+True
+
+Server:
+True
+
+Desktop:
+True
+
+Windows dist:
+True
+
+Dist dir:
+True
+
+Electron:
+True
+
+Health:
+True
+
+FINAL TARGET:
+- syntax PASS
+- Vite build PASS
+- database integrity PASS
+- release audit
+- backup/rollback
+- Electron validation
+- Windows package readiness
+- no claim of POS-80 validation
+- no claim of operational homologation
+
+--------------------------------------------------------------------
+FINAL SAFETY CONTRACT
+--------------------------------------------------------------------
+
+HIGH IMPACT AUTO PAYMENT       = BLOCKED
+HIGH IMPACT AUTO TRANSFER      = BLOCKED
+AUTO BORROWING                 = BLOCKED
+AUTO INVESTMENT                = BLOCKED
+AUTO PURCHASE APPROVAL         = BLOCKED
+
+FAKE BANK BALANCE              = BLOCKED
+GUARANTEED REVENUE             = BLOCKED
+GUARANTEED PROFIT              = BLOCKED
+GUARANTEED LIQUIDITY           = BLOCKED
+
+BLIND LIABILITY CONSOLIDATION  = BLOCKED
+INVENTORY VALUE = CASH         = BLOCKED
+EVENT ATTRIBUTION WITHOUT DATA = BLOCKED
+CUSTOMER CLAIM WITHOUT ID      = BLOCKED
+
+MULTI-UNIT DESTRUCTIVE RETROFIT = BLOCKED
+
+POS-80 PHYSICAL TEST            = PENDING
+OPERATIONAL HOMOLOGATION        = PENDING
+
+====================================================================
+{
+  "generated_at": "2026-09-17T21:26:24.570Z",
+  "database": {
+    "integrity": "ok",
+    "readonly": true,
+    "writes": 0
+  },
+  "core": {
+    "sales": {
+      "table": "sales",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "total",
+        "payment_method",
+        "status",
+        "table_label",
+        "customer_name",
+        "created_at",
+        "cash_session_id",
+        "user_id",
+        "employee_id",
+        "tip_amount",
+        "cancelled_at",
+        "cancel_reason",
+        "received_amount",
+        "change_amount",
+        "release_code",
+        "released_at",
+        "released_by",
+        "cancelled_by"
+      ],
+      "required_columns": {
+        "id": true,
+        "total": true,
+        "status": true,
+        "created_at": true,
+        "customer_name": true,
+        "cash_session_id": true,
+        "user_id": true,
+        "employee_id": true
+      }
+    },
+    "sale_items": {
+      "table": "sale_items",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "sale_id",
+        "product_id",
+        "qty",
+        "unit_price",
+        "unit_cost",
+        "sale_mode"
+      ],
+      "required_columns": {
+        "sale_id": true,
+        "product_id": true,
+        "unit_cost": true
+      }
+    },
+    "products": {
+      "table": "products",
+      "exists": true,
+      "rows": 8,
+      "columns": [
+        "id",
+        "name",
+        "category",
+        "price",
+        "cost",
+        "stock",
+        "minimum_stock",
+        "active",
+        "created_at",
+        "barcode",
+        "image_url",
+        "description",
+        "unit_type",
+        "package_ml",
+        "dose_ml",
+        "stock_factor",
+        "stock_unit",
+        "menu_visible",
+        "menu_featured",
+        "target_margin",
+        "suggested_price"
+      ],
+      "required_columns": {
+        "id": true,
+        "name": true,
+        "category": true,
+        "price": true,
+        "cost": true,
+        "stock": true,
+        "minimum_stock": true,
+        "target_margin": true,
+        "suggested_price": true
+      }
+    },
+    "expenses": {
+      "table": "expenses",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "description",
+        "category",
+        "amount",
+        "due_date",
+        "paid",
+        "recurring",
+        "created_at",
+        "paid_at",
+        "entry_type",
+        "payment_method",
+        "supplier_name",
+        "document_number",
+        "notes",
+        "investment_area",
+        "updated_at"
+      ],
+      "required_columns": {
+        "amount": true,
+        "due_date": true,
+        "paid": true,
+        "entry_type": true,
+        "created_at": true,
+        "paid_at": true
+      }
+    },
+    "debts": {
+      "table": "financial_debts",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "creditor",
+        "description",
+        "category",
+        "original_amount",
+        "current_balance",
+        "installment_amount",
+        "installments_total",
+        "installments_paid",
+        "interest_rate",
+        "due_date",
+        "status",
+        "priority",
+        "payment_method",
+        "document_number",
+        "notes",
+        "created_at",
+        "updated_at",
+        "paid_at"
+      ],
+      "required_columns": {
+        "current_balance": true,
+        "due_date": true,
+        "status": true
+      }
+    },
+    "debt_payments": {
+      "table": "financial_debt_payments",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "debt_id",
+        "amount",
+        "previous_balance",
+        "new_balance",
+        "payment_method",
+        "notes",
+        "user_id",
+        "created_at"
+      ],
+      "required_columns": {
+        "debt_id": true,
+        "amount": true,
+        "created_at": true
+      }
+    },
+    "obligations": {
+      "table": "financial_obligations",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "title",
+        "category",
+        "amount",
+        "due_date",
+        "status",
+        "essential",
+        "created_at"
+      ],
+      "required_columns": {
+        "amount": true,
+        "due_date": true,
+        "status": true
+      }
+    },
+    "purchase_orders": {
+      "table": "purchase_orders",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "supplier_id",
+        "status",
+        "total",
+        "expected_at",
+        "received_at",
+        "notes",
+        "created_at"
+      ],
+      "required_columns": {
+        "status": true,
+        "total": true,
+        "expected_at": true
+      }
+    },
+    "stock_movements": {
+      "table": "stock_movements",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "product_id",
+        "type",
+        "qty",
+        "reference_type",
+        "reference_id",
+        "user_id",
+        "notes",
+        "created_at",
+        "display_unit"
+      ],
+      "required_columns": {}
+    },
+    "inventory_batches": {
+      "table": "inventory_batches",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "product_id",
+        "batch_code",
+        "initial_qty",
+        "remaining_qty",
+        "unit_cost",
+        "manufactured_at",
+        "expires_at",
+        "supplier_id",
+        "purchase_order_id",
+        "notes",
+        "active",
+        "created_by",
+        "created_at",
+        "updated_at"
+      ],
+      "required_columns": {}
+    },
+    "inventory_batch_movements": {
+      "table": "inventory_batch_movements",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "batch_id",
+        "product_id",
+        "movement_type",
+        "qty",
+        "stock_movement_id",
+        "user_id",
+        "notes",
+        "created_at"
+      ],
+      "required_columns": {}
+    },
+    "inventory_losses": {
+      "table": "inventory_losses",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "product_id",
+        "batch_id",
+        "reason",
+        "qty",
+        "unit_cost",
+        "total_cost",
+        "notes",
+        "user_id",
+        "created_at"
+      ],
+      "required_columns": {}
+    },
+    "users": {
+      "table": "users",
+      "exists": true,
+      "rows": 2,
+      "columns": [
+        "id",
+        "name",
+        "email",
+        "password_hash",
+        "role",
+        "active",
+        "force_password_change",
+        "created_at",
+        "last_login_at"
+      ],
+      "required_columns": {}
+    },
+    "audit_logs": {
+      "table": "audit_logs",
+      "exists": false,
+      "rows": null,
+      "columns": [],
+      "required_columns": {}
+    },
+    "audit_log": {
+      "table": "audit_log",
+      "exists": true,
+      "rows": 20,
+      "columns": [
+        "id",
+        "user_id",
+        "action",
+        "entity",
+        "entity_id",
+        "details",
+        "created_at"
+      ],
+      "required_columns": {}
+    },
+    "events": {
+      "table": "events",
+      "exists": true,
+      "rows": 1,
+      "columns": [
+        "id",
+        "title",
+        "event_type",
+        "venue_name",
+        "starts_at",
+        "ends_at",
+        "status",
+        "artist_name",
+        "image_url",
+        "capacity",
+        "cost_estimate",
+        "created_at",
+        "revenue_actual",
+        "audience_actual",
+        "public_sales",
+        "sales_starts_at",
+        "sales_ends_at",
+        "description",
+        "public_slug"
+      ],
+      "required_columns": {}
+    },
+    "tickets": {
+      "table": "tickets",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "event_id",
+        "attendee_name",
+        "ticket_code",
+        "ticket_type",
+        "price",
+        "payment_status",
+        "checkin_at",
+        "created_at",
+        "lot_id",
+        "attendee_phone",
+        "payment_method",
+        "checked_in_by",
+        "qr_payload",
+        "buyer_email",
+        "buyer_document",
+        "ticket_order_id",
+        "ticket_customer_id"
+      ],
+      "required_columns": {}
+    },
+    "ticket_orders": {
+      "table": "ticket_orders",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "order_code",
+        "event_id",
+        "lot_id",
+        "buyer_name",
+        "buyer_phone",
+        "buyer_email",
+        "buyer_document",
+        "quantity",
+        "total",
+        "payment_status",
+        "asaas_customer_id",
+        "asaas_payment_id",
+        "invoice_url",
+        "pix_payload",
+        "pix_image",
+        "created_at",
+        "updated_at",
+        "ticket_portal_token_hash",
+        "ticket_portal_created_at",
+        "ticket_customer_id"
+      ],
+      "required_columns": {}
+    },
+    "event_tickets": {
+      "table": "event_tickets",
+      "exists": false,
+      "rows": null,
+      "columns": [],
+      "required_columns": {}
+    },
+    "cash_sessions": {
+      "table": "cash_sessions",
+      "exists": true,
+      "rows": 1,
+      "columns": [
+        "id",
+        "user_id",
+        "status",
+        "opening_amount",
+        "closing_amount",
+        "expected_amount",
+        "opened_at",
+        "closed_at",
+        "notes"
+      ],
+      "required_columns": {}
+    },
+    "cash_movements": {
+      "table": "cash_movements",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "cash_session_id",
+        "user_id",
+        "type",
+        "amount",
+        "description",
+        "created_at"
+      ],
+      "required_columns": {}
+    },
+    "payment_splits": {
+      "table": "payment_splits",
+      "exists": true,
+      "rows": 0,
+      "columns": [
+        "id",
+        "sale_id",
+        "method",
+        "amount",
+        "created_at"
+      ],
+      "required_columns": {}
+    }
+  },
+  "optional_multi_unit": {
+    "business_units": {
+      "table": "business_units",
+      "exists": false,
+      "rows": null,
+      "columns": [],
+      "required_columns": {}
+    },
+    "units": {
+      "table": "units",
+      "exists": false,
+      "rows": null,
+      "columns": [],
+      "required_columns": {}
+    },
+    "branches": {
+      "table": "branches",
+      "exists": false,
+      "rows": null,
+      "columns": [],
+      "required_columns": {}
+    }
+  },
+  "all_tables": [
+    {
+      "name": "asaas_webhook_events",
+      "rows": 0,
+      "columns": [
+        "event_id",
+        "event_type",
+        "payment_id",
+        "external_reference",
+        "received_at"
+      ]
+    },
+    {
+      "name": "audit_log",
+      "rows": 20,
+      "columns": [
+        "id",
+        "user_id",
+        "action",
+        "entity",
+        "entity_id",
+        "details",
+        "created_at"
+      ]
+    },
+    {
+      "name": "cash_movements",
+      "rows": 0,
+      "columns": [
+        "id",
+        "cash_session_id",
+        "user_id",
+        "type",
+        "amount",
+        "description",
+        "created_at"
+      ]
+    },
+    {
+      "name": "cash_sessions",
+      "rows": 1,
+      "columns": [
+        "id",
+        "user_id",
+        "status",
+        "opening_amount",
+        "closing_amount",
+        "expected_amount",
+        "opened_at",
+        "closed_at",
+        "notes"
+      ]
+    },
+    {
+      "name": "change_corrections",
+      "rows": 0,
+      "columns": [
+        "id",
+        "sale_id",
+        "old_received",
+        "old_change",
+        "new_received",
+        "new_change",
+        "reason",
+        "user_id",
+        "created_at"
+      ]
+    },
+    {
+      "name": "customers",
+      "rows": 0,
+      "columns": [
+        "id",
+        "name",
+        "phone",
+        "email",
+        "birthday",
+        "notes",
+        "total_spent",
+        "visits",
+        "active",
+        "created_at"
+      ]
+    },
+    {
+      "name": "delivery_items",
+      "rows": 0,
+      "columns": [
+        "id",
+        "delivery_id",
+        "product_id",
+        "qty",
+        "unit_price",
+        "sale_mode",
+        "notes"
+      ]
+    },
+    {
+      "name": "delivery_orders",
+      "rows": 0,
+      "columns": [
+        "id",
+        "customer_name",
+        "phone",
+        "order_type",
+        "address",
+        "status",
+        "total",
+        "payment_method",
+        "notes",
+        "created_at",
+        "updated_at",
+        "delivery_fee",
+        "change_for",
+        "courier_name",
+        "sale_id",
+        "payment_status",
+        "public_order_id"
+      ]
+    },
+    {
+      "name": "dining_tables",
+      "rows": 12,
+      "columns": [
+        "id",
+        "label",
+        "area",
+        "capacity",
+        "status",
+        "active",
+        "created_at",
+        "position_x",
+        "position_y"
+      ]
+    },
+    {
+      "name": "employee_rewards",
+      "rows": 0,
+      "columns": [
+        "id",
+        "employee_id",
+        "sale_id",
+        "rule_id",
+        "type",
+        "amount",
+        "description",
+        "status",
+        "created_at"
+      ]
+    },
+    {
+      "name": "employees",
+      "rows": 3,
+      "columns": [
+        "id",
+        "user_id",
+        "name",
+        "role_label",
+        "phone",
+        "active",
+        "created_at"
+      ]
+    },
+    {
+      "name": "event_costs",
+      "rows": 0,
+      "columns": [
+        "id",
+        "event_id",
+        "description",
+        "category",
+        "amount",
+        "created_at"
+      ]
+    },
+    {
+      "name": "event_experience_audit",
+      "rows": 0,
+      "columns": [
+        "id",
+        "event_id",
+        "ticket_order_id",
+        "ticket_customer_id",
+        "action",
+        "status",
+        "details",
+        "created_at"
+      ]
+    },
+    {
+      "name": "event_experience_notifications",
+      "rows": 0,
+      "columns": [
+        "id",
+        "ticket_customer_id",
+        "ticket_order_id",
+        "channel",
+        "destination",
+        "type",
+        "status",
+        "payload",
+        "attempts",
+        "last_error",
+        "created_at",
+        "sent_at"
+      ]
+    },
+    {
+      "name": "events",
+      "rows": 1,
+      "columns": [
+        "id",
+        "title",
+        "event_type",
+        "venue_name",
+        "starts_at",
+        "ends_at",
+        "status",
+        "artist_name",
+        "image_url",
+        "capacity",
+        "cost_estimate",
+        "created_at",
+        "revenue_actual",
+        "audience_actual",
+        "public_sales",
+        "sales_starts_at",
+        "sales_ends_at",
+        "description",
+        "public_slug"
+      ]
+    },
+    {
+      "name": "expenses",
+      "rows": 0,
+      "columns": [
+        "id",
+        "description",
+        "category",
+        "amount",
+        "due_date",
+        "paid",
+        "recurring",
+        "created_at",
+        "paid_at",
+        "entry_type",
+        "payment_method",
+        "supplier_name",
+        "document_number",
+        "notes",
+        "investment_area",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "financial_debt_payments",
+      "rows": 0,
+      "columns": [
+        "id",
+        "debt_id",
+        "amount",
+        "previous_balance",
+        "new_balance",
+        "payment_method",
+        "notes",
+        "user_id",
+        "created_at"
+      ]
+    },
+    {
+      "name": "financial_debts",
+      "rows": 0,
+      "columns": [
+        "id",
+        "creditor",
+        "description",
+        "category",
+        "original_amount",
+        "current_balance",
+        "installment_amount",
+        "installments_total",
+        "installments_paid",
+        "interest_rate",
+        "due_date",
+        "status",
+        "priority",
+        "payment_method",
+        "document_number",
+        "notes",
+        "created_at",
+        "updated_at",
+        "paid_at"
+      ]
+    },
+    {
+      "name": "financial_intelligence_audit",
+      "rows": 0,
+      "columns": [
+        "id",
+        "action",
+        "entity_type",
+        "entity_id",
+        "payload",
+        "user_id",
+        "created_at"
+      ]
+    },
+    {
+      "name": "financial_intelligence_reserves",
+      "rows": 0,
+      "columns": [
+        "id",
+        "obligation_source",
+        "obligation_id",
+        "reserve_date",
+        "target_amount",
+        "reserved_amount",
+        "status",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "financial_obligations",
+      "rows": 0,
+      "columns": [
+        "id",
+        "title",
+        "category",
+        "amount",
+        "due_date",
+        "status",
+        "essential",
+        "created_at"
+      ]
+    },
+    {
+      "name": "fiscal_captures",
+      "rows": 1,
+      "columns": [
+        "id",
+        "supplier",
+        "document_number",
+        "document_type",
+        "issue_date",
+        "total",
+        "image_url",
+        "status",
+        "notes",
+        "created_at"
+      ]
+    },
+    {
+      "name": "goals",
+      "rows": 0,
+      "columns": [
+        "id",
+        "title",
+        "type",
+        "target_value",
+        "current_value",
+        "deadline",
+        "active",
+        "created_at",
+        "employee_id"
+      ]
+    },
+    {
+      "name": "growth_actions",
+      "rows": 0,
+      "columns": [
+        "id",
+        "action_date",
+        "title",
+        "reason",
+        "expected_impact",
+        "status",
+        "created_at"
+      ]
+    },
+    {
+      "name": "incentive_rules",
+      "rows": 0,
+      "columns": [
+        "id",
+        "title",
+        "scope",
+        "scope_value",
+        "reward_type",
+        "reward_value",
+        "target_qty",
+        "target_revenue",
+        "start_date",
+        "end_date",
+        "active",
+        "created_at"
+      ]
+    },
+    {
+      "name": "inventory_alert_ack",
+      "rows": 0,
+      "columns": [
+        "id",
+        "alert_key",
+        "user_id",
+        "seen_at"
+      ]
+    },
+    {
+      "name": "inventory_batch_movements",
+      "rows": 0,
+      "columns": [
+        "id",
+        "batch_id",
+        "product_id",
+        "movement_type",
+        "qty",
+        "stock_movement_id",
+        "user_id",
+        "notes",
+        "created_at"
+      ]
+    },
+    {
+      "name": "inventory_batches",
+      "rows": 0,
+      "columns": [
+        "id",
+        "product_id",
+        "batch_code",
+        "initial_qty",
+        "remaining_qty",
+        "unit_cost",
+        "manufactured_at",
+        "expires_at",
+        "supplier_id",
+        "purchase_order_id",
+        "notes",
+        "active",
+        "created_by",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "inventory_losses",
+      "rows": 0,
+      "columns": [
+        "id",
+        "product_id",
+        "batch_id",
+        "reason",
+        "qty",
+        "unit_cost",
+        "total_cost",
+        "notes",
+        "user_id",
+        "created_at"
+      ]
+    },
+    {
+      "name": "inventory_profiles",
+      "rows": 0,
+      "columns": [
+        "product_id",
+        "purchase_unit",
+        "base_unit",
+        "content_base",
+        "purchase_qty",
+        "purchase_total",
+        "closed_units",
+        "open_base",
+        "dose_size",
+        "sale_dose_price",
+        "sale_package_price",
+        "sell_dose",
+        "sell_package",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "invoices",
+      "rows": 0,
+      "columns": [
+        "id",
+        "supplier",
+        "invoice_number",
+        "amount",
+        "issue_date",
+        "entry_type",
+        "notes",
+        "created_at"
+      ]
+    },
+    {
+      "name": "order_items",
+      "rows": 0,
+      "columns": [
+        "id",
+        "order_id",
+        "product_id",
+        "qty",
+        "unit_price",
+        "notes",
+        "created_at",
+        "status",
+        "employee_id",
+        "sale_mode"
+      ]
+    },
+    {
+      "name": "order_payments",
+      "rows": 0,
+      "columns": [
+        "id",
+        "order_id",
+        "method",
+        "amount",
+        "created_at"
+      ]
+    },
+    {
+      "name": "orders",
+      "rows": 5,
+      "columns": [
+        "id",
+        "label",
+        "customer_name",
+        "status",
+        "subtotal",
+        "created_at",
+        "updated_at",
+        "employee_id",
+        "table_id",
+        "closed_at",
+        "notes"
+      ]
+    },
+    {
+      "name": "payment_splits",
+      "rows": 0,
+      "columns": [
+        "id",
+        "sale_id",
+        "method",
+        "amount",
+        "created_at"
+      ]
+    },
+    {
+      "name": "pricing_policies",
+      "rows": 1,
+      "columns": [
+        "id",
+        "default_margin",
+        "min_margin",
+        "rounding",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "print_jobs",
+      "rows": 0,
+      "columns": [
+        "id",
+        "sale_id",
+        "document_type",
+        "status",
+        "mode",
+        "requested_by",
+        "requested_at",
+        "processed_at",
+        "printed_at",
+        "printer_name",
+        "attempts",
+        "error_message",
+        "idempotency_key",
+        "payload_json",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "print_log",
+      "rows": 0,
+      "columns": [
+        "id",
+        "sale_id",
+        "document_type",
+        "user_id",
+        "created_at"
+      ]
+    },
+    {
+      "name": "products",
+      "rows": 8,
+      "columns": [
+        "id",
+        "name",
+        "category",
+        "price",
+        "cost",
+        "stock",
+        "minimum_stock",
+        "active",
+        "created_at",
+        "barcode",
+        "image_url",
+        "description",
+        "unit_type",
+        "package_ml",
+        "dose_ml",
+        "stock_factor",
+        "stock_unit",
+        "menu_visible",
+        "menu_featured",
+        "target_margin",
+        "suggested_price"
+      ]
+    },
+    {
+      "name": "public_order_items",
+      "rows": 0,
+      "columns": [
+        "id",
+        "order_id",
+        "product_id",
+        "name",
+        "qty",
+        "unit_price",
+        "notes"
+      ]
+    },
+    {
+      "name": "public_orders",
+      "rows": 0,
+      "columns": [
+        "id",
+        "public_code",
+        "customer_name",
+        "phone",
+        "email",
+        "cpf_cnpj",
+        "order_type",
+        "address",
+        "notes",
+        "items_total",
+        "delivery_fee",
+        "total",
+        "payment_method",
+        "payment_status",
+        "asaas_customer_id",
+        "asaas_payment_id",
+        "invoice_url",
+        "pix_payload",
+        "pix_image",
+        "delivery_id",
+        "status",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "purchase_items",
+      "rows": 0,
+      "columns": [
+        "id",
+        "purchase_order_id",
+        "product_id",
+        "qty",
+        "unit_cost",
+        "received_qty"
+      ]
+    },
+    {
+      "name": "purchase_orders",
+      "rows": 0,
+      "columns": [
+        "id",
+        "supplier_id",
+        "status",
+        "total",
+        "expected_at",
+        "received_at",
+        "notes",
+        "created_at"
+      ]
+    },
+    {
+      "name": "purchase_quotes",
+      "rows": 0,
+      "columns": [
+        "id",
+        "title",
+        "status",
+        "created_at"
+      ]
+    },
+    {
+      "name": "quote_invitations",
+      "rows": 0,
+      "columns": [
+        "id",
+        "request_id",
+        "supplier_id",
+        "invite_token",
+        "status",
+        "submitted_at",
+        "freight",
+        "delivery_days",
+        "validity_days",
+        "notes"
+      ]
+    },
+    {
+      "name": "quote_items",
+      "rows": 0,
+      "columns": [
+        "id",
+        "quote_id",
+        "supplier_id",
+        "product_id",
+        "description",
+        "qty",
+        "unit_price",
+        "freight",
+        "lead_days",
+        "notes",
+        "created_at"
+      ]
+    },
+    {
+      "name": "quote_request_items",
+      "rows": 0,
+      "columns": [
+        "id",
+        "request_id",
+        "product_id",
+        "qty",
+        "unit",
+        "target_price"
+      ]
+    },
+    {
+      "name": "quote_requests",
+      "rows": 0,
+      "columns": [
+        "id",
+        "title",
+        "public_code",
+        "status",
+        "deadline_at",
+        "notes",
+        "created_by",
+        "selected_supplier_id",
+        "selected_total",
+        "created_at",
+        "finalized_at"
+      ]
+    },
+    {
+      "name": "quote_supplier_prices",
+      "rows": 0,
+      "columns": [
+        "id",
+        "invitation_id",
+        "item_id",
+        "unit_price",
+        "available",
+        "brand",
+        "notes"
+      ]
+    },
+    {
+      "name": "recipe_items",
+      "rows": 0,
+      "columns": [
+        "id",
+        "recipe_id",
+        "ingredient_product_id",
+        "qty",
+        "unit",
+        "waste_percent",
+        "notes"
+      ]
+    },
+    {
+      "name": "recipes",
+      "rows": 0,
+      "columns": [
+        "id",
+        "product_id",
+        "title",
+        "recipe_type",
+        "yield_qty",
+        "instructions",
+        "active",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "reservations",
+      "rows": 0,
+      "columns": [
+        "id",
+        "customer_id",
+        "customer_name",
+        "phone",
+        "reserved_at",
+        "party_size",
+        "table_id",
+        "status",
+        "notes",
+        "created_at"
+      ]
+    },
+    {
+      "name": "sale_cancellations",
+      "rows": 0,
+      "columns": [
+        "id",
+        "sale_id",
+        "reason",
+        "user_id",
+        "cancel_type",
+        "refund_total",
+        "created_at",
+        "total",
+        "released_before_cancel"
+      ]
+    },
+    {
+      "name": "sale_inventory_ledger",
+      "rows": 0,
+      "columns": [
+        "id",
+        "sale_id",
+        "product_id",
+        "stock_delta",
+        "closed_delta",
+        "open_delta",
+        "created_at"
+      ]
+    },
+    {
+      "name": "sale_item_inventory_ledger",
+      "rows": 0,
+      "columns": [
+        "id",
+        "sale_id",
+        "sale_item_id",
+        "affected_product_id",
+        "stock_delta",
+        "closed_delta",
+        "open_delta",
+        "source_mode",
+        "created_at"
+      ]
+    },
+    {
+      "name": "sale_items",
+      "rows": 0,
+      "columns": [
+        "id",
+        "sale_id",
+        "product_id",
+        "qty",
+        "unit_price",
+        "unit_cost",
+        "sale_mode"
+      ]
+    },
+    {
+      "name": "sale_participant_payments",
+      "rows": 0,
+      "columns": [
+        "id",
+        "participant_id",
+        "method",
+        "amount",
+        "created_at"
+      ]
+    },
+    {
+      "name": "sale_participants",
+      "rows": 0,
+      "columns": [
+        "id",
+        "sale_id",
+        "participant_no",
+        "label",
+        "payment_total",
+        "created_at"
+      ]
+    },
+    {
+      "name": "sale_payment_reversals",
+      "rows": 0,
+      "columns": [
+        "id",
+        "sale_id",
+        "payment_split_id",
+        "method",
+        "amount",
+        "status",
+        "user_id",
+        "reason",
+        "created_at"
+      ]
+    },
+    {
+      "name": "sale_return_items",
+      "rows": 0,
+      "columns": [
+        "id",
+        "return_id",
+        "sale_item_id",
+        "product_id",
+        "qty",
+        "amount"
+      ]
+    },
+    {
+      "name": "sale_return_payment_reversals",
+      "rows": 0,
+      "columns": [
+        "id",
+        "return_id",
+        "sale_id",
+        "payment_split_id",
+        "method",
+        "amount",
+        "status",
+        "user_id",
+        "reason",
+        "created_at"
+      ]
+    },
+    {
+      "name": "sale_returns",
+      "rows": 0,
+      "columns": [
+        "id",
+        "sale_id",
+        "reason",
+        "total",
+        "user_id",
+        "created_at"
+      ]
+    },
+    {
+      "name": "sales",
+      "rows": 0,
+      "columns": [
+        "id",
+        "total",
+        "payment_method",
+        "status",
+        "table_label",
+        "customer_name",
+        "created_at",
+        "cash_session_id",
+        "user_id",
+        "employee_id",
+        "tip_amount",
+        "cancelled_at",
+        "cancel_reason",
+        "received_amount",
+        "change_amount",
+        "release_code",
+        "released_at",
+        "released_by",
+        "cancelled_by"
+      ]
+    },
+    {
+      "name": "schema_versions",
+      "rows": 2,
+      "columns": [
+        "version",
+        "applied_at"
+      ]
+    },
+    {
+      "name": "sessions",
+      "rows": 3,
+      "columns": [
+        "id",
+        "user_id",
+        "token_hash",
+        "created_at",
+        "expires_at",
+        "revoked_at"
+      ]
+    },
+    {
+      "name": "settings",
+      "rows": 8,
+      "columns": [
+        "key",
+        "value"
+      ]
+    },
+    {
+      "name": "smart_closings",
+      "rows": 0,
+      "columns": [
+        "id",
+        "cash_session_id",
+        "revenue",
+        "cogs",
+        "expenses",
+        "obligations",
+        "safety_reserve",
+        "reinvestment",
+        "safe_owner_withdrawal",
+        "risk_level",
+        "rationale",
+        "created_at"
+      ]
+    },
+    {
+      "name": "social_actions",
+      "rows": 0,
+      "columns": [
+        "id",
+        "title",
+        "event_date",
+        "goal_amount",
+        "received_amount",
+        "spent_amount",
+        "beneficiaries",
+        "notes",
+        "created_at"
+      ]
+    },
+    {
+      "name": "stock_counts",
+      "rows": 0,
+      "columns": [
+        "id",
+        "product_id",
+        "expected_qty",
+        "counted_qty",
+        "variance_qty",
+        "reason",
+        "user_id",
+        "created_at"
+      ]
+    },
+    {
+      "name": "stock_movements",
+      "rows": 0,
+      "columns": [
+        "id",
+        "product_id",
+        "type",
+        "qty",
+        "reference_type",
+        "reference_id",
+        "user_id",
+        "notes",
+        "created_at",
+        "display_unit"
+      ]
+    },
+    {
+      "name": "supplier_dispatches",
+      "rows": 0,
+      "columns": [
+        "id",
+        "request_id",
+        "supplier_id",
+        "purchase_order_id",
+        "status",
+        "payload",
+        "created_at",
+        "sent_at"
+      ]
+    },
+    {
+      "name": "supplier_portal_users",
+      "rows": 0,
+      "columns": [
+        "id",
+        "supplier_id",
+        "access_token",
+        "active",
+        "last_access_at",
+        "created_at"
+      ]
+    },
+    {
+      "name": "suppliers",
+      "rows": 0,
+      "columns": [
+        "id",
+        "name",
+        "contact",
+        "phone",
+        "email",
+        "active",
+        "created_at"
+      ]
+    },
+    {
+      "name": "ticket_access_log",
+      "rows": 0,
+      "columns": [
+        "id",
+        "ticket_id",
+        "event_id",
+        "code",
+        "result",
+        "user_id",
+        "created_at"
+      ]
+    },
+    {
+      "name": "ticket_customers",
+      "rows": 0,
+      "columns": [
+        "id",
+        "full_name",
+        "document",
+        "email",
+        "phone",
+        "birth_date",
+        "access_token_hash",
+        "access_token_created_at",
+        "created_at",
+        "updated_at",
+        "last_ticket_purchase_at",
+        "ticket_purchase_count",
+        "ticket_total_spent"
+      ]
+    },
+    {
+      "name": "ticket_delivery_outbox",
+      "rows": 0,
+      "columns": [
+        "id",
+        "ticket_order_id",
+        "ticket_id",
+        "channel",
+        "destination",
+        "status",
+        "attempts",
+        "last_error",
+        "provider_message_id",
+        "created_at",
+        "sent_at",
+        "updated_at"
+      ]
+    },
+    {
+      "name": "ticket_delivery_v39_log",
+      "rows": 0,
+      "columns": [
+        "id",
+        "source",
+        "source_id",
+        "ticket_order_id",
+        "channel",
+        "destination",
+        "provider",
+        "result",
+        "provider_message_id",
+        "error",
+        "created_at"
+      ]
+    },
+    {
+      "name": "ticket_lots",
+      "rows": 1,
+      "columns": [
+        "id",
+        "event_id",
+        "name",
+        "price",
+        "quantity",
+        "sold",
+        "starts_at",
+        "ends_at",
+        "status",
+        "created_at"
+      ]
+    },
+    {
+      "name": "ticket_magic_links",
+      "rows": 0,
+      "columns": [
+        "id",
+        "ticket_customer_id",
+        "ticket_order_id",
+        "token_hash",
+        "purpose",
+        "status",
+        "expires_at",
+        "used_at",
+        "created_at"
+      ]
+    },
+    {
+      "name": "ticket_orders",
+      "rows": 0,
+      "columns": [
+        "id",
+        "order_code",
+        "event_id",
+        "lot_id",
+        "buyer_name",
+        "buyer_phone",
+        "buyer_email",
+        "buyer_document",
+        "quantity",
+        "total",
+        "payment_status",
+        "asaas_customer_id",
+        "asaas_payment_id",
+        "invoice_url",
+        "pix_payload",
+        "pix_image",
+        "created_at",
+        "updated_at",
+        "ticket_portal_token_hash",
+        "ticket_portal_created_at",
+        "ticket_customer_id"
+      ]
+    },
+    {
+      "name": "ticket_payment_tracking",
+      "rows": 0,
+      "columns": [
+        "id",
+        "ticket_order_id",
+        "token_hash",
+        "expires_at",
+        "created_at",
+        "last_seen_at"
+      ]
+    },
+    {
+      "name": "tickets",
+      "rows": 0,
+      "columns": [
+        "id",
+        "event_id",
+        "attendee_name",
+        "ticket_code",
+        "ticket_type",
+        "price",
+        "payment_status",
+        "checkin_at",
+        "created_at",
+        "lot_id",
+        "attendee_phone",
+        "payment_method",
+        "checked_in_by",
+        "qr_payload",
+        "buyer_email",
+        "buyer_document",
+        "ticket_order_id",
+        "ticket_customer_id"
+      ]
+    },
+    {
+      "name": "tips",
+      "rows": 0,
+      "columns": [
+        "id",
+        "sale_id",
+        "employee_id",
+        "amount",
+        "method",
+        "status",
+        "created_at"
+      ]
+    },
+    {
+      "name": "users",
+      "rows": 2,
+      "columns": [
+        "id",
+        "name",
+        "email",
+        "password_hash",
+        "role",
+        "active",
+        "force_password_change",
+        "created_at",
+        "last_login_at"
+      ]
+    }
+  ]
+}
