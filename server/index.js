@@ -6101,29 +6101,6 @@ registerTicketsV25(app,{minRole,audit});
 registerInventoryV49A(app,{minRole,audit});
 registerEventIntelligenceV37(app,{minRole});
 
-app.use('/api',(req,res)=>res.status(404).json({error:'API_ROUTE_NOT_FOUND',message:`Rota API não encontrada: ${req.method} ${req.originalUrl}`,version:'1.5.0'}));
-
-const dist=path.resolve(process.cwd(),'dist');if(fs.existsSync(dist)){app.use(express.static(dist));app.get(/.*/,(_req,res)=>res.sendFile(path.join(dist,'index.html')))}
-
-
-app.listen(PORT,'0.0.0.0',()=>console.log(`NEXUS HOSPITALITY ONE | API em 0.0.0.0:${PORT}`));
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /* NEXUS V5.0C MASTER FINAL R8-R18 ROUTE */
 app.get(
   "/api/v50c/final-intelligence",
@@ -6153,4 +6130,11 @@ app.get(
     }
   }
 );
+
+app.use('/api',(req,res)=>res.status(404).json({error:'API_ROUTE_NOT_FOUND',message:`Rota API não encontrada: ${req.method} ${req.originalUrl}`,version:'1.5.0'}));
+
+const dist=path.resolve(process.cwd(),'dist');if(fs.existsSync(dist)){app.use(express.static(dist));app.get(/.*/,(_req,res)=>res.sendFile(path.join(dist,'index.html')))}
+
+
+app.listen(PORT,'0.0.0.0',()=>console.log(`NEXUS HOSPITALITY ONE | API em 0.0.0.0:${PORT}`));
 
