@@ -60,5 +60,8 @@
                            }
               },
     "description":  "NEXUS Hospitality One V1.5.1 | Premium POS Stability",
-    "author":  "NEXORA â€” GestÃ£o \u0026 Compliance"
+    "author":  "NEXORA â€” GestÃ£o \u0026 Compliance",
+    "engines":  {
+                    "node":  "22.x"
+                }
 }
