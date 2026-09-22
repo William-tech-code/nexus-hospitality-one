@@ -679,12 +679,48 @@ app.get('/api/public/events/:id',(req,res)=>{
     info.lastInsertRowid
    );
 
-  }catch(err){
+   }catch(err){
 
-   if(err.code!=='ASAAS_NOT_CONFIGURED'){
-    throw err;
+    /*
+     * NEXUS TICKET PAYMENT FAILURE PROTECTION
+     *
+     * O ticket_order PENDING existe antes da chamada externa
+     * porque seu ID compoe o externalReference TICKET:<id>.
+     *
+     * Em falha de inicializacao do pagamento, removemos apenas
+     * esse pedido PENDING para impedir pedido local orfao.
+     */
+
+    try{
+     db.prepare(`
+      DELETE FROM ticket_orders
+      WHERE id=?
+        AND payment_status='PENDING'
+     `).run(info.lastInsertRowid);
+    }catch(cleanupError){
+     console.error(
+      'TICKET_PAYMENT_FAILURE_CLEANUP_ERROR',
+      cleanupError
+     );
+    }
+
+    if(err.code==='ASAAS_NOT_CONFIGURED'){
+     return res.status(503).json({
+      error:'PAYMENT_GATEWAY_NOT_CONFIGURED',
+      message:'Pagamento online temporariamente indisponivel.'
+     });
+    }
+
+    console.error(
+     'TICKET_PAYMENT_GATEWAY_ERROR',
+     err
+    );
+
+    return res.status(502).json({
+     error:'PAYMENT_GATEWAY_ERROR',
+     message:'Nao foi possivel iniciar o pagamento.'
+    });
    }
-  }
 
   return res.status(201).json({
    ...db.prepare(`
