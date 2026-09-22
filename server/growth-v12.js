@@ -608,6 +608,14 @@ app.get('/api/public/events/:id',(req,res)=>{
    }
   }
 
+  /* NEXUS SAFE TICKET CHECKOUT */
+  if(!String(process.env.ASAAS_API_KEY||'').trim()){
+   return res.status(503).json({
+    error:'PAYMENT_GATEWAY_NOT_CONFIGURED',
+    message:'Pagamento online temporariamente indisponivel.'
+   });
+  }
+
   const total=n(lot.price)*qty;
   const orderCode=uid('ING');
 
