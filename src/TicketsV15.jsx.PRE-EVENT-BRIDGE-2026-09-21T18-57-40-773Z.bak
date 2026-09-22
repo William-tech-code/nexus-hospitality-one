@@ -28,13 +28,11 @@ export default function TicketsV15(){
   const [lots,setLots]=useState([]);
   const [tickets,setTickets]=useState([]);
 
-  /* NEXUS_SMART_LOTS_TIME_V1 */
   const [lot,setLot]=useState({
     name:'1\u00ba Lote',
     price:'',
-    quantity:'100',
-    starts_at:'',
-    ends_at:''});
+    quantity:'100'
+  });
 
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
@@ -380,35 +378,6 @@ export default function TicketsV15(){
 
       setBusy(true);
       setMessage('');
-
-      
-      if(!lot.starts_at){
-        throw new Error(
-          'Informe quando as vendas deste lote comecam.'
-        );
-      }
-
-      if(!lot.ends_at){
-        throw new Error(
-          'Informe quando as vendas deste lote terminam.'
-        );
-      }
-
-      const lotStart =
-        new Date(lot.starts_at).getTime();
-
-      const lotEnd =
-        new Date(lot.ends_at).getTime();
-
-      if(
-        !Number.isFinite(lotStart) ||
-        !Number.isFinite(lotEnd) ||
-        lotEnd <= lotStart
-      ){
-        throw new Error(
-          'O encerramento do lote deve ser posterior ao inicio.'
-        );
-      }
 
       await api.createTicketLot({
         ...lot,
@@ -827,46 +796,6 @@ export default function TicketsV15(){
               placeholder="Quantidade"
             />
 
-            <label
-              style={{
-                display:'grid',
-                gap:6
-              }}
-            >
-              <small>INICIO DAS VENDAS</small>
-
-              <input
-                type="datetime-local"
-                value={lot.starts_at}
-                onChange={e=>
-                  setLot({
-                    ...lot,
-                    starts_at:e.target.value
-                  })
-                }
-              />
-            </label>
-
-            <label
-              style={{
-                display:'grid',
-                gap:6
-              }}
-            >
-              <small>ENCERRAMENTO DO LOTE</small>
-
-              <input
-                type="datetime-local"
-                value={lot.ends_at}
-                onChange={e=>
-                  setLot({
-                    ...lot,
-                    ends_at:e.target.value
-                  })
-                }
-              />
-            </label>
-
             <button
               disabled={
                 !event ||
@@ -892,18 +821,6 @@ export default function TicketsV15(){
 
                   <small>
                     {row.sold}/{row.quantity} vendidos
-                  </small>
-
-                  <small>
-                    {row.starts_at
-                      ? `Inicio: ${dt(row.starts_at)}`
-                      : 'Inicio imediato'}
-                  </small>
-
-                  <small>
-                    {row.ends_at
-                      ? `Encerra: ${dt(row.ends_at)}`
-                      : 'Sem encerramento definido'}
                   </small>
 
                 </span>

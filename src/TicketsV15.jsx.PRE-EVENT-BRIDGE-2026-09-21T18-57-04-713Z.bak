@@ -28,24 +28,14 @@ export default function TicketsV15(){
   const [lots,setLots]=useState([]);
   const [tickets,setTickets]=useState([]);
 
-  /* NEXUS_SMART_LOTS_TIME_V1 */
   const [lot,setLot]=useState({
     name:'1\u00ba Lote',
     price:'',
-    quantity:'100',
-    starts_at:'',
-    ends_at:''});
+    quantity:'100'
+  });
 
   const [message,setMessage]=useState('');
   const [busy,setBusy]=useState(false);
-
-  /* NEXUS_EVENT_CREATION_BRIDGE_V154 */
-  const [eventForm,setEventForm]=useState({
-    title:'',
-    starts_at:'',
-    venue_name:'',
-    description:''
-  });
 
   const [payment,setPayment]=useState(null);
 
@@ -215,200 +205,12 @@ export default function TicketsV15(){
     tickets
   ]);
 
-  async function createAndPublishEvent(){
-
-    try{
-
-      setBusy(true);
-      setMessage('');
-
-      const title=
-        String(eventForm.title||'').trim();
-
-      if(!title){
-        throw new Error(
-          'Informe o nome do evento.'
-        );
-      }
-
-      if(!eventForm.starts_at){
-        throw new Error(
-          'Informe a data e o horario do evento.'
-        );
-      }
-
-      /*
-       * Cria usando o motor de eventos
-       * já existente no NEXUS.
-       */
-      const created=
-        await api.createEventV06({
-          title,
-          starts_at:eventForm.starts_at,
-          venue_name:
-            String(
-              eventForm.venue_name||''
-            ).trim()||null,
-          description:
-            String(
-              eventForm.description||''
-            ).trim()||null
-        });
-
-      const createdId=
-        created?.id||
-        created?.event?.id;
-
-      if(!createdId){
-        throw new Error(
-          'Evento criado sem identificador.'
-        );
-      }
-
-      /*
-       * Publica para a Event Experience.
-       */
-      await api.updateEventV12(
-        createdId,
-        {
-          public_sales:true,
-          status:'ACTIVE',
-          description:
-            String(
-              eventForm.description||''
-            ).trim()||null
-        }
-      );
-
-      setEventForm({
-        title:'',
-        starts_at:'',
-        venue_name:'',
-        description:''
-      });
-
-      /*
-       * Atualiza a lista e seleciona
-       * automaticamente o novo evento.
-       */
-      const rows=
-        await api.ticketEvents();
-
-      setEvents(rows);
-
-      setEvent(
-        String(createdId)
-      );
-
-      await loadEventData(
-        createdId
-      );
-
-      setMessage(
-        'Evento criado e publicado com sucesso. Agora crie o lote.'
-      );
-
-    }catch(error){
-
-      console.error(
-        'NEXUS_EVENT_CREATE',
-        error
-      );
-
-      setMessage(
-        error?.message||
-        'Nao foi possivel criar o evento.'
-      );
-
-    }finally{
-
-      setBusy(false);
-    }
-  }
-
-
-  async function publishCurrentEvent(){
-
-    if(!event){
-      setMessage(
-        'Selecione um evento.'
-      );
-      return;
-    }
-
-    try{
-
-      setBusy(true);
-      setMessage('');
-
-      await api.updateEventV12(
-        event,
-        {
-          public_sales:true,
-          status:'ACTIVE'
-        }
-      );
-
-      await load();
-
-      setMessage(
-        'Evento publicado. A pagina publica esta liberada.'
-      );
-
-    }catch(error){
-
-      console.error(
-        'NEXUS_EVENT_PUBLISH',
-        error
-      );
-
-      setMessage(
-        error?.message||
-        'Nao foi possivel publicar o evento.'
-      );
-
-    }finally{
-
-      setBusy(false);
-    }
-  }
-
-
   async function addLot(){
 
     try{
 
       setBusy(true);
       setMessage('');
-
-      
-      if(!lot.starts_at){
-        throw new Error(
-          'Informe quando as vendas deste lote comecam.'
-        );
-      }
-
-      if(!lot.ends_at){
-        throw new Error(
-          'Informe quando as vendas deste lote terminam.'
-        );
-      }
-
-      const lotStart =
-        new Date(lot.starts_at).getTime();
-
-      const lotEnd =
-        new Date(lot.ends_at).getTime();
-
-      if(
-        !Number.isFinite(lotStart) ||
-        !Number.isFinite(lotEnd) ||
-        lotEnd <= lotStart
-      ){
-        throw new Error(
-          'O encerramento do lote deve ser posterior ao inicio.'
-        );
-      }
 
       await api.createTicketLot({
         ...lot,
@@ -645,87 +447,6 @@ export default function TicketsV15(){
 
           </div>
 
-          <div
-            style={{
-              display:'grid',
-              gap:10,
-              marginBottom:18,
-              padding:16,
-              border:'1px solid rgba(255,255,255,.10)',
-              borderRadius:16
-            }}
-          >
-
-            <div className="ticket15-title">
-
-              <span>
-                NOVO EVENTO
-              </span>
-
-              <h2>
-                Criar e publicar evento
-              </h2>
-
-            </div>
-
-            <input
-              value={eventForm.title}
-              onChange={e=>
-                setEventForm({
-                  ...eventForm,
-                  title:e.target.value
-                })
-              }
-              placeholder="Nome do evento"
-            />
-
-            <input
-              type="datetime-local"
-              value={eventForm.starts_at}
-              onChange={e=>
-                setEventForm({
-                  ...eventForm,
-                  starts_at:e.target.value
-                })
-              }
-            />
-
-            <input
-              value={eventForm.venue_name}
-              onChange={e=>
-                setEventForm({
-                  ...eventForm,
-                  venue_name:e.target.value
-                })
-              }
-              placeholder="Local do evento"
-            />
-
-            <textarea
-              value={eventForm.description}
-              onChange={e=>
-                setEventForm({
-                  ...eventForm,
-                  description:e.target.value
-                })
-              }
-              placeholder="Descricao do evento"
-              rows="3"
-            />
-
-            <button
-              className="primary"
-              disabled={busy}
-              onClick={createAndPublishEvent}
-            >
-              {busy
-                ?'PROCESSANDO...'
-                :'CRIAR E PUBLICAR EVENTO'}
-            </button>
-
-          </div>
-
-
           <label>
 
             EVENTO
@@ -754,40 +475,7 @@ export default function TicketsV15(){
 
           {!events.length&&
             <div className="ticket15-empty">
-              Nenhum evento cadastrado. Use o formulario acima para criar o primeiro.
-            </div>
-          }
-
-          {!!event&&
-            <div
-              style={{
-                display:'flex',
-                gap:10,
-                flexWrap:'wrap',
-                margin:'12px 0 18px'
-              }}
-            >
-
-              <button
-                disabled={busy}
-                onClick={publishCurrentEvent}
-              >
-                PUBLICAR / LIBERAR VENDA
-              </button>
-
-              <button
-                disabled={!event}
-                onClick={()=>
-                  window.open(
-                    `/eventos/${event}`,
-                    '_blank',
-                    'noopener,noreferrer'
-                  )
-                }
-              >
-                ABRIR EXPERIENCIA PUBLICA
-              </button>
-
+              Crie o evento primeiro no modulo Eventos.
             </div>
           }
 
@@ -827,46 +515,6 @@ export default function TicketsV15(){
               placeholder="Quantidade"
             />
 
-            <label
-              style={{
-                display:'grid',
-                gap:6
-              }}
-            >
-              <small>INICIO DAS VENDAS</small>
-
-              <input
-                type="datetime-local"
-                value={lot.starts_at}
-                onChange={e=>
-                  setLot({
-                    ...lot,
-                    starts_at:e.target.value
-                  })
-                }
-              />
-            </label>
-
-            <label
-              style={{
-                display:'grid',
-                gap:6
-              }}
-            >
-              <small>ENCERRAMENTO DO LOTE</small>
-
-              <input
-                type="datetime-local"
-                value={lot.ends_at}
-                onChange={e=>
-                  setLot({
-                    ...lot,
-                    ends_at:e.target.value
-                  })
-                }
-              />
-            </label>
-
             <button
               disabled={
                 !event ||
@@ -892,18 +540,6 @@ export default function TicketsV15(){
 
                   <small>
                     {row.sold}/{row.quantity} vendidos
-                  </small>
-
-                  <small>
-                    {row.starts_at
-                      ? `Inicio: ${dt(row.starts_at)}`
-                      : 'Inicio imediato'}
-                  </small>
-
-                  <small>
-                    {row.ends_at
-                      ? `Encerra: ${dt(row.ends_at)}`
-                      : 'Sem encerramento definido'}
                   </small>
 
                 </span>

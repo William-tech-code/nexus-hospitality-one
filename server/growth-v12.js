@@ -384,7 +384,66 @@ export function registerGrowthV12(app,{auth,minRole,audit}){
  }
 });
 app.get('/api/public/events',(_q,res)=>res.json(db.prepare(`SELECT e.*,COALESCE((SELECT SUM(CASE WHEN t.payment_status='PAID' THEN 1 ELSE 0 END) FROM tickets t WHERE t.event_id=e.id),0) sold FROM events e WHERE e.public_sales=1 AND COALESCE(e.status,'') NOT IN ('CANCELLED','DRAFT') ORDER BY datetime(e.starts_at) ASC`).all()));
- app.get('/api/public/events/:id',(req,res)=>{const e=eventPublic(req.params.id);if(!e)return res.status(404).json({error:'EVENTO_NAO_ENCONTRADO'});const lots=db.prepare('SELECT * FROM ticket_lots WHERE event_id=? ORDER BY id').all(e.id).map(x=>({...x,...lotState(x)}));res.json({...e,lots})});
+ /*
+ * NEXUS_SMART_LOTS_PUBLIC_V1
+ *
+ * O administrativo continua recebendo todos os lotes
+ * pelas rotas autenticadas.
+ *
+ * Na experiencia publica apenas o primeiro lote
+ * realmente disponivel e exibido.
+ *
+ * Quando o lote atual esgota, expira ou e desativado,
+ * o proximo lote elegivel assume automaticamente.
+ */
+app.get('/api/public/events/:id',(req,res)=>{
+
+ const e=eventPublic(req.params.id);
+
+ if(!e){
+  return res.status(404).json({
+   error:'EVENTO_NAO_ENCONTRADO'
+  });
+ }
+
+ const allLots=db.prepare(
+  'SELECT * FROM ticket_lots WHERE event_id=? ORDER BY id'
+ ).all(e.id);
+
+ const evaluated=
+  allLots.map(lot=>({
+   ...lot,
+   ...lotState(lot)
+  }));
+
+ /*
+  * Ordem de prioridade:
+  * primeiro lote criado que esteja efetivamente
+  * disponivel para venda.
+  */
+ const currentLot=
+  evaluated.find(lot=>lot.available) || null;
+
+ /*
+  * A experiencia publica recebe no maximo um lote.
+  * O frontend existente continua compativel,
+  * pois ainda recebe a propriedade "lots".
+  */
+ const lots=currentLot
+  ? [currentLot]
+  : [];
+
+ return res.json({
+  ...e,
+  lots,
+
+  smart_lot:{
+   enabled:true,
+   current_lot_id:currentLot?.id || null,
+   state:currentLot?.state || 'NO_LOT_AVAILABLE'
+  }
+ });
+});
  app.post('/api/public/events/:id/buy',async(req,res)=>{
  try{
   /* CUSTOMER_LINKED_PUBLIC_BUY_V26 */

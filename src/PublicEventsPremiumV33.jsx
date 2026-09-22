@@ -64,6 +64,67 @@ export default function PublicEventsPremiumV33({
   const[checkout,setCheckout]=useState(null);
   const[buying,setBuying]=useState(false);
 
+  /* NEXUS_EVENTS_FINAL_PREMIUM_V1 */
+  const[now,setNow]=useState(()=>Date.now());
+
+  useEffect(()=>{
+    const timer=setInterval(
+      ()=>setNow(Date.now()),
+      1000
+    );
+
+    return ()=>clearInterval(timer);
+  },[]);
+
+  const countdown=value=>{
+
+    if(!value){
+      return null;
+    }
+
+    const target=
+      new Date(value).getTime();
+
+    if(!Number.isFinite(target)){
+      return null;
+    }
+
+    const diff=
+      Math.max(
+        0,
+        target-now
+      );
+
+    const totalSeconds=
+      Math.floor(diff/1000);
+
+    const days=
+      Math.floor(
+        totalSeconds/86400
+      );
+
+    const hours=
+      Math.floor(
+        (totalSeconds%86400)/3600
+      );
+
+    const minutes=
+      Math.floor(
+        (totalSeconds%3600)/60
+      );
+
+    const seconds=
+      totalSeconds%60;
+
+    return {
+      expired:diff<=0,
+      days,
+      hours,
+      minutes,
+      seconds
+    };
+  };
+
   useEffect(()=>{
 
     let alive=true;
@@ -454,32 +515,17 @@ export default function PublicEventsPremiumV33({
           <div className="nev33-lots">
 
             {lots.map((lot,index)=>{
-
-              const quantity=
-                Number(lot.quantity||0);
-
-              const sold=
-                Number(lot.sold||0);
-
-              const remaining=
-                quantity>0
-                  ?Math.max(
-                      0,
-                      quantity-sold
-                    )
-                  :null;
+              const clock=
+                countdown(lot.ends_at);
 
               const soldOut=
-                remaining===0 &&
-                quantity>0;
+                String(lot.state||'')
+                  .toUpperCase()==='SOLD_OUT';
 
-              const progress=
-                quantity>0
-                  ?Math.min(
-                      100,
-                      (sold/quantity)*100
-                    )
-                  :0;
+              const unavailable=
+                !lot.available &&
+                String(lot.state||'')
+                  .toUpperCase()!=='LAST_UNITS';
 
               return(
                 <article
@@ -494,14 +540,9 @@ export default function PublicEventsPremiumV33({
                         ?"LOTE ATUAL"
                         :"LOTE"}
                     </span>
-
-                    {remaining!==null&&(
-                      <small>
-                        {soldOut
-                          ?"ESGOTADO"
-                          :`${remaining} disponíveis`}
-                      </small>
-                    )}
+                    <small className="nev33-public-status">
+                      {lot.label||"LOTE ATUAL"}
+                    </small>
 
                   </div>
 
@@ -510,22 +551,65 @@ export default function PublicEventsPremiumV33({
                   <strong className="nev33-price">
                     {money(lot.price)}
                   </strong>
+                  <div className="nev33-countdown">
 
-                  {quantity>0&&(
-                    <div className="nev33-capacity">
-                      <div>
-                        <span
-                          style={{
-                            width:`${progress}%`
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
+                    <small>
+                      {clock
+                        ? "ESTE LOTE ENCERRA EM"
+                        : "LOTE ATUAL"}
+                    </small>
+
+                    {clock
+                      ?(
+                        <div className="nev33-countdown-grid">
+
+                          <span>
+                            <b>
+                              {String(clock.days)
+                                .padStart(2,"0")}
+                            </b>
+                            <em>DIAS</em>
+                          </span>
+
+                          <span>
+                            <b>
+                              {String(clock.hours)
+                                .padStart(2,"0")}
+                            </b>
+                            <em>HORAS</em>
+                          </span>
+
+                          <span>
+                            <b>
+                              {String(clock.minutes)
+                                .padStart(2,"0")}
+                            </b>
+                            <em>MIN</em>
+                          </span>
+
+                          <span>
+                            <b>
+                              {String(clock.seconds)
+                                .padStart(2,"0")}
+                            </b>
+                            <em>SEG</em>
+                          </span>
+
+                        </div>
+                      )
+                      :(
+                        <strong>
+                          VENDAS EM ANDAMENTO
+                        </strong>
+                      )
+                    }
+
+                  </div>
 
                   <button
                     disabled={
                       soldOut||
+                      unavailable||
                       buying
                     }
                     onClick={()=>
@@ -534,9 +618,11 @@ export default function PublicEventsPremiumV33({
                   >
                     {soldOut
                       ?"Lote esgotado"
-                      :buying
-                        ?"Processando..."
-                        :"Comprar ingresso"}
+                      :unavailable
+                        ?"Lote indisponivel"
+                        :buying
+                          ?"Processando..."
+                          :"Comprar ingresso"}
                   </button>
 
                 </article>

@@ -4,6 +4,7 @@
   useRef,
   useState
 } from "react";
+import jsQR from "jsqr";
 
 import {api} from "./api";
 
@@ -48,6 +49,10 @@ function label(result){
 
   if(result==="INVALID"){
     return "INGRESSO INVÁLIDO";
+  }
+
+  if(result==="CAMERA_ERROR"){
+    return "CÂMERA NÃO DISPONÍVEL";
   }
 
   return "ACESSO NEGADO";
@@ -326,28 +331,22 @@ export default function GateScannerV25(){
 
       setResult({
         ok:false,
-        result:"ERROR",
+        result:"CAMERA_ERROR",
         message:
-          "Câmera indisponível neste dispositivo."
+          "Nenhuma câmera disponível neste dispositivo. Use a busca ou digite o código do ingresso."
       });
 
       return;
     }
 
-    if(
-      typeof window.BarcodeDetector===
-      "undefined"
-    ){
-
-      setResult({
-        ok:false,
-        result:"ERROR",
-        message:
-          "Leitor QR automático indisponível. Use a busca ou digite o código."
-      });
-
-      return;
-    }
+    /*
+     * NEXUS_QR_SCANNER_UNIVERSAL_V2
+     * Scanner hibrido:
+     * BarcodeDetector nativo quando disponivel;
+     * jsQR quando o navegador nao possui BarcodeDetector.
+     */
+    const hasNativeBarcodeDetector=
+      typeof window.BarcodeDetector!=="undefined";
 
     try{
 
@@ -379,9 +378,22 @@ export default function GateScannerV25(){
       }
 
       const detector=
-        new window.BarcodeDetector({
-          formats:["qr_code"]
-        });
+        hasNativeBarcodeDetector
+          ?new window.BarcodeDetector({
+              formats:["qr_code"]
+            })
+          :null;
+
+      const qrCanvas=
+        document.createElement("canvas");
+
+      const qrContext=
+        qrCanvas.getContext(
+          "2d",
+          {
+            willReadFrequently:true
+          }
+        );
 
       scanningRef.current=true;
 
@@ -396,13 +408,76 @@ export default function GateScannerV25(){
 
         try{
 
-          const codes=
-            await detector.detect(
-              videoRef.current
-            );
+          let raw="";
 
-          const raw=
-            codes?.[0]?.rawValue;
+          if(detector){
+
+            const codes=
+              await detector.detect(
+                videoRef.current
+              );
+
+            raw=
+              codes?.[0]?.rawValue||
+              "";
+
+          }else{
+
+            const video=
+              videoRef.current;
+
+            const width=
+              video.videoWidth;
+
+            const height=
+              video.videoHeight;
+
+            if(
+              width>0 &&
+              height>0 &&
+              qrContext
+            ){
+
+              if(
+                qrCanvas.width!==width ||
+                qrCanvas.height!==height
+              ){
+                qrCanvas.width=width;
+                qrCanvas.height=height;
+              }
+
+              qrContext.drawImage(
+                video,
+                0,
+                0,
+                width,
+                height
+              );
+
+              const frame=
+                qrContext.getImageData(
+                  0,
+                  0,
+                  width,
+                  height
+                );
+
+              const decoded=
+                jsQR(
+                  frame.data,
+                  frame.width,
+                  frame.height,
+                  {
+                    inversionAttempts:
+                      "attemptBoth"
+                  }
+                );
+
+              raw=
+                decoded?.data||
+                "";
+            }
+          }
 
           if(raw){
 
@@ -465,12 +540,66 @@ export default function GateScannerV25(){
 
       stopCamera();
 
+      /*
+       * NEXUS_CAMERA_ERROR_FIX_V2
+       *
+       * Este catch pertence exclusivamente
+       * à abertura da câmera.
+       */
+
+      const cameraErrorName=
+        String(error?.name||"");
+
+      const cameraErrorMessage=
+        String(error?.message||"");
+
+      let cameraMessage=
+        cameraErrorMessage||
+        "Não foi possível iniciar a câmera.";
+
+      if(
+        cameraErrorName==="NotFoundError" ||
+        /requested device not found/i.test(
+          cameraErrorMessage
+        ) ||
+        /device not found/i.test(
+          cameraErrorMessage
+        )
+      ){
+
+        cameraMessage=
+          "Nenhuma câmera disponível neste dispositivo. Use a busca ou digite o código do ingresso.";
+
+      }else if(
+        cameraErrorName==="NotAllowedError" ||
+        cameraErrorName==="PermissionDeniedError"
+      ){
+
+        cameraMessage=
+          "Acesso à câmera não autorizado. Libere a permissão da câmera no navegador e tente novamente.";
+
+      }else if(
+        cameraErrorName==="NotReadableError" ||
+        /could not start video source/i.test(
+          cameraErrorMessage
+        )
+      ){
+
+        cameraMessage=
+          "A câmera está sendo utilizada por outro aplicativo ou não pôde ser iniciada.";
+
+      }else if(
+        cameraErrorName==="OverconstrainedError"
+      ){
+
+        cameraMessage=
+          "A câmera disponível não atende à configuração solicitada. Tente novamente.";
+      }
+
       setResult({
         ok:false,
-        result:"ERROR",
-        message:
-          error.message||
-          "Não foi possível abrir a câmera."
+        result:"CAMERA_ERROR",
+        message:cameraMessage
       });
     }
   }
@@ -510,7 +639,6 @@ export default function GateScannerV25(){
           error.message||
           "Falha na busca."
       });
-
     }finally{
       setSearching(false);
     }
