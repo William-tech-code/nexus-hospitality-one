@@ -1,4 +1,4 @@
-﻿import { db } from './db.js';
+import { db } from './db.js';
 
 function txt(value){
   return String(value ?? '').trim();
@@ -139,6 +139,96 @@ function serializePlan(plan){
   };
 }
 
+
+// ============================================================
+// NEXUS_GROWTH_FOR_ALL_PLANS_V1
+// Commercial capability migration.
+//
+// Growth Intelligence is a core NEXUS capability and is
+// available to every active paid plan.
+//
+// IMPORTANT:
+// - preserves every existing feature
+// - adds/refreshes only Growth capability keys
+// - safe to execute repeatedly
+// - does not change prices
+// - does not change subscriptions
+// - does not change promotions
+// ============================================================
+
+function ensureGrowthForAllPlans(){
+
+  const growthIntelligence = {
+    enabled: true,
+    onboarding: true,
+    financial_diagnosis: true,
+    marco_zero: true,
+    growth_score: true,
+    goals_2x_3x_custom: true,
+    scenarios: true,
+    action_plan: true,
+    monitoring_30_60_90: true
+  };
+
+  const plans = db.prepare(`
+    SELECT id, code, features_json
+    FROM saas_plans
+    WHERE active = 1
+  `).all();
+
+  const update = db.prepare(`
+    UPDATE saas_plans
+    SET features_json = ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `);
+
+  const tx = db.transaction(() => {
+
+    for(const plan of plans){
+
+      let features = {};
+
+      try{
+        features = JSON.parse(plan.features_json || '{}');
+
+        if(
+          !features ||
+          typeof features !== 'object' ||
+          Array.isArray(features)
+        ){
+          features = {};
+        }
+
+      }catch{
+        features = {};
+      }
+
+      const next = {
+        ...features,
+        growth: true,
+        growth_intelligence: {
+          ...(
+            features.growth_intelligence &&
+            typeof features.growth_intelligence === 'object' &&
+            !Array.isArray(features.growth_intelligence)
+              ? features.growth_intelligence
+              : {}
+          ),
+          ...growthIntelligence
+        }
+      };
+
+      const nextJson = JSON.stringify(next);
+
+      if(nextJson !== String(plan.features_json || '{}')){
+        update.run(nextJson, plan.id);
+      }
+    }
+  });
+
+  tx();
+}
 function initSaasCommercialSchema(){
   db.exec(`
     CREATE TABLE IF NOT EXISTS saas_plans(
@@ -287,6 +377,9 @@ function requireAdmin(req, res, next){
   }
 
   next();
+
+  // NEXUS_GROWTH_FOR_ALL_PLANS_V1
+  ensureGrowthForAllPlans();
 }
 
 export function registerSaasCommercialCore(app, auth){
