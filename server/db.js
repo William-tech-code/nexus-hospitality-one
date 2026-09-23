@@ -168,10 +168,22 @@ export function initDb(){
   addColumn('order_items','employee_id','INTEGER'); addColumn('order_items','sale_mode',"TEXT NOT NULL DEFAULT 'UNIT'");
   addColumn('orders','table_id','INTEGER'); addColumn('orders','closed_at','TEXT'); addColumn('orders','notes','TEXT');
 
-  const defaults={business_name:'Meu Bar & Restaurante',reserve_percent:'10',tax_percent:'6',salary_percent:'15',owner_percent:'8',reinvest_percent:'12',daily_goal:'1000',schema_version:'1.0.0'};
-  const put=db.prepare('INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)');
-  Object.entries(defaults).forEach(([k,v])=>put.run(k,v));
-  db.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES('schema_version','1.0.0')").run();
+  // NEXUS TENANT SETTINGS V2.1
+  // Tenant business settings are provisioned by the tenant lifecycle.
+  // initDb must never create global business settings.
+  //
+  // schema_version is system metadata and does not belong to a tenant.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS nexus_system_meta(
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+  `);
+
+  db.prepare(`
+    INSERT OR IGNORE INTO nexus_system_meta(key,value)
+    VALUES('schema_version','1.0.0')
+  `).run();
 
   if(!db.prepare('SELECT COUNT(*) n FROM dining_tables').get().n){
     const addTable=db.prepare('INSERT INTO dining_tables(label,area,capacity) VALUES(?,?,?)');
@@ -249,4 +261,8 @@ export function initDb(){
   db.prepare('INSERT OR IGNORE INTO schema_versions(version) VALUES(4)').run();
 }
 
-export function setting(key,fallback=''){return db.prepare('SELECT value FROM settings WHERE key=?').get(key)?.value ?? fallback}
+export function setting(key,fallback='',tenantId=null){
+  const tid=Number(tenantId);
+  if(!Number.isInteger(tid)||tid<=0) return fallback;
+  return db.prepare('SELECT value FROM settings WHERE tenant_id=? AND key=?').get(tid,key)?.value ?? fallback;
+}

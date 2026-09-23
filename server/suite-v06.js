@@ -64,7 +64,20 @@ export function initSuiteV06(){
   addColumn('stock_movements','display_unit',"TEXT");
   addColumn('events','revenue_actual',"REAL NOT NULL DEFAULT 0");
   addColumn('events','audience_actual',"INTEGER NOT NULL DEFAULT 0");
-  db.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES('schema_version','0.7.0')").run();
+  // NEXUS SYSTEM META V3
+  // schema_version is global application metadata.
+  // It must never be stored in tenant business settings.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS nexus_system_meta(
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+  `);
+
+  db.prepare(`
+    INSERT OR IGNORE INTO nexus_system_meta(key,value)
+    VALUES('schema_version','0.7.0')
+  `).run();
 }
 
 export function smartProfile(productId,tenantId){
