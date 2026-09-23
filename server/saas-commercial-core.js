@@ -377,13 +377,14 @@ function requireAdmin(req, res, next){
   }
 
   next();
-
-  // NEXUS_GROWTH_FOR_ALL_PLANS_V1
-  ensureGrowthForAllPlans();
 }
 
 export function registerSaasCommercialCore(app, auth){
   initSaasCommercialSchema();
+
+  // NEXUS_GROWTH_FOR_ALL_PLANS_V1
+  // Existing installations receive Growth after plan schema/seed init.
+  ensureGrowthForAllPlans();
 
   // ============================================================
   // PUBLIC
