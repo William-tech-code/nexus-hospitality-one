@@ -33,7 +33,62 @@ import {
  * - nenhuma cobrança real nesta V1.
  */
 
-const ASAAS_DRY_RUN = true;
+/*
+ * ASAAS SaaS fail-safe:
+ *
+ * LIVE somente quando:
+ * - NEXUS_SAAS_ASAAS_LIVE=true
+ * - ASAAS_ENV=production
+ * - ASAAS_API_KEY presente
+ * - ASAAS_WEBHOOK_TOKEN presente
+ *
+ * Qualquer outra condição = DRY RUN.
+ */
+
+function nexusEnvFlag(name){
+  return String(
+    process.env[name] || ''
+  ).trim().toLowerCase() === 'true';
+}
+
+function saasAsaasLiveEnabled(){
+
+  const explicitLive =
+    nexusEnvFlag(
+      'NEXUS_SAAS_ASAAS_LIVE'
+    );
+
+  const environment =
+    String(
+      process.env.ASAAS_ENV || ''
+    )
+      .trim()
+      .toLowerCase();
+
+  const apiKeyConfigured =
+    Boolean(
+      String(
+        process.env.ASAAS_API_KEY || ''
+      ).trim()
+    );
+
+  const webhookConfigured =
+    Boolean(
+      String(
+        process.env.ASAAS_WEBHOOK_TOKEN || ''
+      ).trim()
+    );
+
+  return (
+    explicitLive === true &&
+    environment === 'production' &&
+    apiKeyConfigured === true &&
+    webhookConfigured === true
+  );
+}
+
+const ASAAS_DRY_RUN =
+  !saasAsaasLiveEnabled();
 
 function txt(value){
   return String(value ?? '').trim();
