@@ -1,0 +1,734 @@
+{
+  "version": "OPERATIONAL_TENANT_V1",
+  "tenant": {
+    "id": 3,
+    "code": "BOTECO-PARADA-OBRIGATORIA",
+    "trade_name": "BOTECO - PARADA OBRIGATORIA"
+  },
+  "operational_tables": 81,
+  "roots": [
+    {
+      "table": "asaas_webhook_events",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "audit_log",
+      "rows": 48,
+      "tenant_column": true
+    },
+    {
+      "table": "cash_sessions",
+      "rows": 1,
+      "tenant_column": true
+    },
+    {
+      "table": "change_corrections",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "customers",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "delivery_orders",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "dining_tables",
+      "rows": 12,
+      "tenant_column": true
+    },
+    {
+      "table": "employees",
+      "rows": 3,
+      "tenant_column": true
+    },
+    {
+      "table": "event_experience_audit",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "event_experience_notifications",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "events",
+      "rows": 2,
+      "tenant_column": true
+    },
+    {
+      "table": "expenses",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "financial_debt_payments",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "financial_debts",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "financial_intelligence_audit",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "financial_intelligence_reserves",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "financial_obligations",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "fiscal_captures",
+      "rows": 1,
+      "tenant_column": true
+    },
+    {
+      "table": "goals",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "growth_actions",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "incentive_rules",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "inventory_alert_ack",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "invoices",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "orders",
+      "rows": 5,
+      "tenant_column": true
+    },
+    {
+      "table": "pricing_policies",
+      "rows": 1,
+      "tenant_column": true
+    },
+    {
+      "table": "print_log",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "products",
+      "rows": 8,
+      "tenant_column": true
+    },
+    {
+      "table": "public_orders",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "purchase_quotes",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "quote_invitations",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "quote_requests",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "quote_supplier_prices",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "sale_cancellations",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "sale_inventory_ledger",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "sale_item_inventory_ledger",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "sale_participant_payments",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "sale_participants",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "sale_payment_reversals",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "sale_return_items",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "sale_return_payment_reversals",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "sale_returns",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "sales",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "settings",
+      "rows": 8,
+      "tenant_column": true
+    },
+    {
+      "table": "smart_closings",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "social_actions",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "stock_counts",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "supplier_dispatches",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "supplier_portal_users",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "suppliers",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "ticket_access_log",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "ticket_customers",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "ticket_delivery_v39_log",
+      "rows": 0,
+      "tenant_column": true
+    },
+    {
+      "table": "ticket_magic_links",
+      "rows": 0,
+      "tenant_column": true
+    }
+  ],
+  "dependent": [
+    {
+      "table": "cash_movements",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "cash_session_id",
+          "parent_table": "cash_sessions",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "delivery_items",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "product_id",
+          "parent_table": "products",
+          "parent_column": "id"
+        },
+        {
+          "column": "delivery_id",
+          "parent_table": "delivery_orders",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "employee_rewards",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "rule_id",
+          "parent_table": "incentive_rules",
+          "parent_column": "id"
+        },
+        {
+          "column": "sale_id",
+          "parent_table": "sales",
+          "parent_column": "id"
+        },
+        {
+          "column": "employee_id",
+          "parent_table": "employees",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "event_costs",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "event_id",
+          "parent_table": "events",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "inventory_batch_movements",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "stock_movement_id",
+          "parent_table": "stock_movements",
+          "parent_column": "id"
+        },
+        {
+          "column": "product_id",
+          "parent_table": "products",
+          "parent_column": "id"
+        },
+        {
+          "column": "batch_id",
+          "parent_table": "inventory_batches",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "inventory_batches",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "purchase_order_id",
+          "parent_table": "purchase_orders",
+          "parent_column": "id"
+        },
+        {
+          "column": "supplier_id",
+          "parent_table": "suppliers",
+          "parent_column": "id"
+        },
+        {
+          "column": "product_id",
+          "parent_table": "products",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "inventory_losses",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "batch_id",
+          "parent_table": "inventory_batches",
+          "parent_column": "id"
+        },
+        {
+          "column": "product_id",
+          "parent_table": "products",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "inventory_profiles",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "product_id",
+          "parent_table": "products",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "order_items",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "product_id",
+          "parent_table": "products",
+          "parent_column": "id"
+        },
+        {
+          "column": "order_id",
+          "parent_table": "orders",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "order_payments",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "order_id",
+          "parent_table": "orders",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "payment_splits",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "sale_id",
+          "parent_table": "sales",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "print_jobs",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "sale_id",
+          "parent_table": "sales",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "public_order_items",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "order_id",
+          "parent_table": "public_orders",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "purchase_items",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "product_id",
+          "parent_table": "products",
+          "parent_column": "id"
+        },
+        {
+          "column": "purchase_order_id",
+          "parent_table": "purchase_orders",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "purchase_orders",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "supplier_id",
+          "parent_table": "suppliers",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "quote_items",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "product_id",
+          "parent_table": "products",
+          "parent_column": "id"
+        },
+        {
+          "column": "supplier_id",
+          "parent_table": "suppliers",
+          "parent_column": "id"
+        },
+        {
+          "column": "quote_id",
+          "parent_table": "purchase_quotes",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "quote_request_items",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "request_id",
+          "parent_table": "quote_requests",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "recipe_items",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "ingredient_product_id",
+          "parent_table": "products",
+          "parent_column": "id"
+        },
+        {
+          "column": "recipe_id",
+          "parent_table": "recipes",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "recipes",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "product_id",
+          "parent_table": "products",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "reservations",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "table_id",
+          "parent_table": "dining_tables",
+          "parent_column": "id"
+        },
+        {
+          "column": "customer_id",
+          "parent_table": "customers",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "sale_items",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "product_id",
+          "parent_table": "products",
+          "parent_column": "id"
+        },
+        {
+          "column": "sale_id",
+          "parent_table": "sales",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "stock_movements",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "product_id",
+          "parent_table": "products",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "ticket_delivery_outbox",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "ticket_id",
+          "parent_table": "tickets",
+          "parent_column": "id"
+        },
+        {
+          "column": "ticket_order_id",
+          "parent_table": "ticket_orders",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "ticket_lots",
+      "rows": 4,
+      "parents": [
+        {
+          "column": "event_id",
+          "parent_table": "events",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "ticket_orders",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "lot_id",
+          "parent_table": "ticket_lots",
+          "parent_column": "id"
+        },
+        {
+          "column": "event_id",
+          "parent_table": "events",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "ticket_payment_tracking",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "ticket_order_id",
+          "parent_table": "ticket_orders",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "tickets",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "event_id",
+          "parent_table": "events",
+          "parent_column": "id"
+        }
+      ]
+    },
+    {
+      "table": "tips",
+      "rows": 0,
+      "parents": [
+        {
+          "column": "employee_id",
+          "parent_table": "employees",
+          "parent_column": "id"
+        },
+        {
+          "column": "sale_id",
+          "parent_table": "sales",
+          "parent_column": "id"
+        }
+      ]
+    }
+  ],
+  "changed_tables": [
+    "asaas_webhook_events",
+    "audit_log",
+    "cash_sessions",
+    "change_corrections",
+    "customers",
+    "delivery_orders",
+    "dining_tables",
+    "employees",
+    "event_experience_audit",
+    "event_experience_notifications",
+    "events",
+    "expenses",
+    "financial_debt_payments",
+    "financial_debts",
+    "financial_intelligence_audit",
+    "financial_intelligence_reserves",
+    "financial_obligations",
+    "fiscal_captures",
+    "goals",
+    "growth_actions",
+    "incentive_rules",
+    "inventory_alert_ack",
+    "invoices",
+    "orders",
+    "pricing_policies",
+    "print_log",
+    "products",
+    "public_orders",
+    "purchase_quotes",
+    "quote_invitations",
+    "quote_requests",
+    "quote_supplier_prices",
+    "sale_cancellations",
+    "sale_inventory_ledger",
+    "sale_item_inventory_ledger",
+    "sale_participant_payments",
+    "sale_participants",
+    "sale_payment_reversals",
+    "sale_return_items",
+    "sale_return_payment_reversals",
+    "sale_returns",
+    "sales",
+    "settings",
+    "smart_closings",
+    "social_actions",
+    "stock_counts",
+    "supplier_dispatches",
+    "supplier_portal_users",
+    "suppliers",
+    "ticket_access_log",
+    "ticket_customers",
+    "ticket_delivery_v39_log",
+    "ticket_magic_links"
+  ],
+  "already_tenant_aware": [],
+  "fk_before": 0,
+  "fk_after": 0
+}

@@ -3,6 +3,7 @@ let token=localStorage.getItem('nexus_hospitality_token')||'';
 export function setAuthToken(v){token=v||'';if(token)localStorage.setItem('nexus_hospitality_token',token);else localStorage.removeItem('nexus_hospitality_token')}
 async function request(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(token)headers.Authorization=`Bearer ${token}`;let res;try{res=await fetch(`${API}${path}`,{...options,headers})}catch(cause){const e=new Error('API do NEXUS Hospitality indisponível. Confirme que o servidor está ativo na porta 8989.');e.code='API_UNREACHABLE';e.cause=cause;throw e}const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.message||data.error||`Erro HTTP ${res.status}`);e.code=data.error;e.status=res.status;throw e}return data}
 export const api={
+  firstAccessStatusV1,
   inventoryV49Summary:()=>request('/v49/inventory/summary'),
   inventoryV49Alerts:()=>request('/v49/inventory/alerts'),
   inventoryV49Product:id=>request(`/v49/inventory/products/${id}`),
@@ -443,3 +444,107 @@ export const financialMentorV50C=
 export const hospitalityFinalIntelligenceV50C =
   () => request('/v50c/final-intelligence');
 
+
+
+/* NEXUS GROWTH EXPERIENCE V1 */
+
+async function nexusGrowthFetchV1(path,options={}){
+  const token=
+    localStorage.getItem("nexus_hospitality_token")||"";
+
+  const response=await fetch(path,{
+    ...options,
+    headers:{
+      "Content-Type":"application/json",
+      ...(token
+        ?{Authorization:`Bearer ${token}`}
+        :{}),
+      ...(options.headers||{})
+    }
+  });
+
+  const data=await response
+    .json()
+    .catch(()=>({}));
+
+  if(!response.ok){
+    const error=new Error(
+      data.message||
+      data.error||
+      `HTTP ${response.status}`
+    );
+
+    error.status=response.status;
+    error.data=data;
+
+    throw error;
+  }
+
+  return data;
+}
+
+export function growthStatusV1(){
+  return nexusGrowthFetchV1(
+    "/api/growth-v1/status"
+  );
+}
+
+export function growthSaveOnboardingV1(data){
+  return nexusGrowthFetchV1(
+    "/api/growth-v1/onboarding",
+    {
+      method:"PUT",
+      body:JSON.stringify(data)
+    }
+  );
+}
+
+export function growthAnalyzeV1(data){
+  return nexusGrowthFetchV1(
+    "/api/growth-v1/analyze",
+    {
+      method:"POST",
+      body:JSON.stringify(data)
+    }
+  );
+}
+
+export function growthActivateV1(data){
+  return nexusGrowthFetchV1(
+    "/api/growth-v1/activate",
+    {
+      method:"POST",
+      body:JSON.stringify(data)
+    }
+  );
+}
+
+export function growthRecommendationStatusV1(
+  id,
+  status
+){
+  return nexusGrowthFetchV1(
+    `/api/growth-v1/recommendations/${id}`,
+    {
+      method:"PATCH",
+      body:JSON.stringify({status})
+    }
+  );
+}
+/* NEXUS FIRST ACCESS + MONITOR V1 */
+
+export async function firstAccessStatusV1(){
+  return nexusGrowthFetchV1(
+    "/api/first-access/status"
+  );
+}
+
+export async function growthMonitorRunV1(){
+  return nexusGrowthFetchV1(
+    "/api/growth-v1/monitor/run",
+    {
+      method:"POST",
+      body:JSON.stringify({})
+    }
+  );
+}

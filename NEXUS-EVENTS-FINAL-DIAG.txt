@@ -1,0 +1,6373 @@
+============================================================
+ NEXUS HOSPITALITY ONE
+ DIAGNOSTICO FINAL - EVENTOS / LOTES / QR / PORTARIA / PUBLICO
+============================================================
+
+
+============================================================
+ FILE: src/EventCommandCenterV38.jsx
+============================================================
+﻿import React,{
+  useEffect,
+  useMemo,
+  useState
+} from "react";
+
+import {api} from "./api.js";
+
+import TicketsV15 from "./TicketsV15.jsx";
+import TicketOrderCenterV25 from "./TicketOrderCenterV25.jsx";
+import GateScannerV25 from "./GateScannerV25.jsx";
+import EventIntelligenceV37 from "./EventIntelligenceV37.jsx";
+
+import "./EventCommandCenterV38.css";
+
+const money=value=>
+  Number(value||0).toLocaleString(
+    "pt-BR",
+    {
+      style:"currency",
+      currency:"BRL"
+    }
+  );
+
+function dt(value){
+
+  if(!value){
+    return "Data a confirmar";
+  }
+
+  try{
+
+    return new Date(value).toLocaleString(
+      "pt-BR",
+      {
+        dateStyle:"medium",
+        timeStyle:"short"
+      }
+    );
+
+  }catch{
+
+    return value;
+  }
+}
+
+export default function EventCommandCenterV38(){
+
+  const[events,setEvents]=useState([]);
+  const[eventId,setEventId]=useState("");
+  const[dashboard,setDashboard]=useState(null);
+
+  const[tab,setTab]=useState("overview");
+
+  const[loading,setLoading]=useState(true);
+  const[error,setError]=useState("");
+
+  async function loadEvents(){
+
+    try{
+
+      const rows=
+        await api.ticketEvents();
+
+      const list=
+        Array.isArray(rows)
+          ?rows
+          :[];
+
+      setEvents(list);
+
+      setEventId(current=>{
+
+        if(
+          current &&
+          list.some(
+            item=>
+              String(item.id)===
+              String(current)
+          )
+        ){
+          return current;
+        }
+
+        return list.length
+          ?String(list[0].id)
+          :"";
+      });
+
+    }catch(err){
+
+      setError(
+        err?.message||
+        "Falha ao carregar eventos."
+      );
+
+    }finally{
+
+      setLoading(false);
+    }
+  }
+
+  async function loadDashboard(){
+
+    if(!eventId){
+      setDashboard(null);
+      return;
+    }
+
+    try{
+
+      const response=
+        await api.ticketDashboardV25(
+          eventId
+        );
+
+      setDashboard(response);
+
+    }catch(err){
+
+      console.error(
+        "EVENT_COMMAND_CENTER_DASHBOARD",
+        err
+      );
+    }
+  }
+
+  useEffect(()=>{
+
+    loadEvents();
+
+  },[]);
+
+  useEffect(()=>{
+
+    loadDashboard();
+
+  },[eventId]);
+
+  useEffect(()=>{
+
+    const refresh=()=>{
+      loadDashboard();
+    };
+
+    window.addEventListener(
+      "nexus:ticket-checkin",
+      refresh
+    );
+
+    window.addEventListener(
+      "nexus:gate-intelligence",
+      refresh
+    );
+
+    const timer=
+      setInterval(
+        refresh,
+        15000
+      );
+
+    return()=>{
+
+      clearInterval(timer);
+
+      window.removeEventListener(
+        "nexus:ticket-checkin",
+        refresh
+      );
+
+      window.removeEventListener(
+        "nexus:gate-intelligence",
+        refresh
+      );
+    };
+
+  },[eventId]);
+
+  const activeEvent=
+    useMemo(
+      ()=>
+        events.find(
+          item=>
+            String(item.id)===
+            String(eventId)
+        )||null,
+      [events,eventId]
+    );
+
+  const metrics=
+    dashboard?.metrics||{};
+
+  const orders=
+    dashboard?.orders||{};
+
+  const issued=
+    Number(metrics.issued||0);
+
+  const checked=
+    Number(
+      metrics.checked_in||
+      metrics.checkins||
+      metrics.used||
+      0
+    );
+
+  const occupancy=
+    issued>0
+      ?Math.min(
+          100,
+          Math.round(
+            (checked/issued)*100
+          )
+        )
+      :0;
+
+  function openPublicEvent(){
+
+    if(!eventId){
+      return;
+    }
+
+    window.open(
+      `/eventos/${eventId}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }
+
+  if(loading){
+
+    return(
+      <section className="ecc38-shell">
+
+        <div className="ecc38-loading">
+
+          <div className="ecc38-orb">
+            N
+          </div>
+
+          <strong>
+            NEXUS EVENT COMMAND CENTER
+          </strong>
+
+          <span>
+            Sincronizando ecossistema do evento...
+          </span>
+
+        </div>
+
+      </section>
+    );
+  }
+
+  return(
+    <section className="ecc38-shell">
+
+      <header className="ecc38-hero">
+
+        <div className="ecc38-brand">
+
+          <span className="ecc38-kicker">
+            NEXUS EVENT EXPERIENCE V3.8
+          </span>
+
+          <h1>
+            Event Command Center
+          </h1>
+
+          <p>
+            Venda, ingressos, lotes, acesso,
+            experiência do cliente e inteligência
+            operando como um único ecossistema.
+          </p>
+
+        </div>
+
+        <div className="ecc38-event-control">
+
+          <small>
+            EVENTO EM OPERAÇÃO
+          </small>
+
+          <select
+            value={eventId}
+            onChange={event=>{
+              setEventId(
+                event.target.value
+              );
+            }}
+          >
+
+            {!events.length&&(
+              <option value="">
+                Nenhum evento disponível
+              </option>
+            )}
+
+            {events.map(event=>(
+              <option
+                key={event.id}
+                value={event.id}
+              >
+                {event.title}
+              </option>
+            ))}
+
+          </select>
+
+          {!!eventId&&(
+            <button
+              type="button"
+              onClick={openPublicEvent}
+            >
+              ABRIR PÁGINA PÚBLICA ↗
+            </button>
+          )}
+
+        </div>
+
+      </header>
+
+      {error&&(
+        <div className="ecc38-error">
+          {error}
+        </div>
+      )}
+
+      {activeEvent&&(
+
+        <section className="ecc38-event-strip">
+
+          <div>
+
+            <span>
+              EVENTO SELECIONADO
+            </span>
+
+            <strong>
+              {activeEvent.title}
+            </strong>
+
+          </div>
+
+          <div>
+
+            <span>
+              DATA
+            </span>
+
+            <strong>
+              {dt(
+                activeEvent.starts_at
+              )}
+            </strong>
+
+          </div>
+
+          <div>
+
+            <span>
+              LOCAL
+            </span>
+
+            <strong>
+              {activeEvent.venue_name||
+               "Local a confirmar"}
+            </strong>
+
+          </div>
+
+          <div className="ecc38-live">
+
+            <i/>
+
+            <span>
+              ECOSSISTEMA ONLINE
+            </span>
+
+          </div>
+
+        </section>
+      )}
+
+      <nav className="ecc38-nav">
+
+        <button
+          className={
+            tab==="overview"
+              ?"active"
+              :""
+          }
+          onClick={()=>
+            setTab("overview")
+          }
+        >
+          <span>01</span>
+          VISÃO GERAL
+        </button>
+
+        <button
+          className={
+            tab==="tickets"
+              ?"active"
+              :""
+          }
+          onClick={()=>
+            setTab("tickets")
+          }
+        >
+          <span>02</span>
+          VENDAS & INGRESSOS
+        </button>
+
+        <button
+          className={
+            tab==="lots"
+              ?"active"
+              :""
+          }
+          onClick={()=>
+            setTab("lots")
+          }
+        >
+          <span>03</span>
+          EVENTO & LOTES
+        </button>
+
+        <button
+          className={
+            tab==="gate"
+              ?"active"
+              :""
+          }
+          onClick={()=>
+            setTab("gate")
+          }
+        >
+          <span>04</span>
+          PORTARIA
+        </button>
+
+        <button
+          className={
+            tab==="public"
+              ?"active"
+              :""
+          }
+          onClick={()=>
+            setTab("public")
+          }
+        >
+          <span>05</span>
+          EXPERIÊNCIA PÚBLICA
+        </button>
+
+        <button
+          className={
+            tab==="intelligence"
+              ?"active"
+              :""
+          }
+          onClick={()=>
+            setTab("intelligence")
+          }
+        >
+          <span>06</span>
+          INTELLIGENCE
+        </button>
+
+      </nav>
+
+
+      {tab==="overview"&&(
+
+        <div className="ecc38-overview">
+
+          <section className="ecc38-kpis">
+
+            <article>
+
+              <span>
+                INGRESSOS EMITIDOS
+              </span>
+
+              <strong>
+                {issued}
+              </strong>
+
+              <small>
+                base atual do evento
+              </small>
+
+            </article>
+
+            <article>
+
+              <span>
+                CHECK-INS
+              </span>
+
+              <strong>
+                {checked}
+              </strong>
+
+              <small>
+                entradas registradas
+              </small>
+
+            </article>
+
+            <article>
+
+              <span>
+                RECEITA
+              </span>
+
+              <strong>
+                {money(
+                  metrics.revenue
+                )}
+              </strong>
+
+              <small>
+                ingressos confirmados
+              </small>
+
+            </article>
+
+            <article>
+
+              <span>
+                PAGAMENTOS PENDENTES
+              </span>
+
+              <strong>
+                {orders.pending||0}
+              </strong>
+
+              <small>
+                aguardando confirmação
+              </small>
+
+            </article>
+
+          </section>
+
+
+          <section className="ecc38-grid">
+
+            <article className="ecc38-card ecc38-occupancy">
+
+              <div className="ecc38-card-title">
+
+                <span>
+                  LIVE OPERATION
+                </span>
+
+                <h3>
+                  Fluxo de entrada
+                </h3>
+
+              </div>
+
+              <div className="ecc38-ring">
+
+                <div>
+                  <strong>
+                    {occupancy}%
+                  </strong>
+
+                  <span>
+                    CHECK-IN
+                  </span>
+                </div>
+
+              </div>
+
+              <p>
+                {checked} de {issued} ingresso(s)
+                emitido(s) já passaram pela portaria.
+              </p>
+
+              <button
+                onClick={()=>
+                  setTab("gate")
+                }
+              >
+                ABRIR PORTARIA →
+              </button>
+
+            </article>
+
+
+            <article className="ecc38-card">
+
+              <div className="ecc38-card-title">
+
+                <span>
+                  CUSTOMER JOURNEY
+                </span>
+
+                <h3>
+                  Jornada automatizada
+                </h3>
+
+              </div>
+
+              <div className="ecc38-flow">
+
+                <div>
+                  <b>01</b>
+                  <span>Evento publicado</span>
+                </div>
+
+                <i/>
+
+                <div>
+                  <b>02</b>
+                  <span>Compra online</span>
+                </div>
+
+                <i/>
+
+                <div>
+                  <b>03</b>
+                  <span>Pagamento</span>
+                </div>
+
+                <i/>
+
+                <div>
+                  <b>04</b>
+                  <span>Ingresso emitido</span>
+                </div>
+
+                <i/>
+
+                <div>
+                  <b>05</b>
+                  <span>Carteira digital</span>
+                </div>
+
+                <i/>
+
+                <div>
+                  <b>06</b>
+                  <span>Gate</span>
+                </div>
+
+              </div>
+
+              <p>
+                O pagamento confirmado alimenta
+                automaticamente emissão, carteira
+                digital, QR individual e acesso.
+              </p>
+
+            </article>
+
+
+            <article className="ecc38-card">
+
+              <div className="ecc38-card-title">
+
+                <span>
+                  QUICK ACTIONS
+                </span>
+
+                <h3>
+                  Operação do evento
+                </h3>
+
+              </div>
+
+              <div className="ecc38-actions">
+
+                <button
+                  onClick={()=>
+                    setTab("tickets")
+                  }
+                >
+                  <span>INGRESSOS</span>
+                  Venda e pedidos
+                </button>
+
+                <button
+                  onClick={()=>
+                    setTab("lots")
+                  }
+                >
+                  <span>CONFIGURAÇÃO</span>
+                  Evento e lotes
+                </button>
+
+                <button
+                  onClick={()=>
+                    setTab("gate")
+                  }
+                >
+                  <span>PORTARIA</span>
+                  Validar acesso
+                </button>
+
+                <button
+                  onClick={()=>
+                    setTab("intelligence")
+                  }
+                >
+                  <span>INTELLIGENCE</span>
+                  Analisar evento
+                </button>
+
+                <button
+                  onClick={openPublicEvent}
+                >
+                  <span>PÚBLICO</span>
+                  Abrir página
+                </button>
+
+              </div>
+
+            </article>
+
+
+            <article className="ecc38-card ecc38-status">
+
+              <div className="ecc38-card-title">
+
+                <span>
+                  NEXUS CORE
+                </span>
+
+                <h3>
+                  Sistemas conectados
+                </h3>
+
+              </div>
+
+              <div>
+                <span>
+                  <i/>
+                  EVENT ENGINE
+                </span>
+
+                <b>ONLINE</b>
+              </div>
+
+              <div>
+                <span>
+                  <i/>
+                  ASAAS PAYMENT
+                </span>
+
+                <b>INTEGRADO</b>
+              </div>
+
+              <div>
+                <span>
+                  <i/>
+                  TICKET ENGINE
+                </span>
+
+                <b>ONLINE</b>
+              </div>
+
+              <div>
+                <span>
+                  <i/>
+                  CUSTOMER WALLET
+                </span>
+
+                <b>CONECTADO</b>
+              </div>
+
+              <div>
+                <span>
+                  <i/>
+                  GATE INTELLIGENCE
+                </span>
+
+                <b>ONLINE</b>
+              </div>
+
+              <div>
+                <span>
+                  <i/>
+                  EVENT INTELLIGENCE
+                </span>
+
+                <b>ONLINE</b>
+              </div>
+
+            </article>
+
+          </section>
+
+        </div>
+      )}
+
+
+      {tab==="tickets"&&(
+
+        <div className="ecc38-module">
+
+          <div className="ecc38-module-head">
+
+            <span>
+              TICKET OPERATIONS
+            </span>
+
+            <h2>
+              Vendas & Ingressos
+            </h2>
+
+            <p>
+              Venda presencial, pedidos online,
+              pagamentos, emissão e localização
+              de ingressos.
+            </p>
+
+          </div>
+
+          <TicketOrderCenterV25/>
+
+        </div>
+      )}
+
+
+      {tab==="lots"&&(
+
+        <div className="ecc38-module">
+
+          <div className="ecc38-module-head">
+
+            <span>
+              EVENT MANAGEMENT
+            </span>
+
+            <h2>
+              Evento & Lotes
+            </h2>
+
+            <p>
+              Estrutura comercial do evento,
+              lotes, capacidade e regras de venda.
+            </p>
+
+          </div>
+
+          <TicketsV15/>
+
+        </div>
+      )}
+
+
+      {tab==="gate"&&(
+
+        <div className="ecc38-module ecc38-gate-module">
+
+          <div className="ecc38-module-head">
+
+            <span>
+              ACCESS OPERATION
+            </span>
+
+            <h2>
+              Portaria & Gate Intelligence
+            </h2>
+
+            <p>
+              QR Code, contingência, validação,
+              bloqueio de duplicidade e leitura
+              operacional em tempo real.
+            </p>
+
+          </div>
+
+          <GateScannerV25/>
+
+        </div>
+      )}
+
+
+      {tab==="public"&&(
+
+        <div className="ecc38-public">
+
+          <div className="ecc38-public-orb">
+            N
+          </div>
+
+          <span>
+            NEXUS EVENT EXPERIENCE
+          </span>
+
+          <h2>
+            A experiência do cliente
+            começa antes da entrada.
+          </h2>
+
+          <p>
+            A página pública conecta divulgação,
+            compra, PIX, confirmação automática,
+            emissão do ingresso, carteira digital
+            e QR Code individual.
+          </p>
+
+          <div className="ecc38-public-flow">
+
+            <span>EVENTO</span>
+            <i>→</i>
+            <span>CHECKOUT</span>
+            <i>→</i>
+            <span>PIX</span>
+            <i>→</i>
+            <span>INGRESSO</span>
+            <i>→</i>
+            <span>WALLET</span>
+            <i>→</i>
+            <span>GATE</span>
+
+          </div>
+
+          <button
+            onClick={openPublicEvent}
+            disabled={!eventId}
+          >
+            ABRIR EXPERIÊNCIA PÚBLICA ↗
+          </button>
+
+        </div>
+      )}
+
+
+      {tab==="intelligence"&&(
+
+        <div className="ecc38-module">
+
+          <div className="ecc38-module-head">
+
+            <span>
+              NEXUS EVENT INTELLIGENCE
+            </span>
+
+            <h2>
+              Inteligência do Evento
+            </h2>
+
+            <p>
+              Receita, ocupação, ritmo de vendas,
+              comportamento de entrada e sinais
+              operacionais do evento.
+            </p>
+
+          </div>
+
+          {eventId
+            ?(
+              <EventIntelligenceV37
+                eventId={eventId}
+              />
+            )
+            :(
+              <div className="ecc38-empty">
+                Selecione um evento.
+              </div>
+            )
+          }
+
+        </div>
+      )}
+
+
+      <footer className="ecc38-footer">
+
+        <span>
+          NEXUS HOSPITALITY ONE
+        </span>
+
+        <b>
+          EVENT COMMAND CENTER • V3.8
+        </b>
+
+      </footer>
+
+    </section>
+  );
+}
+
+
+============================================================
+ FILE: src/PublicEventsPremiumV33.jsx
+============================================================
+﻿import React,{
+  useEffect,
+  useMemo,
+  useState
+} from "react";
+
+import "./PublicEventsPremiumV33.css";
+import EventPaymentTrackerV35 from "./EventPaymentTrackerV35.jsx";
+
+const money=value=>
+  Number(value||0).toLocaleString(
+    "pt-BR",
+    {
+      style:"currency",
+      currency:"BRL"
+    }
+  );
+
+const date=value=>{
+  if(!value)return "Data a confirmar";
+
+  try{
+    return new Date(value).toLocaleString(
+      "pt-BR",
+      {
+        dateStyle:"long",
+        timeStyle:"short"
+      }
+    );
+  }catch{
+    return value;
+  }
+};
+
+async function jsonFetch(url,options){
+
+  const response=await fetch(
+    url,
+    options
+  );
+
+  const data=
+    await response.json()
+      .catch(()=>({}));
+
+  if(!response.ok){
+    throw new Error(
+      data?.error||
+      "REQUEST_FAILED"
+    );
+  }
+
+  return data;
+}
+
+export default function PublicEventsPremiumV33({
+  eventId=null
+}){
+
+  const[events,setEvents]=useState([]);
+  const[selected,setSelected]=useState(null);
+  const[loading,setLoading]=useState(true);
+  const[error,setError]=useState("");
+  const[checkout,setCheckout]=useState(null);
+  const[buying,setBuying]=useState(false);
+
+  useEffect(()=>{
+
+    let alive=true;
+
+    async function load(){
+
+      try{
+
+        setLoading(true);
+        setError("");
+
+        if(eventId){
+
+          const data=
+            await jsonFetch(
+              `/api/public/events/${eventId}`
+            );
+
+          if(!alive)return;
+
+          const event=
+            data?.event||
+            data;
+
+          setSelected(event);
+          setEvents(
+            event?[event]:[]
+          );
+
+        }else{
+
+          const data=
+            await jsonFetch(
+              "/api/public/events"
+            );
+
+          if(!alive)return;
+
+          const list=
+            Array.isArray(data)
+              ?data
+              :data?.events||[];
+
+          setEvents(list);
+
+          if(list.length===1){
+            setSelected(list[0]);
+          }
+        }
+
+      }catch(e){
+
+        if(alive){
+          setError(
+            "Nao foi possivel carregar os eventos."
+          );
+        }
+
+      }finally{
+
+        if(alive)setLoading(false);
+      }
+    }
+
+    load();
+
+    return()=>{
+      alive=false;
+    };
+
+  },[eventId]);
+
+  const current=
+    selected||
+    (eventId?events[0]:null);
+
+  const lots=useMemo(
+    ()=>current?.lots||[],
+    [current]
+  );
+
+  async function buy(event,lot){
+
+    const name=
+      window.prompt(
+        "Nome completo do comprador:"
+      );
+
+    if(!name?.trim())return;
+
+    const phone=
+      window.prompt(
+        "WhatsApp com DDD:"
+      );
+
+    if(!phone?.trim())return;
+
+    const email=
+      window.prompt(
+        "E-mail:"
+      )||"";
+
+    const document=
+      window.prompt(
+        "CPF:"
+      )||"";
+
+    const quantityRaw=
+      window.prompt(
+        `Quantidade de ingressos - ${lot.name}:`,
+        "1"
+      );
+
+    if(quantityRaw===null)return;
+
+    const quantity=
+      Math.max(
+        1,
+        Math.min(
+          10,
+          Number(quantityRaw)||1
+        )
+      );
+
+    try{
+
+      setBuying(true);
+      setError("");
+
+      const result=
+        await jsonFetch(
+          `/api/public/events/${event.id}/buy`,
+          {
+            method:"POST",
+            headers:{
+              "Content-Type":
+                "application/json"
+            },
+            body:JSON.stringify({
+              lot_id:lot.id,
+              buyer_name:name.trim(),
+              buyer_phone:phone.trim(),
+              buyer_email:email.trim(),
+              buyer_document:document.trim(),
+              quantity
+            })
+          }
+        );
+
+      setCheckout(result);
+
+    }catch(e){
+
+      setError(
+        e?.message||
+        "Nao foi possivel iniciar a compra."
+      );
+
+    }finally{
+      setBuying(false);
+    }
+  }
+
+  if(loading){
+
+    return(
+      <main className="nev33-shell nev33-center">
+        <div className="nev33-loader">
+          <span>N</span>
+          <small>NEXUS EVENT EXPERIENCE</small>
+          <h1>Preparando sua experiência</h1>
+          <p>
+            Carregando eventos, lotes e disponibilidade.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if(checkout){
+
+    const order=
+      checkout?.order||
+      checkout;
+
+    return(
+      <main className="nev33-shell">
+        <section className="nev33-checkout-success">
+
+          <span className="nev33-eyebrow">
+            COMPRA INICIADA
+          </span>
+
+          <h1>
+            Seu ingresso está quase garantido.
+          </h1>
+
+          <p>
+            Assim que o pagamento for confirmado,
+            o NEXUS emitirá seus ingressos e os
+            conectará automaticamente à sua carteira.
+          </p>
+
+          <div className="nev33-order-code">
+            <small>PEDIDO</small>
+            <strong>
+              {order?.order_code||
+               order?.id||
+               "NEXUS"}
+            </strong>
+          </div>
+
+          {order?.pix_image&&(
+            <div className="nev33-pix">
+              <img
+                src={
+                  order.pix_image.startsWith?.("data:")
+                    ?order.pix_image
+                    :`data:image/png;base64,${order.pix_image}`
+                }
+                alt="QR Code PIX"
+              />
+              <strong>
+                Escaneie para pagar
+              </strong>
+            </div>
+          )}
+
+          {order?.pix_payload&&(
+            <div className="nev33-copy">
+              <small>PIX COPIA E COLA</small>
+              <textarea
+                readOnly
+                value={order.pix_payload}
+              />
+              <button
+                onClick={async()=>{
+                  try{
+                    await navigator.clipboard.writeText(
+                      order.pix_payload
+                    );
+                  }catch{}
+                }}
+              >
+                Copiar PIX
+              </button>
+            </div>
+          )}
+
+          {order?.invoice_url&&(
+            <a
+              className="nev33-primary"
+              href={order.invoice_url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Abrir pagamento
+            </a>
+          )}
+
+          <button
+            className="nev33-secondary"
+            onClick={()=>{
+              window.location.href="/meus-ingressos";
+            }}
+          >
+            Já sou cliente
+          </button>
+
+          <EventPaymentTrackerV35
+            order={order}
+            onError={error=>{
+              console.error(
+                "NEXUS PAYMENT EXPERIENCE",
+                error
+              );
+            }}
+          />
+
+          <small className="nev33-security">
+            Pagamento confirmado → emissão automática →
+            carteira NEXUS → QR individual.
+          </small>
+
+        </section>
+      </main>
+    );
+  }
+
+  if(current){
+
+    return(
+      <main className="nev33-shell">
+
+        <header className="nev33-header">
+          <a href="/eventos" className="nev33-brand">
+            <b>N</b>
+            <span>
+              NEXUS
+              <small>EVENT EXPERIENCE</small>
+            </span>
+          </a>
+
+          <a
+            href="/meus-ingressos"
+            className="nev33-wallet-link"
+          >
+            Meus ingressos
+          </a>
+        </header>
+
+        <section className="nev33-event-hero">
+
+          <div className="nev33-glow"/>
+
+          <div className="nev33-event-content">
+
+            <span className="nev33-eyebrow">
+              EXPERIÊNCIA NEXUS
+            </span>
+
+            <h1>
+              {current.title||"Evento"}
+            </h1>
+
+            <p>
+              {current.description||
+               "Uma experiência preparada para você."}
+            </p>
+
+            <div className="nev33-meta">
+
+              <div>
+                <small>DATA</small>
+                <strong>
+                  {date(current.starts_at)}
+                </strong>
+              </div>
+
+              <div>
+                <small>LOCAL</small>
+                <strong>
+                  {current.venue_name||
+                   "Local a confirmar"}
+                </strong>
+              </div>
+
+              <div>
+                <small>ACESSO</small>
+                <strong>
+                  QR Code individual
+                </strong>
+              </div>
+
+            </div>
+          </div>
+
+          <div className="nev33-event-badge">
+            <span>LIVE</span>
+            <strong>
+              {current.artist_name||
+               "NEXUS EVENT"}
+            </strong>
+            <small>
+              Compra e acesso integrados
+            </small>
+          </div>
+
+        </section>
+
+        <section className="nev33-buy-area">
+
+          <div className="nev33-title">
+            <span>INGRESSOS</span>
+            <h2>Escolha seu lote</h2>
+            <p>
+              Após a confirmação do pagamento,
+              seus ingressos são emitidos automaticamente.
+            </p>
+          </div>
+
+          {!lots.length&&(
+            <div className="nev33-empty">
+              Nenhum lote disponível neste momento.
+            </div>
+          )}
+
+          <div className="nev33-lots">
+
+            {lots.map((lot,index)=>{
+
+              const quantity=
+                Number(lot.quantity||0);
+
+              const sold=
+                Number(lot.sold||0);
+
+              const remaining=
+                quantity>0
+                  ?Math.max(
+                      0,
+                      quantity-sold
+                    )
+                  :null;
+
+              const soldOut=
+                remaining===0 &&
+                quantity>0;
+
+              const progress=
+                quantity>0
+                  ?Math.min(
+                      100,
+                      (sold/quantity)*100
+                    )
+                  :0;
+
+              return(
+                <article
+                  className="nev33-lot"
+                  key={lot.id}
+                >
+
+                  <div className="nev33-lot-head">
+
+                    <span>
+                      {index===0
+                        ?"LOTE ATUAL"
+                        :"LOTE"}
+                    </span>
+
+                    {remaining!==null&&(
+                      <small>
+                        {soldOut
+                          ?"ESGOTADO"
+                          :`${remaining} disponíveis`}
+                      </small>
+                    )}
+
+                  </div>
+
+                  <h3>{lot.name}</h3>
+
+                  <strong className="nev33-price">
+                    {money(lot.price)}
+                  </strong>
+
+                  {quantity>0&&(
+                    <div className="nev33-capacity">
+                      <div>
+                        <span
+                          style={{
+                            width:`${progress}%`
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    disabled={
+                      soldOut||
+                      buying
+                    }
+                    onClick={()=>
+                      buy(current,lot)
+                    }
+                  >
+                    {soldOut
+                      ?"Lote esgotado"
+                      :buying
+                        ?"Processando..."
+                        :"Comprar ingresso"}
+                  </button>
+
+                </article>
+              );
+            })}
+
+          </div>
+        </section>
+
+        <section className="nev33-flow">
+
+          <span className="nev33-eyebrow">
+            NEXUS AUTOMATION
+          </span>
+
+          <h2>
+            Você compra. O NEXUS cuida do restante.
+          </h2>
+
+          <div className="nev33-flow-grid">
+
+            <article>
+              <b>01</b>
+              <strong>Pagamento</strong>
+              <p>
+                Compra online integrada ao evento.
+              </p>
+            </article>
+
+            <article>
+              <b>02</b>
+              <strong>Emissão</strong>
+              <p>
+                Confirmação gera os ingressos automaticamente.
+              </p>
+            </article>
+
+            <article>
+              <b>03</b>
+              <strong>Carteira</strong>
+              <p>
+                Seus ingressos ficam reunidos em um único lugar.
+              </p>
+            </article>
+
+            <article>
+              <b>04</b>
+              <strong>Entrada</strong>
+              <p>
+                QR individual validado pelo NEXUS Gate.
+              </p>
+            </article>
+
+          </div>
+        </section>
+
+        {error&&(
+          <div className="nev33-error">
+            {error}
+          </div>
+        )}
+
+        <footer className="nev33-footer">
+          <strong>NEXUS EVENT EXPERIENCE</strong>
+          <span>
+            Commerce • Wallet • Access • Intelligence
+          </span>
+        </footer>
+
+      </main>
+    );
+  }
+
+  return(
+    <main className="nev33-shell">
+
+      <header className="nev33-header">
+        <div className="nev33-brand">
+          <b>N</b>
+          <span>
+            NEXUS
+            <small>EVENT EXPERIENCE</small>
+          </span>
+        </div>
+
+        <a
+          href="/meus-ingressos"
+          className="nev33-wallet-link"
+        >
+          Meus ingressos
+        </a>
+      </header>
+
+      <section className="nev33-list-hero">
+        <span className="nev33-eyebrow">
+          PRÓXIMAS EXPERIÊNCIAS
+        </span>
+        <h1>
+          O próximo evento começa aqui.
+        </h1>
+        <p>
+          Escolha sua experiência, compre seu ingresso
+          e deixe o NEXUS cuidar do restante.
+        </p>
+      </section>
+
+      {error&&(
+        <div className="nev33-error">
+          {error}
+        </div>
+      )}
+
+      <section className="nev33-event-list">
+
+        {!events.length&&(
+          <div className="nev33-empty">
+            Nenhum evento disponível neste momento.
+          </div>
+        )}
+
+        {events.map(event=>(
+          <a
+            key={event.id}
+            href={`/eventos/${event.id}`}
+            className="nev33-event-card"
+          >
+            <span>
+              {date(event.starts_at)}
+            </span>
+
+            <h2>{event.title}</h2>
+
+            <p>
+              {event.venue_name||
+               "Local a confirmar"}
+            </p>
+
+            <strong>
+              Ver evento →
+            </strong>
+          </a>
+        ))}
+
+      </section>
+
+    </main>
+  );
+}
+
+
+
+============================================================
+ FILE: src/TicketsV15.jsx
+============================================================
+﻿import React,{
+  useEffect,
+  useMemo,
+  useState
+} from 'react';
+
+import {api} from './api.js';
+
+const brl=value=>
+  Number(value||0).toLocaleString(
+    'pt-BR',
+    {
+      style:'currency',
+      currency:'BRL'
+    }
+  );
+
+const dt=value=>
+  value
+    ? new Date(value)
+        .toLocaleString('pt-BR')
+    : '\u2014';
+
+export default function TicketsV15(){
+
+  const [events,setEvents]=useState([]);
+  const [event,setEvent]=useState('');
+  const [lots,setLots]=useState([]);
+  const [tickets,setTickets]=useState([]);
+
+  const [lot,setLot]=useState({
+    name:'1\u00ba Lote',
+    price:'',
+    quantity:'100'
+  });
+
+  const [message,setMessage]=useState('');
+  const [busy,setBusy]=useState(false);
+
+  const [payment,setPayment]=useState(null);
+
+  const [asaas,setAsaas]=useState({
+    environment:'SANDBOX',
+    base_url:'',
+    api_key:'',
+    webhook_token:''
+  });
+
+  async function loadEventData(eventId){
+
+    if(!eventId){
+      setLots([]);
+      setTickets([]);
+      return;
+    }
+
+    const [lotRows,ticketRows]=
+      await Promise.all([
+        api.ticketLots(eventId),
+        api.tickets(eventId)
+      ]);
+
+    setLots(lotRows);
+    setTickets(ticketRows);
+  }
+
+  async function load(){
+
+    try{
+
+      const rows=
+        await api.ticketEvents();
+
+      setEvents(rows);
+
+      const selected=
+        event ||
+        rows[0]?.id;
+
+      if(selected){
+
+        setEvent(
+          String(selected)
+        );
+
+        await loadEventData(
+          selected
+        );
+      }
+
+    }catch(error){
+
+      setMessage(
+        error.message
+      );
+    }
+  }
+
+  async function loadPayment(){
+
+    try{
+
+      const response=
+        await api.paymentConfigV15();
+
+      setPayment(
+        response.asaas
+      );
+
+      setAsaas(current=>({
+        ...current,
+
+        environment:
+          response.asaas?.environment ||
+          'SANDBOX',
+
+        base_url:
+          response.asaas?.base_url ||
+          ''
+      }));
+
+    }catch(error){
+
+      setMessage(
+        error.message
+      );
+    }
+  }
+
+  useEffect(()=>{
+
+    load();
+    loadPayment();
+
+  },[]);
+
+  useEffect(()=>{
+
+    if(!event) return;
+
+    loadEventData(event)
+      .catch(error=>
+        setMessage(
+          error.message
+        )
+      );
+
+  },[event]);
+
+  const active=
+    events.find(
+      row=>
+        String(row.id)===
+        String(event)
+    );
+
+  const stats=useMemo(()=>{
+
+    const sold=
+      Number(
+        active?.tickets ||
+        tickets.length ||
+        0
+      );
+
+    const checked=
+      Number(
+        active?.checked_in ||
+        tickets.filter(
+          row=>row.checkin_at
+        ).length
+      );
+
+    const revenue=
+      Number(
+        active?.revenue ||
+        tickets.reduce(
+          (sum,row)=>
+            sum+
+            (
+              row.payment_status==='PAID'
+                ? Number(row.price||0)
+                : 0
+            ),
+          0
+        )
+      );
+
+    const attendance=
+      sold>0
+        ? Math.round(
+            checked/sold*100
+          )
+        : 0;
+
+    return {
+      sold,
+      checked,
+      revenue,
+      attendance
+    };
+
+  },[
+    active,
+    tickets
+  ]);
+
+  async function addLot(){
+
+    try{
+
+      setBusy(true);
+      setMessage('');
+
+      await api.createTicketLot({
+        ...lot,
+
+        event_id:
+          Number(event),
+
+        price:
+          Number(
+            String(lot.price)
+              .replace(',','.')
+          ),
+
+        quantity:
+          Number(lot.quantity)
+      });
+
+      setLots(
+        await api.ticketLots(event)
+      );
+
+      setMessage(
+        'Lote criado com sucesso.'
+      );
+
+    }catch(error){
+
+      setMessage(
+        error.message
+      );
+
+    }finally{
+
+      setBusy(false);
+    }
+  }
+
+  async function saveAsaas(){
+
+    try{
+
+      setBusy(true);
+      setMessage('');
+
+      if(
+        !asaas.api_key.trim() &&
+        !payment?.configured
+      ){
+        throw new Error(
+          'Informe a API Key do Asaas.'
+        );
+      }
+
+      if(
+        !asaas.webhook_token.trim() &&
+        !payment?.webhook_configured
+      ){
+        throw new Error(
+          'Informe o token do webhook.'
+        );
+      }
+
+      const body={
+        environment:
+          String(
+            asaas.environment
+          ).toLowerCase(),
+
+        base_url:
+          asaas.base_url
+      };
+
+      if(
+        asaas.api_key.trim()
+      ){
+        body.api_key=
+          asaas.api_key.trim();
+      }
+
+      if(
+        asaas.webhook_token.trim()
+      ){
+        body.webhook_token=
+          asaas.webhook_token.trim();
+      }
+
+      const response=
+        await api.saveAsaasV15(
+          body
+        );
+
+      setPayment(
+        response.asaas
+      );
+
+      setAsaas(current=>({
+        ...current,
+        api_key:'',
+        webhook_token:'',
+        environment:
+          response.asaas.environment,
+        base_url:
+          response.asaas.base_url
+      }));
+
+      setMessage(
+        'Configuracao Asaas salva com seguranca.'
+      );
+
+    }catch(error){
+
+      setMessage(
+        error.message
+      );
+
+    }finally{
+
+      setBusy(false);
+    }
+  }
+
+  async function testAsaas(){
+
+    try{
+
+      setBusy(true);
+      setMessage('');
+
+      const response=
+        await api.testAsaasV15();
+
+      setMessage(
+        `Asaas conectado - ${response.environment} - ${response.account_status}`
+      );
+
+      await loadPayment();
+
+    }catch(error){
+
+      setMessage(
+        `Falha na conexao Asaas: ${error.message}`
+      );
+
+    }finally{
+
+      setBusy(false);
+    }
+  }
+
+  const publicUrl=
+    event
+      ? `${location.origin}/eventos/${event}`
+      : `${location.origin}/eventos`;
+
+  const webhookUrl=
+    `${location.origin}/api/webhooks/asaas`;
+
+  return (
+    <section className="ticket15">
+
+      <header>
+
+        <div>
+
+          <span>
+            NEXUS TICKETS {'\u2022'} PAYMENT INTELLIGENCE
+          </span>
+
+          <h1>
+            Ingressos & Acesso
+          </h1>
+
+          <p>
+            Venda, pagamento, QR Code e controle de acesso em uma unica operacao.
+          </p>
+
+        </div>
+
+        <button
+          disabled={!event}
+          onClick={()=>
+            window.open(
+              `/eventos/${event}`,
+              '_blank'
+            )
+          }
+        >
+          ABRIR PAGINA DE VENDA
+        </button>
+
+      </header>
+
+      {message&&
+        <div className="ticket15-msg">
+          {message}
+        </div>
+      }
+
+      <div className="ticket15-kpis">
+
+        <div>
+          <small>VENDIDOS</small>
+          <b>{stats.sold}</b>
+        </div>
+
+        <div>
+          <small>CHECK-INS</small>
+          <b>{stats.checked}</b>
+        </div>
+
+        <div>
+          <small>RECEITA</small>
+          <b>{brl(stats.revenue)}</b>
+        </div>
+
+        <div>
+          <small>PRESENCA</small>
+          <b>{stats.attendance}%</b>
+        </div>
+
+      </div>
+
+      <main>
+
+        <section className="ticket15-config">
+
+          <div className="ticket15-title">
+
+            <span>EVENTO</span>
+
+            <h2>
+              Evento e lotes
+            </h2>
+
+          </div>
+
+          <label>
+
+            EVENTO
+
+            <select
+              value={event}
+              onChange={
+                e=>setEvent(
+                  e.target.value
+                )
+              }
+            >
+
+              {events.map(row=>
+                <option
+                  key={row.id}
+                  value={row.id}
+                >
+                  {row.title} {'\u2022'} {dt(row.starts_at)}
+                </option>
+              )}
+
+            </select>
+
+          </label>
+
+          {!events.length&&
+            <div className="ticket15-empty">
+              Crie o evento primeiro no modulo Eventos.
+            </div>
+          }
+
+          <div className="ticket15-lotform">
+
+            <input
+              value={lot.name}
+              onChange={
+                e=>setLot({
+                  ...lot,
+                  name:e.target.value
+                })
+              }
+              placeholder="Nome do lote"
+            />
+
+            <input
+              value={lot.price}
+              onChange={
+                e=>setLot({
+                  ...lot,
+                  price:e.target.value
+                })
+              }
+              placeholder="Preco R$"
+            />
+
+            <input
+              type="number"
+              value={lot.quantity}
+              onChange={
+                e=>setLot({
+                  ...lot,
+                  quantity:e.target.value
+                })
+              }
+              placeholder="Quantidade"
+            />
+
+            <button
+              disabled={
+                !event ||
+                busy
+              }
+              onClick={addLot}
+            >
+              CRIAR LOTE
+            </button>
+
+          </div>
+
+          <div className="ticket15-lots">
+
+            {lots.map(row=>
+              <div key={row.id}>
+
+                <span>
+
+                  <b>
+                    {row.name}
+                  </b>
+
+                  <small>
+                    {row.sold}/{row.quantity} vendidos
+                  </small>
+
+                </span>
+
+                <strong>
+                  {brl(row.price)}
+                </strong>
+
+                <em>
+                  {Math.max(
+                    0,
+                    Number(row.quantity)-
+                    Number(row.sold)
+                  )} disponiveis
+                </em>
+
+              </div>
+            )}
+
+          </div>
+
+          <div className="ticket15-link">
+
+            <small>
+              LINK PARA DIVULGACAO
+            </small>
+
+            <code>
+              {publicUrl}
+            </code>
+
+            <button
+              onClick={()=>
+                navigator.clipboard
+                  ?.writeText(
+                    publicUrl
+                  )
+              }
+            >
+              COPIAR LINK
+            </button>
+
+          </div>
+
+        </section>
+
+        <section className="ticket15-how">
+
+          <span>
+            AUTOMACAO DO INGRESSO
+          </span>
+
+          <h2>
+            Da compra a portaria
+          </h2>
+
+          {[
+            ['01','Cliente abre o link'],
+            ['02','Escolhe evento e lote'],
+            ['03','Preenche seus dados'],
+            ['04','Asaas processa o pagamento'],
+            ['05','Webhook confirma o recebimento'],
+            ['06','NEXUS gera QR Code unico'],
+            ['07','Portaria valida uma unica vez']
+          ].map(row=>
+            <div key={row[0]}>
+              <b>{row[0]}</b>
+              <span>{row[1]}</span>
+            </div>
+          )}
+
+        </section>
+
+      </main>
+
+      <section
+        className="ticket15-config"
+        data-nexus-payment-center="asaas"
+      >
+
+        <div className="ticket15-title">
+
+          <span>
+            NEXUS PAYMENTS
+          </span>
+
+          <h2>
+            Configuracao Asaas
+          </h2>
+
+        </div>
+
+        <div className="ticket15-kpis">
+
+          <div>
+
+            <small>
+              AMBIENTE
+            </small>
+
+            <b>
+              {payment?.environment||'\u2014'}
+            </b>
+
+          </div>
+
+          <div>
+
+            <small>
+              API
+            </small>
+
+            <b>
+              {payment?.configured
+                ? 'CONFIGURADA'
+                : 'PENDENTE'}
+            </b>
+
+          </div>
+
+          <div>
+
+            <small>
+              WEBHOOK
+            </small>
+
+            <b>
+              {payment?.webhook_configured
+                ? 'CONFIGURADO'
+                : 'PENDENTE'}
+            </b>
+
+          </div>
+
+          <div>
+
+            <small>
+              PROTECAO
+            </small>
+
+            <b>
+              {payment?.secure_storage||
+               'WINDOWS DPAPI'}
+            </b>
+
+          </div>
+
+        </div>
+
+        <div className="ticket15-lotform">
+
+          <select
+            value={asaas.environment}
+            onChange={
+              e=>setAsaas({
+                ...asaas,
+
+                environment:
+                  e.target.value,
+
+                base_url:
+                  e.target.value==='PRODUCTION'
+                    ? 'https://api.asaas.com/v3'
+                    : 'https://api-sandbox.asaas.com/v3'
+              })
+            }
+          >
+
+            <option value="SANDBOX">
+              SANDBOX
+            </option>
+
+            <option value="PRODUCTION">
+              PRODUCAO
+            </option>
+
+          </select>
+
+          <input
+            value={asaas.base_url}
+            onChange={
+              e=>setAsaas({
+                ...asaas,
+                base_url:e.target.value
+              })
+            }
+            placeholder="Base URL Asaas"
+          />
+
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={asaas.api_key}
+            onChange={
+              e=>setAsaas({
+                ...asaas,
+                api_key:e.target.value
+              })
+            }
+            placeholder={
+              payment?.configured
+                ? `API Key atual ${payment.api_key_masked||''}`
+                : 'API Key Asaas'
+            }
+          />
+
+          <input
+            type="password"
+            autoComplete="new-password"
+            value={asaas.webhook_token}
+            onChange={
+              e=>setAsaas({
+                ...asaas,
+                webhook_token:e.target.value
+              })
+            }
+            placeholder={
+              payment?.webhook_configured
+                ? `Webhook atual ${payment.webhook_token_masked||''}`
+                : 'Token do webhook'
+            }
+          />
+
+        </div>
+
+        <div className="ticket15-link">
+
+          <small>
+            ENDERECO DO WEBHOOK
+          </small>
+
+          <code>
+            {webhookUrl}
+          </code>
+
+          <button
+            onClick={()=>
+              navigator.clipboard
+                ?.writeText(
+                  webhookUrl
+                )
+            }
+          >
+            COPIAR
+          </button>
+
+        </div>
+
+        <div
+          style={{
+            display:'flex',
+            gap:10,
+            flexWrap:'wrap',
+            marginTop:14
+          }}
+        >
+
+          <button
+            className="primary"
+            disabled={busy}
+            onClick={saveAsaas}
+          >
+            {busy
+              ? 'PROCESSANDO...'
+              : 'SALVAR CONFIGURACAO'}
+          </button>
+
+          <button
+            disabled={
+              busy ||
+              !payment?.configured
+            }
+            onClick={testAsaas}
+          >
+            TESTAR CONEXAO
+          </button>
+
+        </div>
+
+        <p
+          style={{
+            opacity:.72,
+            marginTop:12
+          }}
+        >
+          A API Key e o token do webhook sao protegidos pelo Windows DPAPI.
+          O NEXUS nao exibe os segredos completos depois de salvos.
+        </p>
+
+      </section>
+
+      <section className="ticket15-table">
+
+        <div className="ticket15-title">
+
+          <span>
+            INGRESSOS EMITIDOS
+          </span>
+
+          <h2>
+            Compradores & acesso
+          </h2>
+
+        </div>
+
+        <div className="table-wrap">
+
+          <table>
+
+            <thead>
+
+              <tr>
+                <th>Codigo</th>
+                <th>Participante</th>
+                <th>Lote</th>
+                <th>Valor</th>
+                <th>Pagamento</th>
+                <th>Acesso</th>
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              {tickets.map(row=>
+                <tr key={row.id}>
+
+                  <td>
+                    <b>
+                      {row.ticket_code}
+                    </b>
+                  </td>
+
+                  <td>
+                    {row.attendee_name}
+
+                    <small>
+                      {row.attendee_phone}
+                    </small>
+                  </td>
+
+                  <td>
+                    {row.lot_name||
+                     row.ticket_type}
+                  </td>
+
+                  <td>
+                    {brl(row.price)}
+                  </td>
+
+                  <td>
+                    {row.payment_status}
+                  </td>
+
+                  <td>
+                    {row.checkin_at
+                      ? `OK ${dt(row.checkin_at)}`
+                      : 'AGUARDANDO'}
+                  </td>
+
+                </tr>
+              )}
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </section>
+
+    </section>
+  );
+}
+
+
+============================================================
+ FILE: src/TicketOrderCenterV25.jsx
+============================================================
+﻿import React,{
+  useEffect,
+  useMemo,
+  useState
+} from 'react';
+
+import {api} from './api.js';
+import EventIntelligenceV37 from "./EventIntelligenceV37.jsx";
+import './TicketsV25.css';
+
+const money=value=>
+  Number(value||0)
+    .toLocaleString(
+      'pt-BR',
+      {
+        style:'currency',
+        currency:'BRL'
+      }
+    );
+
+const dt=value=>{
+  if(!value)return '\u2014';
+
+  const date=new Date(value);
+
+  return Number.isNaN(
+    date.getTime()
+  )
+    ? value
+    : date.toLocaleString(
+        'pt-BR',
+        {
+          timeZone:'America/Sao_Paulo',
+          year:'numeric',
+          month:'2-digit',
+          day:'2-digit',
+          hour:'2-digit',
+          minute:'2-digit',
+          second:'2-digit',
+          hour12:false
+        }
+      );
+};
+
+export default function TicketOrderCenterV25(){
+
+  const [events,setEvents]=useState([]);
+  const [eventId,setEventId]=useState('');
+  const [dashboard,setDashboard]=useState(null);
+  const [orders,setOrders]=useState([]);
+  const [history,setHistory]=useState([]);
+  const [tickets,setTickets]=useState([]);
+  const [lots,setLots]=useState([]);
+  const [query,setQuery]=useState('');
+  const [search,setSearch]=useState([]);
+  const [message,setMessage]=useState('');
+
+  const [form,setForm]=useState({
+    attendee_name:'',
+    attendee_phone:'',
+    buyer_email:'',
+    buyer_document:'',
+    lot_id:'',
+    payment_method:'DINHEIRO',
+    payment_status:'PAID'
+  });
+
+  async function loadEvents(){
+
+    const rows=
+      await api.ticketEvents();
+
+    setEvents(rows);
+
+    if(
+      !eventId &&
+      rows.length
+    ){
+      setEventId(
+        String(rows[0].id)
+      );
+    }
+  }
+
+  async function load(){
+
+    if(!eventId){
+      return;
+    }
+
+    try{
+
+      const [
+        dashboardData,
+        orderRows,
+        accessRows,
+        ticketRows,
+        lotRows
+      ]=await Promise.all([
+        api.ticketDashboardV25(eventId),
+        api.ticketOrdersV25(eventId),
+        api.ticketAccessV25(eventId),
+        api.tickets(eventId),
+        api.ticketLots(eventId)
+      ]);
+
+      setDashboard(
+        dashboardData
+      );
+
+      setOrders(
+        orderRows
+      );
+
+      setHistory(
+        accessRows
+      );
+
+      setTickets(
+        ticketRows
+      );
+
+      setLots(
+        lotRows
+      );
+
+    }catch(error){
+
+      setMessage(
+        error.message||
+        'Falha ao carregar central de ingressos.'
+      );
+    }
+  }
+
+  useEffect(
+    ()=>{
+      loadEvents()
+        .catch(
+          error=>
+            setMessage(
+              error.message
+            )
+        );
+    },
+    []
+  );
+
+  useEffect(
+    ()=>{
+      load();
+    },
+    [eventId]
+  );
+
+  useEffect(
+    ()=>{
+      const handleTicketCheckin=()=>{
+        load();
+      };
+
+      window.addEventListener(
+        'nexus:ticket-checkin',
+        handleTicketCheckin
+      );
+
+      return ()=>{
+        window.removeEventListener(
+          'nexus:ticket-checkin',
+          handleTicketCheckin
+        );
+      };
+    },
+    [eventId]
+  );
+
+  async function runSearch(){
+
+    if(!query.trim()){
+      setSearch([]);
+      return;
+    }
+
+    try{
+
+      const rows=
+        await api.ticketSearchV25(
+          eventId,
+          query.trim()
+        );
+
+      setSearch(rows);
+
+    }catch(error){
+
+      setMessage(
+        error.message
+      );
+    }
+  }
+
+  async function createPresential(){
+
+    if(
+      !eventId ||
+      !form.attendee_name.trim()
+    ){
+
+      setMessage(
+        'Informe o participante.'
+      );
+
+      return;
+    }
+
+    try{
+
+      const response=
+        await api.createPresentialTicketV25({
+          event_id:Number(eventId),
+          lot_id:
+            form.lot_id
+              ? Number(form.lot_id)
+              : null,
+          attendee_name:
+            form.attendee_name,
+          attendee_phone:
+            form.attendee_phone,
+          buyer_email:
+            form.buyer_email,
+          buyer_document:
+            form.buyer_document,
+          payment_method:
+            form.payment_method,
+          payment_status:
+            form.payment_status
+        });
+
+      setMessage(
+        'Ingresso emitido: '+
+        response.ticket.ticket_code
+      );
+
+      setForm(current=>({
+        ...current,
+        attendee_name:'',
+        attendee_phone:'',
+        buyer_email:'',
+        buyer_document:''
+      }));
+
+      await load();
+
+    }catch(error){
+
+      setMessage(
+        error.message||
+        'Falha ao emitir ingresso.'
+      );
+    }
+  }
+
+  const metrics=
+    dashboard?.metrics||{};
+
+  const orderMetrics=
+    dashboard?.orders||{};
+
+  const visibleTickets=
+    query.trim()
+      ? search
+      : tickets;
+
+  const activeEvent=
+    useMemo(
+      ()=>
+        events.find(
+          row=>
+            String(row.id)===
+            String(eventId)
+        ),
+      [events,eventId]
+    );
+
+  return (
+    <section className="ticket-center-v25">
+
+      <div className="ticket-center-head">
+
+        <div>
+          <span>
+            NEXUS TICKETS V2.5
+          </span>
+
+          <h2>
+            Ticket Order Center
+          </h2>
+
+          <p>
+            Venda, pagamento, emissao,
+            QR Code e acesso em uma unica operacao.
+          </p>
+        </div>
+
+        <select
+          value={eventId}
+          onChange={
+            event=>
+              setEventId(
+                event.target.value
+              )
+          }
+        >
+          <option value="">
+            Selecione o evento
+          </option>
+
+          {events.map(row=>(
+            <option
+              key={row.id}
+              value={row.id}
+            >
+              {row.title}
+            </option>
+          ))}
+        </select>
+
+      </div>
+
+      {message&&(
+        <div className="ticket-v25-message">
+          {message}
+        </div>
+      )}
+
+      {activeEvent&&(
+        <div className="ticket-v25-event">
+          <b>
+            {activeEvent.title}
+          </b>
+
+          <span>
+            {dt(
+              activeEvent.starts_at
+            )}
+          </span>
+        </div>
+      )}
+
+      <div className="ticket-v25-kpis">
+
+        <article>
+          <span>EMITIDOS</span>
+          <strong>
+            {metrics.issued||0}
+          </strong>
+        </article>
+
+        <article>
+          <span>DISPONIVEIS</span>
+          <strong>
+            {metrics.available===null
+              ? '\u221e'
+              : metrics.available||0}
+          </strong>
+        </article>
+
+        <article>
+          <span>CHECK-INS</span>
+          <strong>
+            {metrics.checked_in||0}
+          </strong>
+        </article>
+
+        <article>
+          <span>PRESENCA</span>
+          <strong>
+            {metrics.attendance_rate||0}%
+          </strong>
+        </article>
+
+        <article>
+          <span>RECEITA</span>
+          <strong>
+            {money(
+              metrics.revenue
+            )}
+          </strong>
+        </article>
+
+        <article>
+          <span>PENDENTES</span>
+          <strong>
+            {orderMetrics.pending||0}
+          </strong>
+        </article>
+
+      </div>
+
+      <div className="ticket-v25-grid">
+
+        <section className="ticket-v25-card">
+
+          <div className="ticket-v25-title">
+            <span>VENDA PRESENCIAL</span>
+            <h3>
+              Emitir ingresso
+            </h3>
+          </div>
+
+          <div className="ticket-v25-form">
+
+            <input
+              placeholder="Nome do participante"
+              value={
+                form.attendee_name
+              }
+              onChange={
+                event=>
+                  setForm({
+                    ...form,
+                    attendee_name:
+                      event.target.value
+                  })
+              }
+            />
+
+            <input
+              placeholder="WhatsApp"
+              value={
+                form.attendee_phone
+              }
+              onChange={
+                event=>
+                  setForm({
+                    ...form,
+                    attendee_phone:
+                      event.target.value
+                  })
+              }
+            />
+
+            <input
+              placeholder="E-mail"
+              value={
+                form.buyer_email
+              }
+              onChange={
+                event=>
+                  setForm({
+                    ...form,
+                    buyer_email:
+                      event.target.value
+                  })
+              }
+            />
+
+            <input
+              placeholder="CPF / documento"
+              value={
+                form.buyer_document
+              }
+              onChange={
+                event=>
+                  setForm({
+                    ...form,
+                    buyer_document:
+                      event.target.value
+                  })
+              }
+            />
+
+            <select
+              value={form.lot_id}
+              onChange={
+                event=>
+                  setForm({
+                    ...form,
+                    lot_id:
+                      event.target.value
+                  })
+              }
+            >
+              <option value="">
+                Sem lote
+              </option>
+
+              {lots.map(row=>(
+                <option
+                  key={row.id}
+                  value={row.id}
+                >
+                  {row.name} - {money(row.price)}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={
+                form.payment_status
+              }
+              onChange={
+                event=>
+                  setForm({
+                    ...form,
+                    payment_status:
+                      event.target.value
+                  })
+              }
+            >
+              <option value="PAID">
+                Pago
+              </option>
+
+              <option value="COURTESY">
+                Cortesia
+              </option>
+            </select>
+
+            {form.payment_status==='PAID'&&(
+              <select
+                value={
+                  form.payment_method
+                }
+                onChange={
+                  event=>
+                    setForm({
+                      ...form,
+                      payment_method:
+                        event.target.value
+                    })
+                }
+              >
+                <option value="DINHEIRO">
+                  Dinheiro
+                </option>
+
+                <option value="PIX">
+                  PIX
+                </option>
+
+                <option value="CARTAO">
+                  Cartao
+                </option>
+              </select>
+            )}
+
+            <button
+              onClick={
+                createPresential
+              }
+            >
+              EMITIR INGRESSO
+            </button>
+
+          </div>
+
+        </section>
+
+        <section className="ticket-v25-card">
+
+          <div className="ticket-v25-title">
+            <span>ASAAS</span>
+            <h3>
+              Pedidos online
+            </h3>
+          </div>
+
+          <div className="ticket-v25-orders">
+
+            {!orders.length&&(
+              <div className="ticket-v25-empty">
+                Nenhum pedido online.
+              </div>
+            )}
+
+            {orders.slice(0,20)
+              .map(row=>(
+                <article key={row.id}>
+
+                  <div>
+                    <b>
+                      {row.order_code}
+                    </b>
+                    <span>
+                      {row.buyer_name}
+                    </span>
+                  </div>
+
+                  <div>
+                    <b>
+                      {row.lot_name}
+                    </b>
+                    <span>
+                      {row.quantity} ingresso(s)
+                    </span>
+                  </div>
+
+                  <div>
+                    <b>
+                      {money(row.total)}
+                    </b>
+                    <span>
+                      {row.payment_status}
+                    </span>
+                  </div>
+
+                  <div>
+                    <b>
+                      {row.asaas_payment_id||
+                        '\u2014'}
+                    </b>
+                    <span>
+                      {dt(row.created_at)}
+                    </span>
+                  </div>
+
+                </article>
+              ))
+            }
+
+          </div>
+
+        </section>
+
+      </div>
+
+      <section className="ticket-v25-card">
+
+        <div className="ticket-v25-title">
+          <span>BUSCA INTELIGENTE</span>
+          <h3>
+            Ingressos emitidos
+          </h3>
+        </div>
+
+        <div className="ticket-v25-search">
+
+          <input
+            value={query}
+            onChange={
+              event=>
+                setQuery(
+                  event.target.value
+                )
+            }
+            onKeyDown={
+              event=>{
+                if(event.key==='Enter'){
+                  runSearch();
+                }
+              }
+            }
+            placeholder="Nome, telefone, e-mail ou codigo"
+          />
+
+          <button
+            onClick={runSearch}
+          >
+            BUSCAR
+          </button>
+
+          {query&&(
+            <button
+              className="secondary"
+              onClick={()=>{
+                setQuery('');
+                setSearch([]);
+              }}
+            >
+              LIMPAR
+            </button>
+          )}
+
+        </div>
+
+        <div className="ticket-v25-table-wrap">
+
+          <table>
+            <thead>
+              <tr>
+                <th>Codigo</th>
+                <th>Participante</th>
+                <th>Lote</th>
+                <th>Valor</th>
+                <th>Pagamento</th>
+                <th>Acesso</th>
+              </tr>
+            </thead>
+
+            <tbody>
+
+              {visibleTickets.map(row=>(
+                <tr key={row.id}>
+                  <td>
+                    <b>
+                      {row.ticket_code}
+                    </b>
+                  </td>
+
+                  <td>
+                    {row.attendee_name||
+                      '\u2014'}
+                  </td>
+
+                  <td>
+                    {row.lot_name||
+                      row.ticket_type||
+                      '\u2014'}
+                  </td>
+
+                  <td>
+                    {money(row.price)}
+                  </td>
+
+                  <td>
+                    {row.payment_status}
+                  </td>
+
+                  <td>
+                    {row.checkin_at
+                      ? 'UTILIZADO'
+                      : 'DISPONIVEL'}
+                  </td>
+                </tr>
+              ))}
+
+            </tbody>
+          </table>
+
+        </div>
+
+      </section>
+
+      <section className="ticket-v25-card">
+
+        <div className="ticket-v25-title">
+          <span>SEGURANCA</span>
+          <h3>
+            Historico da portaria
+          </h3>
+        </div>
+
+        <div className="ticket-v25-access">
+
+          {!history.length&&(
+            <div className="ticket-v25-empty">
+              Nenhuma tentativa registrada.
+            </div>
+          )}
+
+          {history.slice(0,50)
+            .map(row=>(
+              <article
+                key={row.id}
+                className={
+                  String(
+                    row.result
+                  ).toLowerCase()
+                }
+              >
+
+                <b>
+                  {row.result}
+                </b>
+
+                <span>
+                  {row.attendee_name||
+                    row.code}
+                </span>
+
+                <span>
+                  {row.lot_name||
+                    '\u2014'}
+                </span>
+
+                <span>
+                  {row.operator_name||
+                    '\u2014'}
+                </span>
+
+                <span>
+                  {dt(row.created_at)}
+                </span>
+
+              </article>
+            ))
+          }
+
+        </div>
+
+      </section>
+      <EventIntelligenceV37
+        eventId={eventId}
+      />
+
+
+    </section>
+  );
+}
+
+
+
+============================================================
+ FILE: src/GateScannerV25.jsx
+============================================================
+﻿import React,{
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
+
+import {api} from "./api";
+
+function dt(value){
+
+  if(!value)return "—";
+
+  try{
+    return new Date(value)
+      .toLocaleString("pt-BR");
+  }catch{
+    return value;
+  }
+}
+
+function tone(result){
+
+  if(result==="ALLOWED"){
+    return "allowed";
+  }
+
+  if(result==="DUPLICATE"){
+    return "duplicate";
+  }
+
+  return "denied";
+}
+
+function label(result){
+
+  if(result==="ALLOWED"){
+    return "ENTRADA LIBERADA";
+  }
+
+  if(result==="DUPLICATE"){
+    return "INGRESSO JÁ UTILIZADO";
+  }
+
+  if(result==="PAYMENT_PENDING"){
+    return "PAGAMENTO PENDENTE";
+  }
+
+  if(result==="INVALID"){
+    return "INGRESSO INVÁLIDO";
+  }
+
+  return "ACESSO NEGADO";
+}
+
+function beep(result){
+
+  try{
+
+    const AudioContext=
+      window.AudioContext||
+      window.webkitAudioContext;
+
+    if(!AudioContext)return;
+
+    const ctx=new AudioContext();
+    const oscillator=
+      ctx.createOscillator();
+
+    const gain=
+      ctx.createGain();
+
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+
+    oscillator.type="sine";
+
+    if(result==="ALLOWED"){
+      oscillator.frequency.value=880;
+    }else if(result==="DUPLICATE"){
+      oscillator.frequency.value=520;
+    }else{
+      oscillator.frequency.value=220;
+    }
+
+    gain.gain.setValueAtTime(
+      .07,
+      ctx.currentTime
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      .001,
+      ctx.currentTime+.20
+    );
+
+    oscillator.start();
+    oscillator.stop(
+      ctx.currentTime+.21
+    );
+
+  }catch{}
+}
+
+export default function GateScannerV25(){
+
+  const[code,setCode]=useState("");
+  const[result,setResult]=useState(null);
+  const[busy,setBusy]=useState(false);
+
+  const[camera,setCamera]=useState(false);
+  const[continuous,setContinuous]=useState(true);
+
+  const[events,setEvents]=useState([]);
+  const[eventId,setEventId]=useState("");
+
+  const[query,setQuery]=useState("");
+  const[search,setSearch]=useState([]);
+  const[searching,setSearching]=useState(false);
+
+  const[session,setSession]=useState({
+    allowed:0,
+    duplicate:0,
+    denied:0,
+    total:0
+  });
+
+  const[lastAccess,setLastAccess]=useState([]);
+
+  const videoRef=useRef(null);
+  const streamRef=useRef(null);
+  const scanningRef=useRef(false);
+  const lastCodeRef=useRef("");
+  const lastReadRef=useRef(0);
+
+  const state=
+    result
+      ?tone(result.result)
+      :"idle";
+
+  const activeEvent=
+    useMemo(
+      ()=>
+        events.find(
+          row=>
+            String(row.id)===
+            String(eventId)
+        )||null,
+      [events,eventId]
+    );
+
+  useEffect(()=>{
+
+    let alive=true;
+
+    async function loadEvents(){
+
+      try{
+
+        const rows=
+          await api.ticketEvents();
+
+        if(!alive)return;
+
+        const list=
+          Array.isArray(rows)
+            ?rows
+            :Array.isArray(rows?.events)
+              ?rows.events
+              :[];
+
+        setEvents(list);
+
+        if(list.length){
+          setEventId(
+            current=>
+              current||
+              String(list[0].id)
+          );
+        }
+
+      }catch(error){
+
+        console.error(
+          "NEXUS GATE EVENTS",
+          error
+        );
+      }
+    }
+
+    loadEvents();
+
+    return()=>{
+      alive=false;
+    };
+
+  },[]);
+
+  function registerSession(response){
+
+    const r=response?.result;
+
+    setSession(current=>({
+
+      allowed:
+        current.allowed+
+        (r==="ALLOWED"?1:0),
+
+      duplicate:
+        current.duplicate+
+        (r==="DUPLICATE"?1:0),
+
+      denied:
+        current.denied+
+        (
+          r!=="ALLOWED" &&
+          r!=="DUPLICATE"
+            ?1
+            :0
+        ),
+
+      total:
+        current.total+1
+    }));
+
+    setLastAccess(current=>[
+      {
+        result:r,
+        code:
+          response?.ticket?.ticket_code||
+          code||
+          "—",
+        attendee:
+          response?.ticket?.attendee_name||
+          "—",
+        at:new Date().toISOString()
+      },
+      ...current
+    ].slice(0,8));
+  }
+
+  async function validate(rawCode){
+
+    const normalized=
+      String(rawCode||"")
+        .trim()
+        .toUpperCase();
+
+    if(!normalized || busy){
+      return;
+    }
+
+    setBusy(true);
+
+    try{
+
+      const response=
+        await api.checkinV25(
+          normalized
+        );
+
+      setResult(response);
+      setCode("");
+
+      beep(response?.result);
+      registerSession(response);
+
+      window.dispatchEvent(
+        new CustomEvent(
+          "nexus:gate-intelligence",
+          {
+            detail:response
+          }
+        )
+      );
+
+    }catch(error){
+
+      const response={
+        ok:false,
+        result:"ERROR",
+        message:
+          error.message||
+          "Falha ao validar ingresso."
+      };
+
+      setResult(response);
+      beep("ERROR");
+      registerSession(response);
+
+    }finally{
+
+      setBusy(false);
+
+      if(
+        continuous &&
+        streamRef.current
+      ){
+        scanningRef.current=true;
+      }
+    }
+  }
+
+  function stopCamera(){
+
+    scanningRef.current=false;
+
+    if(streamRef.current){
+
+      streamRef.current
+        .getTracks()
+        .forEach(
+          track=>track.stop()
+        );
+    }
+
+    streamRef.current=null;
+    setCamera(false);
+  }
+
+  async function startCamera(){
+
+    if(
+      !navigator.mediaDevices?.
+        getUserMedia
+    ){
+
+      setResult({
+        ok:false,
+        result:"ERROR",
+        message:
+          "Câmera indisponível neste dispositivo."
+      });
+
+      return;
+    }
+
+    if(
+      typeof window.BarcodeDetector===
+      "undefined"
+    ){
+
+      setResult({
+        ok:false,
+        result:"ERROR",
+        message:
+          "Leitor QR automático indisponível. Use a busca ou digite o código."
+      });
+
+      return;
+    }
+
+    try{
+
+      const stream=
+        await navigator.mediaDevices
+          .getUserMedia({
+            video:{
+              facingMode:{
+                ideal:"environment"
+              }
+            },
+            audio:false
+          });
+
+      streamRef.current=stream;
+      setCamera(true);
+
+      await new Promise(
+        resolve=>
+          setTimeout(resolve,150)
+      );
+
+      if(videoRef.current){
+
+        videoRef.current.srcObject=
+          stream;
+
+        await videoRef.current.play();
+      }
+
+      const detector=
+        new window.BarcodeDetector({
+          formats:["qr_code"]
+        });
+
+      scanningRef.current=true;
+
+      const scan=async()=>{
+
+        if(
+          !scanningRef.current ||
+          !videoRef.current
+        ){
+          return;
+        }
+
+        try{
+
+          const codes=
+            await detector.detect(
+              videoRef.current
+            );
+
+          const raw=
+            codes?.[0]?.rawValue;
+
+          if(raw){
+
+            const now=Date.now();
+
+            /*
+             * Anti-double-read:
+             * same QR ignored for 2.5 seconds.
+             */
+            if(
+              raw===lastCodeRef.current &&
+              now-lastReadRef.current<2500
+            ){
+
+              requestAnimationFrame(scan);
+              return;
+            }
+
+            lastCodeRef.current=raw;
+            lastReadRef.current=now;
+
+            scanningRef.current=false;
+
+            setCode(raw);
+
+            await validate(raw);
+
+            if(
+              continuous &&
+              streamRef.current
+            ){
+
+              setTimeout(
+                ()=>{
+                  scanningRef.current=true;
+                  requestAnimationFrame(scan);
+                },
+                650
+              );
+
+              return;
+            }
+
+            stopCamera();
+            return;
+          }
+
+        }catch{
+          // scanner permanece ativo
+        }
+
+        if(scanningRef.current){
+          requestAnimationFrame(scan);
+        }
+      };
+
+      requestAnimationFrame(scan);
+
+    }catch(error){
+
+      stopCamera();
+
+      setResult({
+        ok:false,
+        result:"ERROR",
+        message:
+          error.message||
+          "Não foi possível abrir a câmera."
+      });
+    }
+  }
+
+  async function runSearch(){
+
+    if(
+      !eventId ||
+      !query.trim()
+    ){
+      setSearch([]);
+      return;
+    }
+
+    setSearching(true);
+
+    try{
+
+      const rows=
+        await api.ticketSearchV25(
+          eventId,
+          query.trim()
+        );
+
+      setSearch(
+        Array.isArray(rows)
+          ?rows
+          :[]
+      );
+
+    }catch(error){
+
+      setResult({
+        ok:false,
+        result:"ERROR",
+        message:
+          error.message||
+          "Falha na busca."
+      });
+
+    }finally{
+      setSearching(false);
+    }
+  }
+
+  async function validateSearchTicket(ticket){
+
+    if(!ticket?.ticket_code){
+      return;
+    }
+
+    setQuery("");
+    setSearch([]);
+
+    await validate(
+      ticket.ticket_code
+    );
+  }
+
+  useEffect(
+    ()=>{
+      return()=>{
+        stopCamera();
+      };
+    },
+    []
+  );
+
+  return(
+    <section
+      className={
+        `nexus-gate-v25 nexus-gate-v36 ${state}`
+      }
+    >
+
+      <div className="gate36-top">
+
+        <div className="gate36-brand">
+
+          <span>
+            NEXUS EVENT EXPERIENCE
+          </span>
+
+          <h2>
+            Gate Intelligence
+          </h2>
+
+          <p>
+            Controle inteligente de entrada,
+            QR individual e proteção contra
+            reutilização.
+          </p>
+
+        </div>
+
+        <div className="gate36-live">
+          <i/>
+          PORTARIA ONLINE
+        </div>
+
+      </div>
+
+      <div className="gate36-event">
+
+        <div>
+
+          <small>EVENTO EM OPERAÇÃO</small>
+
+          <select
+            value={eventId}
+            onChange={event=>{
+              setEventId(
+                event.target.value
+              );
+              setSearch([]);
+              setQuery("");
+            }}
+          >
+
+            {!events.length&&(
+              <option value="">
+                Nenhum evento
+              </option>
+            )}
+
+            {events.map(event=>(
+              <option
+                key={event.id}
+                value={event.id}
+              >
+                {event.title||
+                 `Evento #${event.id}`}
+              </option>
+            ))}
+
+          </select>
+
+        </div>
+
+        {activeEvent&&(
+          <div className="gate36-event-name">
+            <span>ATIVO</span>
+            <strong>
+              {activeEvent.title}
+            </strong>
+          </div>
+        )}
+
+      </div>
+
+      <div className="gate36-kpis">
+
+        <article>
+          <span>LIBERADOS</span>
+          <strong>
+            {session.allowed}
+          </strong>
+        </article>
+
+        <article>
+          <span>DUPLICADOS</span>
+          <strong>
+            {session.duplicate}
+          </strong>
+        </article>
+
+        <article>
+          <span>BLOQUEADOS</span>
+          <strong>
+            {session.denied}
+          </strong>
+        </article>
+
+        <article>
+          <span>LEITURAS</span>
+          <strong>
+            {session.total}
+          </strong>
+        </article>
+
+      </div>
+
+      <div className="gate36-workspace">
+
+        <div className="gate36-scanner">
+
+          <div className="gate36-section-title">
+            <div>
+              <small>ENTRADA PRINCIPAL</small>
+              <h3>Leitor de ingresso</h3>
+            </div>
+
+            <label className="gate36-continuous">
+              <input
+                type="checkbox"
+                checked={continuous}
+                onChange={event=>
+                  setContinuous(
+                    event.target.checked
+                  )
+                }
+              />
+              Leitura contínua
+            </label>
+          </div>
+
+          <div className="gate-v25-controls">
+
+            <input
+              value={code}
+              autoComplete="off"
+              placeholder="Código do ingresso"
+              onChange={event=>
+                setCode(
+                  event.target.value
+                )
+              }
+              onKeyDown={event=>{
+                if(event.key==="Enter"){
+                  validate(code);
+                }
+              }}
+            />
+
+            <button
+              disabled={busy}
+              onClick={()=>
+                validate(code)
+              }
+            >
+              {busy
+                ?"VALIDANDO..."
+                :"VALIDAR"}
+            </button>
+
+            {!camera
+              ?(
+                <button
+                  className="secondary"
+                  onClick={startCamera}
+                >
+                  ABRIR CÂMERA
+                </button>
+              )
+              :(
+                <button
+                  className="secondary"
+                  onClick={stopCamera}
+                >
+                  FECHAR CÂMERA
+                </button>
+              )
+            }
+
+          </div>
+
+          {camera&&(
+            <div className="gate-v25-camera gate36-camera">
+
+              <video
+                ref={videoRef}
+                playsInline
+                muted
+              />
+
+              <div className="gate-v25-frame"/>
+
+              <div className="gate36-camera-label">
+                POSICIONE O QR CODE
+              </div>
+
+            </div>
+          )}
+
+          {result&&(
+            <div
+              className={
+                `gate-v25-result gate36-result ${state}`
+              }
+            >
+
+              <div className="gate36-result-icon">
+                {result.result==="ALLOWED"
+                  ?"✓"
+                  :result.result==="DUPLICATE"
+                    ?"!"
+                    :"×"}
+              </div>
+
+              <strong>
+                {label(result.result)}
+              </strong>
+
+              <p>
+                {result.message}
+              </p>
+
+              {result.ticket&&(
+                <div className="gate-v25-ticket">
+
+                  <div>
+                    <span>Participante</span>
+                    <b>
+                      {result.ticket.attendee_name||
+                       "—"}
+                    </b>
+                  </div>
+
+                  <div>
+                    <span>Ingresso</span>
+                    <b>
+                      {result.ticket.ticket_type||
+                       result.ticket.lot_name||
+                       "—"}
+                    </b>
+                  </div>
+
+                  <div>
+                    <span>Código</span>
+                    <b>
+                      {result.ticket.ticket_code||
+                       "—"}
+                    </b>
+                  </div>
+
+                  <div>
+                    <span>Pagamento</span>
+                    <b>
+                      {result.ticket.payment_status||
+                       "—"}
+                    </b>
+                  </div>
+
+                  <div>
+                    <span>Evento</span>
+                    <b>
+                      {result.ticket.event_title||
+                       "—"}
+                    </b>
+                  </div>
+
+                  <div>
+                    <span>Check-in</span>
+                    <b>
+                      {dt(
+                        result.ticket.checkin_at
+                      )}
+                    </b>
+                  </div>
+
+                </div>
+              )}
+
+            </div>
+          )}
+
+        </div>
+
+        <aside className="gate36-contingency">
+
+          <div className="gate36-section-title">
+            <div>
+              <small>CONTINGÊNCIA</small>
+              <h3>Localizar ingresso</h3>
+            </div>
+          </div>
+
+          <p>
+            Sem QR? Localize o cliente por
+            nome, telefone, e-mail ou código.
+          </p>
+
+          <div className="gate36-search">
+
+            <input
+              value={query}
+              placeholder="Buscar participante..."
+              onChange={event=>
+                setQuery(
+                  event.target.value
+                )
+              }
+              onKeyDown={event=>{
+                if(event.key==="Enter"){
+                  runSearch();
+                }
+              }}
+            />
+
+            <button
+              onClick={runSearch}
+              disabled={
+                searching||
+                !eventId
+              }
+            >
+              {searching
+                ?"BUSCANDO..."
+                :"BUSCAR"}
+            </button>
+
+          </div>
+
+          {!!search.length&&(
+            <div className="gate36-search-results">
+
+              {search.map(ticket=>(
+
+                <button
+                  key={
+                    ticket.id||
+                    ticket.ticket_code
+                  }
+                  onClick={()=>
+                    validateSearchTicket(
+                      ticket
+                    )
+                  }
+                >
+
+                  <div>
+                    <strong>
+                      {ticket.attendee_name||
+                       "Participante"}
+                    </strong>
+
+                    <span>
+                      {ticket.ticket_code}
+                    </span>
+                  </div>
+
+                  <em>
+                    {ticket.checkin_at
+                      ?"UTILIZADO"
+                      :"VALIDAR"}
+                  </em>
+
+                </button>
+
+              ))}
+
+            </div>
+          )}
+
+          {query &&
+           !searching &&
+           !search.length&&(
+            <small className="gate36-empty">
+              Nenhum resultado exibido.
+            </small>
+          )}
+
+          <div className="gate36-history">
+
+            <div className="gate36-section-title">
+              <div>
+                <small>SESSÃO ATUAL</small>
+                <h3>Últimas leituras</h3>
+              </div>
+            </div>
+
+            {!lastAccess.length&&(
+              <span className="gate36-empty">
+                Aguardando primeiro ingresso.
+              </span>
+            )}
+
+            {lastAccess.map(
+              (item,index)=>(
+                <article
+                  key={
+                    `${item.at}-${index}`
+                  }
+                  className={
+                    tone(item.result)
+                  }
+                >
+
+                  <i/>
+
+                  <div>
+                    <strong>
+                      {item.attendee}
+                    </strong>
+                    <span>
+                      {item.code}
+                    </span>
+                  </div>
+
+                  <b>
+                    {item.result}
+                  </b>
+
+                </article>
+              )
+            )}
+
+          </div>
+
+        </aside>
+
+      </div>
+
+      <footer className="gate36-footer">
+        <span>
+          NEXUS GATE INTELLIGENCE V3.6
+        </span>
+
+        <span>
+          QR • CHECK-IN • CONTINGÊNCIA • AUDITORIA
+        </span>
+      </footer>
+
+    </section>
+  );
+}
+
+
+============================================================
+ FILE: src/api.js
+============================================================
+const API=(import.meta.env.VITE_API_URL||'/api').replace(/\/+$/,'');
+let token=localStorage.getItem('nexus_hospitality_token')||'';
+export function setAuthToken(v){token=v||'';if(token)localStorage.setItem('nexus_hospitality_token',token);else localStorage.removeItem('nexus_hospitality_token')}
+async function request(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(token)headers.Authorization=`Bearer ${token}`;let res;try{res=await fetch(`${API}${path}`,{...options,headers})}catch(cause){const e=new Error('API do NEXUS Hospitality indisponível. Confirme que o servidor está ativo na porta 8989.');e.code='API_UNREACHABLE';e.cause=cause;throw e}const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.message||data.error||`Erro HTTP ${res.status}`);e.code=data.error;e.status=res.status;throw e}return data}
+export const api={
+  inventoryV49Summary:()=>request('/v49/inventory/summary'),
+  inventoryV49Alerts:()=>request('/v49/inventory/alerts'),
+  inventoryV49Product:id=>request(`/v49/inventory/products/${id}`),
+  inventoryV49Entry:(id,body)=>request(`/v49/inventory/products/${id}/entry`,{method:'POST',body:JSON.stringify(body)}),
+  inventoryV49Exit:(id,body)=>request(`/v49/inventory/products/${id}/exit`,{method:'POST',body:JSON.stringify(body)}),
+  inventoryV49Loss:(id,body)=>request(`/v49/inventory/products/${id}/loss`,{method:'POST',body:JSON.stringify(body)}),
+  inventoryV49Count:(id,body)=>request(`/v49/inventory/products/${id}/count`,{method:'POST',body:JSON.stringify(body)}),
+  inventoryV49AlertsSeen:keys=>request('/v49/inventory/alerts/seen',{method:'POST',body:JSON.stringify({keys})}),
+  paymentConfigV15:()=>request('/v15/payments/config'),saveAsaasV15:body=>request('/v15/payments/config',{method:'PUT',body:JSON.stringify(body)}),testAsaasV15:()=>request('/v15/payments/test',{method:'POST'}),
+  salesRecentV14:()=>request('/v14/sales/recent'),saleV14:id=>request(`/v14/sales/${id}`),createSaleV14:body=>request('/v14/sales',{method:'POST',body:JSON.stringify(body)}),releaseSaleV14:id=>request(`/v14/sales/${id}/release`,{method:'POST'}),changeCorrectionV14:(id,body)=>request(`/v14/sales/${id}/change-correction`,{method:'POST',body:JSON.stringify(body)}),returnSaleV14:(id,body)=>request(`/v14/sales/${id}/return`,{method:'POST',body:JSON.stringify(body)}),printSaleV14:(id,type)=>request(`/v14/sales/${id}/print`,{method:'POST',body:JSON.stringify({type})}),paymentConfigV14:()=>request('/v14/payment-config'),
+  salesV13:()=>request('/v13/sales/recent'),cancelSaleV13:(id,reason)=>request(`/v13/sales/${id}/cancel`,{method:'POST',body:JSON.stringify({reason})}),splitPaymentV13:body=>request('/v13/sales/split-payment',{method:'POST',body:JSON.stringify(body)}),withdrawalAdviceV13:()=>request('/v13/cash/withdrawal-advice'),pricingV13:()=>request('/v13/pricing'),priceProductV13:(id,body)=>request(`/v13/pricing/product/${id}`,{method:'PATCH',body:JSON.stringify(body)}),
+  purchaseOrdersV49C:()=>request('/v49c/purchase-orders'),
+  purchaseOrderV49C:id=>request(`/v49c/purchase-orders/${id}`),
+  receivePurchaseOrderV49C:(id,body)=>request(`/v49c/purchase-orders/${id}/receive`,{method:'POST',body:JSON.stringify(body)}),
+  procurementNeedV49B:()=>request('/v49b/procurement/need'),
+smartQuoteAnalysisV49B:id=>request(`/v49b/quotes/${id}/smart-analysis`),
+finalizeSmartQuoteV49B:id=>request(`/v49b/quotes/${id}/finalize-smart`,{method:'POST'}),
+  supplierDispatchesV49D:()=>request('/v49d/dispatches'),
+  supplierDispatchV49D:id=>request(`/v49d/dispatches/${id}`),
+  markSupplierDispatchSentV49D:(id,body)=>request(`/v49d/dispatches/${id}/sent`,{method:'POST',body:JSON.stringify(body||{})}),
+quotesV13:()=>request('/v13/quotes'),createQuoteV13:body=>request('/v13/quotes',{method:'POST',body:JSON.stringify(body)}),quoteAnalysisV13:id=>request(`/v13/quotes/${id}/analysis`),finalizeQuoteV13:(id,supplier_id)=>request(`/v13/quotes/${id}/finalize`,{method:'POST',body:JSON.stringify({supplier_id})}),publicSupplierQuoteV13:token=>request(`/public/supplier-quote/${token}`),submitSupplierQuoteV13:(token,body)=>request(`/public/supplier-quote/${token}`,{method:'POST',body:JSON.stringify(body)}),
+
+  publicStore:()=>request('/public/store'),publicCreateOrder:body=>request('/public/orders',{method:'POST',body:JSON.stringify(body)}),publicOrder:code=>request(`/public/orders/${code}`),publicEvents:()=>request('/public/events'),publicEvent:id=>request(`/public/events/${id}`),publicBuyTicket:(id,body)=>request(`/public/events/${id}/buy`,{method:'POST',body:JSON.stringify(body)}),publicTicketOrder:code=>request(`/public/ticket-orders/${code}`),growthV12:()=>request('/v12/growth'),updateEventV12:(id,body)=>request(`/v12/events/${id}`,{method:'PATCH',body:JSON.stringify(body)}),
+  ticketDashboardV25:id=>request(`/v25/tickets/dashboard/${id}`),ticketOrdersV25:id=>request(`/v25/tickets/orders/${id}`),ticketAccessV25:id=>request(`/v25/tickets/access/${id}`),ticketSearchV25:(id,q)=>request(`/v25/tickets/search/${id}?q=${encodeURIComponent(q)}`),createPresentialTicketV25:body=>request('/v25/tickets/presential',{method:'POST',body:JSON.stringify(body)}),checkinV25:async code=>{const result=await request('/v25/tickets/checkin',{method:'POST',body:JSON.stringify({code})});window.dispatchEvent(new CustomEvent('nexus:ticket-checkin',{detail:result}));return result},publicMenu:()=>request('/public/menu'),ticketEvents:()=>request('/v11/tickets/events'),ticketLots:id=>request(`/v11/tickets/lots/${id}`),createTicketLot:body=>request('/v11/tickets/lots',{method:'POST',body:JSON.stringify(body)}),tickets:id=>request(`/v11/tickets/${id}`),createTicket:body=>request('/v11/tickets',{method:'POST',body:JSON.stringify(body)}),checkin:code=>request('/v11/access/checkin',{method:'POST',body:JSON.stringify({code})}),menuAdmin:()=>request('/v11/menu'),updateMenuItem:(id,body)=>request(`/v11/menu/${id}`,{method:'PATCH',body:JSON.stringify(body)}),salon:()=>request('/v11/salon'),updateTableV11:(id,body)=>request(`/v11/tables/${id}`,{method:'PATCH',body:JSON.stringify(body)}),deliveryV11:()=>request('/v11/delivery'),deliveryOneV11:id=>request(`/v11/delivery/${id}`),createDeliveryV11:body=>request('/v11/delivery',{method:'POST',body:JSON.stringify(body)}),deliveryStatusV11:(id,status)=>request(`/v11/delivery/${id}/status`,{method:'PATCH',body:JSON.stringify({status})}),
+
+
+  smartInventory:()=>request('/inventory/smart'),createSmartProduct:body=>request('/inventory/smart-product',{method:'POST',body:JSON.stringify(body)}),updateInventoryProfile:(id,body)=>request(`/inventory/${id}/profile`,{method:'PATCH',body:JSON.stringify(body)}),cashMovement:body=>request('/cash-movements',{method:'POST',body:JSON.stringify(body)}),cashMovements:()=>request('/cash-movements/current'),
+  customers:()=>request('/customers'),createCustomer:body=>request('/customers',{method:'POST',body:JSON.stringify(body)}),reservations:()=>request('/reservations'),createReservation:body=>request('/reservations',{method:'POST',body:JSON.stringify(body)}),reservationStatus:(id,status)=>request(`/reservations/${id}/status`,{method:'PATCH',body:JSON.stringify({status})}),
+  delivery:()=>request('/delivery'),createDelivery:body=>request('/delivery',{method:'POST',body:JSON.stringify(body)}),deliveryStatus:(id,status)=>request(`/delivery/${id}/status`,{method:'PATCH',body:JSON.stringify({status})}),eventsV06:()=>request('/events-v06'),createEventV06:body=>request('/events-v06',{method:'POST',body:JSON.stringify(body)}),addEventCost:(id,body)=>request(`/events-v06/${id}/costs`,{method:'POST',body:JSON.stringify(body)}),
+  fiscalCaptures:()=>request('/fiscal-captures'),createFiscalCapture:body=>request('/fiscal-captures',{method:'POST',body:JSON.stringify(body)}),executiveReport:()=>request('/reports/executive'),
+  login:body=>request('/auth/login',{method:'POST',body:JSON.stringify(body)}),logout:()=>request('/auth/logout',{method:'POST'}),me:()=>request('/auth/me'),changePassword:body=>request('/auth/change-password',{method:'POST',body:JSON.stringify(body)}),capabilities:()=>request('/auth/capabilities'),
+  dashboard:()=>request('/dashboard'),products:()=>request('/products'),createProduct:body=>request('/products',{method:'POST',body:JSON.stringify(body)}),updateProduct:(id,body)=>request(`/products/${id}`,{method:'PATCH',body:JSON.stringify(body)}),aiBrief:()=>request('/ai/operations-brief'),createSale:body=>request('/sales-v1',{method:'POST',body:JSON.stringify(body)}),
+  currentCash:()=>request('/cash-sessions/current'),openCash:body=>request('/cash-sessions/open',{method:'POST',body:JSON.stringify(body)}),closeCash:(id,body)=>request(`/cash-sessions/${id}/close-v1`,{method:'POST',body:JSON.stringify(body)}),
+  employees:()=>request('/employees'),createEmployee:body=>request('/employees',{method:'POST',body:JSON.stringify(body)}),users:()=>request('/users'),createUser:body=>request('/users',{method:'POST',body:JSON.stringify(body)}),audit:()=>request('/audit'),
+  performance:()=>request('/performance'),createIncentive:body=>request('/incentive-rules',{method:'POST',body:JSON.stringify(body)}),createTip:body=>request('/tips',{method:'POST',body:JSON.stringify(body)}),
+
+  opsSummary:()=>request('/operations/summary'),tables:()=>request('/tables'),createTable:body=>request('/tables',{method:'POST',body:JSON.stringify(body)}),openTable:(id,body)=>request(`/tables/${id}/open`,{method:'POST',body:JSON.stringify(body)}),
+  ordersV03:()=>request('/orders-v03'),orderV03:id=>request(`/orders-v03/${id}`),addOrderItem:(id,body)=>request(`/orders-v03/${id}/items`,{method:'POST',body:JSON.stringify(body)}),setOrderItemStatus:(id,status)=>request(`/order-items/${id}/status`,{method:'PATCH',body:JSON.stringify({status})}),deleteOrderItem:id=>request(`/order-items/${id}`,{method:'DELETE'}),transferOrder:(id,table_id)=>request(`/orders-v03/${id}/transfer`,{method:'POST',body:JSON.stringify({table_id})}),splitOrder:(id,body)=>request(`/orders-v03/${id}/split`,{method:'POST',body:JSON.stringify(body)}),closeOrder:(id,body)=>request(`/orders-v1/${id}/close`,{method:'POST',body:JSON.stringify(body)}),kitchen:()=>request('/kitchen'),
+  beverageControl:()=>request('/beverage-control'),updateBeverage:(id,body)=>request(`/products/${id}/beverage`,{method:'PATCH',body:JSON.stringify(body)}),adjustStock:(id,body)=>request(`/products/${id}/stock-adjust`,{method:'POST',body:JSON.stringify(body)}),
+  suppliersV03:()=>request('/suppliers-v03'),createSupplierV03:body=>request('/suppliers-v03',{method:'POST',body:JSON.stringify(body)}),quotesV03:()=>request('/quotes-v03'),createQuoteV03:body=>request('/quotes-v03',{method:'POST',body:JSON.stringify(body)}),quoteV03:id=>request(`/quotes-v03/${id}`),addQuoteItemV03:(id,body)=>request(`/quotes-v03/${id}/items`,{method:'POST',body:JSON.stringify(body)}),bestQuoteV03:id=>request(`/quotes-v03/${id}/best`),
+  recipes:()=>request('/recipes'),recipe:id=>request(`/recipes/${id}`),saveRecipe:body=>request('/recipes',{method:'POST',body:JSON.stringify(body)}),addRecipeItem:(id,body)=>request(`/recipes/${id}/items`,{method:'POST',body:JSON.stringify(body)}),deleteRecipeItem:(id,itemId)=>request(`/recipes/${id}/items/${itemId}`,{method:'DELETE'}),stockCount:body=>request('/stock-counts',{method:'POST',body:JSON.stringify(body)}),smartClosing:()=>request('/smart-closing'),
+  orders:()=>request('/orders'),createOrder:body=>request('/orders',{method:'POST',body:JSON.stringify(body)}),expenses:()=>request('/expenses'),createExpense:body=>request('/expenses',{method:'POST',body:JSON.stringify(body)}),financialEntriesV50B:()=>request('/expenses'),createFinancialEntryV50B:body=>request('/expenses',{method:'POST',body:JSON.stringify(body)}),goals:()=>request('/goals'),createGoal:body=>request('/goals',{method:'POST',body:JSON.stringify(body)}),closingPlan:revenue=>request(`/closing-plan?revenue=${encodeURIComponent(revenue)}`),settings:()=>request('/settings'),updateSettings:body=>request('/settings',{method:'PUT',body:JSON.stringify(body)}),
+  // ==================================================
+  // NEXUS HOSPITALITY ONE V1.6
+  // Operational Checkout & Audit
+  // ==================================================
+
+  salesRecentV16: () =>
+    request('/v16/sales/recent'),
+
+  saleV16: id =>
+    request(`/v16/sales/${id}`),
+
+  cancelSaleV16: (id, reason) =>
+    request(`/v16/sales/${id}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    }),
+
+  returnPreviewV16: (id, body) =>
+    request(`/v16/sales/${id}/return-preview`, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    }),
+
+  returnSaleV16: (id, body) =>
+    request(`/v16/sales/${id}/return`, {
+      method: 'POST',
+      body: JSON.stringify(body)
+    }),
+
+  /* NEXUS_DESKTOP_PRINT_FRONTEND_V218I1 */
+  desktopPrintPendingV16:(limit=50)=>request('/v16/print-jobs/desktop/pending?limit='+encodeURIComponent(limit)),
+  printJobV16:id=>request('/v16/print-jobs/'+id),
+  beginDesktopPrintV16:(id,printerName)=>request('/v16/print-jobs/'+id+'/desktop/begin',{method:'POST',body:JSON.stringify({printer_name:printerName||null})}),
+  markDesktopPrintedV16:(id,printerName)=>request('/v16/print-jobs/'+id+'/desktop/printed',{method:'POST',body:JSON.stringify({printer_name:printerName||null})}),
+  markDesktopFailedV16:(id,error,printerName)=>request('/v16/print-jobs/'+id+'/desktop/failed',{method:'POST',body:JSON.stringify({error:String(error||'DESKTOP_PRINT_FAILED'),printer_name:printerName||null})}),
+  retryDesktopPrintV16:id=>request('/v16/print-jobs/'+id+'/desktop/retry',{method:'POST'}),
+  queueSaleDocumentsV16:
+    (id, mode='SIMULATION') =>
+      request(
+        `/v16/sales/${id}/documents`,
+        {
+          method:'POST',
+          body:JSON.stringify({mode})
+        }
+      ),
+  publicMyTicket:token=>request(`/public/my-ticket/${encodeURIComponent(token)}`),
+  customerClaimTicket:(token,body)=>request(`/public/customer/claim/${encodeURIComponent(token)}`,{method:'POST',body:JSON.stringify(body)}),
+  customerMe:session=>request('/public/customer/me',{headers:{'x-nexus-customer-session':session}}),
+  customerWallet:session=>request('/public/customer/wallet',{headers:{'x-nexus-customer-session':session}}),
+  customerLogout:session=>request('/public/customer/logout',{method:'POST',headers:{'x-nexus-customer-session':session}}),
+  publicEventAgeCheck:(id,birth_date)=>request(`/public/ticket-age-check/${id}`,{method:'POST',body:JSON.stringify({birth_date})})
+};
+
+
+
+
+
+/* CUSTOMER EXPERIENCE V26 */
+
+export function customerSessionV26(){
+ return localStorage.getItem(
+  "nexus_ticket_customer_session"
+ )||"";
+}
+
+export function setCustomerSessionV26(value){
+ if(value){
+  localStorage.setItem(
+   "nexus_ticket_customer_session",
+   value
+  );
+ }else{
+  localStorage.removeItem(
+   "nexus_ticket_customer_session"
+  );
+ }
+}
+
+async function customerFetchV26(
+ path,
+ options={}
+){
+ const session=customerSessionV26();
+
+ const headers={
+  "Content-Type":"application/json",
+  ...(options.headers||{})
+ };
+
+ if(session){
+  headers[
+   "x-nexus-customer-session"
+  ]=session;
+ }
+
+ const response=await fetch(
+  path,
+  {
+   ...options,
+   headers
+  }
+ );
+
+ const data=await response.json()
+  .catch(()=>({}));
+
+ if(!response.ok){
+  const error=new Error(
+   data.error||
+   "CUSTOMER_REQUEST_FAILED"
+  );
+
+  error.status=response.status;
+  error.data=data;
+
+  throw error;
+ }
+
+ return data;
+}
+
+export function customerMeV26(){
+ return customerFetchV26(
+  "/api/public/customer/me"
+ );
+}
+
+export function customerWalletV26(){
+ return customerFetchV26(
+  "/api/public/customer/wallet"
+ );
+}
+
+export function customerOrdersV26(){
+ return customerFetchV26(
+  "/api/public/customer/orders"
+ );
+}
+
+export function customerEventsV26(){
+ return customerFetchV26(
+  "/api/public/customer/events"
+ );
+}
+
+export function updateCustomerProfileV26(data){
+ return customerFetchV26(
+  "/api/public/customer/profile",
+  {
+   method:"PUT",
+   body:JSON.stringify(data)
+  }
+ );
+}
+
+export function logoutCustomerV26(){
+ return customerFetchV26(
+  "/api/public/customer/logout",
+  {
+   method:"POST",
+   body:"{}"
+  }
+ ).finally(()=>{
+  setCustomerSessionV26("");
+ });
+}
+
+export function customerBuyTicketV26(
+ eventId,
+ data
+){
+ return customerFetchV26(
+  `/api/public/events/${eventId}/buy`,
+  {
+   method:"POST",
+   body:JSON.stringify(data)
+  }
+ );
+}
+
+export function customerAgeCheckV26(
+ eventId,
+ birthDate
+){
+ return customerFetchV26(
+  `/api/public/ticket-age-check/${eventId}`,
+  {
+   method:"POST",
+   body:JSON.stringify({
+    birth_date:birthDate
+   })
+  }
+ );
+}
+
+/* NEXUS FINANCIAL INTELLIGENCE V25 */
+
+function nexusAuthHeadersV25(){
+ const financialToken=
+  localStorage.getItem("nexus_hospitality_token")||"";
+
+ return financialToken
+  ?{
+    Authorization:`Bearer ${financialToken}`,
+    "Content-Type":"application/json"
+   }
+  :{
+    "Content-Type":"application/json"
+   };
+}
+
+async function nexusFinancialFetch(
+ path,
+ options={}
+){
+ const response=await fetch(
+  path,
+  {
+   ...options,
+   headers:{
+    ...nexusAuthHeadersV25(),
+    ...(options.headers||{})
+   }
+  }
+ );
+
+ const data=
+  await response.json()
+   .catch(()=>({}));
+
+ if(!response.ok){
+  throw new Error(
+   data.error||
+   "FINANCIAL_REQUEST_FAILED"
+  );
+ }
+
+ return data;
+}
+
+export function financialIntelligenceDashboard(){
+ return nexusFinancialFetch(
+  "/api/v25/intelligence/dashboard"
+ );
+}
+
+export function financialReservePlan(){
+ return nexusFinancialFetch(
+  "/api/v25/intelligence/reserve-plan"
+ );
+}
+
+export function financialPurchaseSimulation(
+ data
+){
+ return nexusFinancialFetch(
+  "/api/v25/intelligence/purchase-simulation",
+  {
+   method:"POST",
+   body:JSON.stringify(data)
+  }
+ );
+}
+
+export function financialRecordReserve(
+ data
+){
+ return nexusFinancialFetch(
+  "/api/v25/intelligence/reserve",
+  {
+   method:"POST",
+   body:JSON.stringify(data)
+  }
+ );
+}
+
+
+/* NEXUS GROWTH INTELLIGENCE T2.5C */
+
+export function financialExecutiveGrowth(){
+ return nexusFinancialFetch(
+  "/api/v25/intelligence/executive-growth"
+ );
+}
+
+export function financialGrowthGoal(){
+ return nexusFinancialFetch(
+  "/api/v25/intelligence/goal"
+ );
+}
+
+export function financialSaveGrowthGoal(
+ data
+){
+ return nexusFinancialFetch(
+  "/api/v25/intelligence/goal",
+  {
+   method:"PUT",
+   body:JSON.stringify(data)
+  }
+ );
+}
+
+/* T2.5D NET INTELLIGENCE */
+
+export function financialNetOverview(){
+ return nexusFinancialFetch(
+  "/api/v25/intelligence/net-overview"
+ );
+}
+
+/* NEXUS V5.0B-R1A ESM EXPORT BRIDGE */
+export const financialEntriesV50B=()=>request('/expenses');
+export const createFinancialEntryV50B=body=>request('/expenses',{
+ method:'POST',
+ body:JSON.stringify(body)
+});
+
+/* NEXUS V5.0C FINANCIAL TRUTH API */
+export const financialTruthV50C=
+ ()=>request('/v50c/financial-truth');
+
+export const financialDebtsV50C=
+ ()=>request('/v50c/debts');
+
+export const createFinancialDebtV50C=
+ body=>request(
+  '/v50c/debts',
+  {
+   method:'POST',
+   body:JSON.stringify(body)
+  }
+ );
+
+export const payFinancialDebtV50C=
+ (id,body)=>request(
+  `/v50c/debts/${id}/payment`,
+  {
+   method:'POST',
+   body:JSON.stringify(body)
+  }
+ );
+
+/* NEXUS V5.0C-R3 DEBT MANAGEMENT API */
+
+export const updateFinancialDebtV50C=
+ (id,body)=>request(
+  `/v50c/debts/${id}`,
+  {
+   method:'PUT',
+   body:JSON.stringify(body)
+  }
+ );
+
+export const financialDebtPaymentsV50C=
+ id=>request(
+  `/v50c/debts/${id}/payments`
+ );
+
+export const registerFinancialDebtPaymentV50C=
+ (id,body)=>request(
+  `/v50c/debts/${id}/pay`,
+  {
+   method:'POST',
+   body:JSON.stringify(body)
+  }
+ );
+
+export const financialPayoffStrategyV50C=
+ ()=>request(
+  '/v50c/payoff-strategy'
+ );
+
+/* NEXUS V5.0C-R4 FINANCIAL CALENDAR API */
+export const financialCalendarV50C=
+  ()=>request('/v50c/financial-calendar');
+
+
+/* NEXUS V5.0C-R5 CASH FLOW + DRE */
+export const cashFlowDREV50C=
+  ()=>request('/v50c/cash-flow-dre');
+
+
+/* NEXUS V5.0C-R6 FINANCIAL FORECAST API */
+export const financialForecastV50C=
+  ()=>request('/v50c/financial-forecast');
+
+
+/* NEXUS V5.0C-R7 FINANCIAL MENTOR API */
+export const financialMentorV50C=
+  ()=>request('/v50c/financial-mentor');
+
+
+
+/* NEXUS V5.0C MASTER FINAL R8-R18 API */
+export const hospitalityFinalIntelligenceV50C =
+  () => request('/v50c/final-intelligence');
+
+
+
+============================================================
+ FILE: server/operations-v11.js
+============================================================
+import crypto from 'node:crypto';
+import {db} from './db.js';
+import {createUnifiedSale} from './transaction-engine.js';
+const n=v=>Number(v||0);
+const code=()=>`NX-${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
+export function initOperationsV11(){
+ db.exec(`
+ CREATE TABLE IF NOT EXISTS ticket_lots(id INTEGER PRIMARY KEY AUTOINCREMENT,event_id INTEGER NOT NULL,name TEXT NOT NULL,price REAL NOT NULL DEFAULT 0,quantity INTEGER NOT NULL DEFAULT 0,sold INTEGER NOT NULL DEFAULT 0,starts_at TEXT,ends_at TEXT,status TEXT NOT NULL DEFAULT 'ACTIVE',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE);
+ CREATE TABLE IF NOT EXISTS ticket_access_log(id INTEGER PRIMARY KEY AUTOINCREMENT,ticket_id INTEGER,event_id INTEGER,code TEXT NOT NULL,result TEXT NOT NULL,user_id INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+ CREATE TABLE IF NOT EXISTS delivery_items(id INTEGER PRIMARY KEY AUTOINCREMENT,delivery_id INTEGER NOT NULL,product_id INTEGER NOT NULL,qty REAL NOT NULL DEFAULT 1,unit_price REAL NOT NULL DEFAULT 0,sale_mode TEXT NOT NULL DEFAULT 'UNIT',notes TEXT,FOREIGN KEY(delivery_id) REFERENCES delivery_orders(id) ON DELETE CASCADE,FOREIGN KEY(product_id) REFERENCES products(id));
+ `);
+ const add=(t,c,d)=>{const cols=db.prepare(`PRAGMA table_info(${t})`).all().map(x=>x.name);if(!cols.includes(c))db.exec(`ALTER TABLE ${t} ADD COLUMN ${c} ${d}`)};
+ add('tickets','lot_id','INTEGER');add('tickets','attendee_phone','TEXT');add('tickets','payment_method','TEXT');add('tickets','checked_in_by','INTEGER');
+ add('products','menu_visible','INTEGER NOT NULL DEFAULT 1');add('products','menu_featured','INTEGER NOT NULL DEFAULT 0');
+ add('delivery_orders','delivery_fee','REAL NOT NULL DEFAULT 0');add('delivery_orders','change_for','REAL');add('delivery_orders','courier_name','TEXT');add('delivery_orders','sale_id','INTEGER');
+ add('dining_tables','position_x','INTEGER NOT NULL DEFAULT 0');add('dining_tables','position_y','INTEGER NOT NULL DEFAULT 0');
+}
+export function registerPublicV11(app){
+ app.get('/api/public/menu',(_req,res)=>{const business=db.prepare("SELECT value FROM settings WHERE key='business_name'").get()?.value||'NEXUS Hospitality';const rows=db.prepare(`SELECT id,name,category,description,image_url,price,stock,menu_featured FROM products WHERE active=1 AND menu_visible=1 ORDER BY menu_featured DESC,category,name`).all();res.json({business,products:rows.map(x=>({...x,available:n(x.stock)>0}))})});
+}
+export function registerOperationsV11(app,{minRole,audit}){
+ app.get('/api/v11/tickets/events',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT e.*,COUNT(DISTINCT t.id) tickets,COALESCE(SUM(CASE WHEN t.payment_status='PAID' THEN t.price ELSE 0 END),0) revenue,SUM(CASE WHEN t.checkin_at IS NOT NULL THEN 1 ELSE 0 END) checked_in FROM events e LEFT JOIN tickets t ON t.event_id=e.id GROUP BY e.id ORDER BY COALESCE(e.starts_at,e.created_at) DESC`).all()));
+ app.get('/api/v11/tickets/lots/:eventId',minRole(40),(req,res)=>res.json(db.prepare('SELECT * FROM ticket_lots WHERE event_id=? ORDER BY id').all(n(req.params.eventId))));
+ app.post('/api/v11/tickets/lots',minRole(60),(req,res)=>{const b=req.body||{};if(!b.event_id||!String(b.name||'').trim())return res.status(400).json({error:'LOT_DATA_REQUIRED'});const i=db.prepare('INSERT INTO ticket_lots(event_id,name,price,quantity,starts_at,ends_at,status) VALUES(?,?,?,?,?,?,?)').run(n(b.event_id),String(b.name).trim(),n(b.price),Math.max(0,n(b.quantity)),b.starts_at||null,b.ends_at||null,b.status||'ACTIVE');audit(req.user.id,'CREATE','TICKET_LOT',i.lastInsertRowid,b);res.status(201).json({id:i.lastInsertRowid})});
+ app.get('/api/v11/tickets/:eventId',minRole(40),(req,res)=>res.json(db.prepare(`SELECT t.*,l.name lot_name,e.title event_title FROM tickets t LEFT JOIN ticket_lots l ON l.id=t.lot_id JOIN events e ON e.id=t.event_id WHERE t.event_id=? ORDER BY t.id DESC`).all(n(req.params.eventId))));
+ app.post('/api/v11/tickets',minRole(40),(req,res)=>{const b=req.body||{},lot=b.lot_id?db.prepare('SELECT * FROM ticket_lots WHERE id=?').get(n(b.lot_id)):null;if(!b.event_id||!String(b.attendee_name||'').trim())return res.status(400).json({error:'TICKET_DATA_REQUIRED'});if(lot&&lot.quantity>0&&lot.sold>=lot.quantity)return res.status(409).json({error:'LOT_SOLD_OUT'});const ticketCode=code(),price=lot?n(lot.price):n(b.price);const i=db.prepare(`INSERT INTO tickets(event_id,lot_id,attendee_name,attendee_phone,ticket_code,ticket_type,price,payment_status,payment_method) VALUES(?,?,?,?,?,?,?,?,?)`).run(n(b.event_id),b.lot_id?n(b.lot_id):null,String(b.attendee_name).trim(),b.attendee_phone||null,ticketCode,lot?.name||b.ticket_type||'INGRESSO',price,b.payment_status||'PAID',b.payment_method||'PIX');if(lot)db.prepare('UPDATE ticket_lots SET sold=sold+1 WHERE id=?').run(lot.id);audit(req.user.id,'CREATE','TICKET',i.lastInsertRowid,{event_id:b.event_id,code:ticketCode});res.status(201).json(db.prepare('SELECT * FROM tickets WHERE id=?').get(i.lastInsertRowid))});
+ app.post('/api/v11/access/checkin',minRole(40),(req,res)=>{const c=String(req.body?.code||'').trim().toUpperCase();const t=db.prepare(`SELECT t.*,e.title event_title FROM tickets t JOIN events e ON e.id=t.event_id WHERE upper(t.ticket_code)=?`).get(c);if(!t){db.prepare("INSERT INTO ticket_access_log(code,result,user_id) VALUES(?,'INVALID',?)").run(c,req.user.id);return res.status(404).json({ok:false,result:'INVALID',message:'Ingresso inválido.'})}if(t.payment_status!=='PAID'&&t.payment_status!=='COURTESY'){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'PAYMENT_PENDING',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'PAYMENT_PENDING',message:'Pagamento não confirmado.',ticket:t})}if(t.checkin_at){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'DUPLICATE',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'DUPLICATE',message:'Ingresso já utilizado.',ticket:t})}db.prepare('UPDATE tickets SET checkin_at=CURRENT_TIMESTAMP,checked_in_by=? WHERE id=?').run(req.user.id,t.id);db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'ALLOWED',?)").run(t.id,t.event_id,c,req.user.id);audit(req.user.id,'CHECKIN','TICKET',t.id,{code:c});res.json({ok:true,result:'ALLOWED',message:'Acesso liberado.',ticket:{...t,checkin_at:new Date().toISOString()}})});
+ app.get('/api/v11/menu',minRole(40),(_req,res)=>res.json(db.prepare('SELECT * FROM products WHERE active=1 ORDER BY category,name').all()));
+ app.patch('/api/v11/menu/:id',minRole(55),(req,res)=>{const b=req.body||{};db.prepare('UPDATE products SET menu_visible=COALESCE(?,menu_visible),menu_featured=COALESCE(?,menu_featured),description=COALESCE(?,description),price=COALESCE(?,price),image_url=COALESCE(?,image_url) WHERE id=?').run(b.menu_visible==null?null:(b.menu_visible?1:0),b.menu_featured==null?null:(b.menu_featured?1:0),b.description??null,b.price==null?null:n(b.price),b.image_url??null,n(req.params.id));audit(req.user.id,'UPDATE','MENU_PRODUCT',req.params.id,b);res.json({ok:true})});
+ app.get('/api/v11/salon',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT dt.*,o.id order_id,o.customer_name,o.subtotal,o.employee_id,o.created_at order_opened_at,e.name employee_name,(SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=o.id AND oi.status<>'CANCELLED') item_count FROM dining_tables dt LEFT JOIN orders o ON o.table_id=dt.id AND o.status='OPEN' LEFT JOIN employees e ON e.id=o.employee_id WHERE dt.active=1 ORDER BY dt.area,dt.id`).all()));
+ app.patch('/api/v11/tables/:id',minRole(80),(req,res)=>{const b=req.body||{};db.prepare('UPDATE dining_tables SET label=COALESCE(?,label),area=COALESCE(?,area),capacity=COALESCE(?,capacity),status=COALESCE(?,status) WHERE id=?').run(b.label??null,b.area??null,b.capacity==null?null:n(b.capacity),b.status??null,n(req.params.id));audit(req.user.id,'UPDATE','TABLE',req.params.id,b);res.json({ok:true})});
+ app.get('/api/v11/delivery',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT d.*,COALESCE((SELECT SUM(di.qty*di.unit_price) FROM delivery_items di WHERE di.delivery_id=d.id),0) items_total FROM delivery_orders d ORDER BY d.id DESC LIMIT 200`).all()));
+ app.get('/api/v11/delivery/:id',minRole(40),(req,res)=>{const d=db.prepare('SELECT * FROM delivery_orders WHERE id=?').get(n(req.params.id));if(!d)return res.status(404).json({error:'DELIVERY_NOT_FOUND'});res.json({...d,items:db.prepare(`SELECT di.*,p.name product_name FROM delivery_items di JOIN products p ON p.id=di.product_id WHERE di.delivery_id=? ORDER BY di.id`).all(d.id)})});
+ app.post('/api/v11/delivery',minRole(40),(req,res)=>{const b=req.body||{},items=Array.isArray(b.items)?b.items:[];if(!String(b.customer_name||'').trim()||!items.length)return res.status(400).json({error:'DELIVERY_DATA_REQUIRED'});const out=db.transaction(()=>{const resolved=items.map(x=>{const p=db.prepare('SELECT * FROM products WHERE id=? AND active=1').get(n(x.product_id));if(!p)throw new Error('Produto inválido');return{...x,p,qty:Math.max(.01,n(x.qty)),price:n(x.unit_price||p.price)}});const itemsTotal=resolved.reduce((s,x)=>s+x.qty*x.price,0),fee=n(b.delivery_fee),total=itemsTotal+fee;const i=db.prepare(`INSERT INTO delivery_orders(customer_name,phone,order_type,address,status,total,payment_method,notes,delivery_fee,change_for,courier_name) VALUES(?,?,?,?,?,?,?,?,?,?,?)`).run(String(b.customer_name).trim(),b.phone||null,b.order_type||'DELIVERY',b.address||null,'NEW',total,b.payment_method||'PIX',b.notes||null,fee,b.change_for ? n(b.change_for) : null,b.courier_name||null);for(const x of resolved)db.prepare('INSERT INTO delivery_items(delivery_id,product_id,qty,unit_price,sale_mode,notes) VALUES(?,?,?,?,?,?)').run(i.lastInsertRowid,x.p.id,x.qty,x.price,x.mode||'UNIT',x.notes||null);return{id:i.lastInsertRowid,total}})();audit(req.user.id,'CREATE','DELIVERY_V11',out.id,out);res.status(201).json(out)});
+ app.patch('/api/v11/delivery/:id/status',minRole(40),(req,res)=>{const id=n(req.params.id),status=String(req.body?.status||'NEW').toUpperCase(),d=db.prepare('SELECT * FROM delivery_orders WHERE id=?').get(id);if(!d)return res.status(404).json({error:'DELIVERY_NOT_FOUND'});if(status==='DELIVERED'&&!d.sale_id){const items=db.prepare('SELECT product_id,qty,sale_mode mode FROM delivery_items WHERE delivery_id=?').all(id);try{const sale=createUnifiedSale({items,payment_method:d.payment_method||'PIX',customer_name:d.customer_name,user_id:req.user.id,source:'DELIVERY',source_id:id});db.prepare("UPDATE delivery_orders SET status='DELIVERED',sale_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").run(sale.id,id);audit(req.user.id,'DELIVER','DELIVERY',id,{sale_id:sale.id});return res.json({ok:true,sale_id:sale.id})}catch(e){return res.status(409).json({error:'DELIVERY_CLOSE_ERROR',message:e.message})}}db.prepare('UPDATE delivery_orders SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(status,id);audit(req.user.id,'UPDATE_STATUS','DELIVERY',id,{status});res.json({ok:true})});
+}
+
+
+============================================================
+ FILE: server/tickets-v25.js
+============================================================
+﻿import crypto from 'node:crypto';
+import {db} from './db.js';
+
+const n=v=>Number(v||0);
+const txt=v=>String(v??'').trim();
+
+function ticketCode(){
+  return (
+    'NX-'+
+    crypto.randomBytes(6)
+      .toString('hex')
+      .toUpperCase()
+  );
+}
+
+function ticketView(id){
+  return db.prepare(`
+    SELECT
+      t.*,
+      e.title AS event_title,
+      e.starts_at AS event_starts_at,
+      e.venue_name,
+      l.name AS lot_name
+    FROM tickets t
+    JOIN events e
+      ON e.id=t.event_id
+    LEFT JOIN ticket_lots l
+      ON l.id=t.lot_id
+    WHERE t.id=?
+  `).get(id);
+}
+
+export function registerTicketsV25(
+  app,
+  {
+    minRole,
+    audit
+  }
+){
+
+  app.get(
+    '/api/v25/tickets/dashboard/:eventId',
+    minRole(40),
+    (req,res)=>{
+      try{
+
+        const eventId=n(req.params.eventId);
+
+        const event=db.prepare(`
+          SELECT *
+          FROM events
+          WHERE id=?
+        `).get(eventId);
+
+        if(!event){
+          return res.status(404).json({
+            error:'EVENT_NOT_FOUND'
+          });
+        }
+
+        const metrics=db.prepare(`
+          SELECT
+            COUNT(*) AS issued,
+            SUM(
+              CASE
+                WHEN payment_status='PAID'
+                THEN 1 ELSE 0
+              END
+            ) AS paid,
+            SUM(
+              CASE
+                WHEN payment_status='COURTESY'
+                THEN 1 ELSE 0
+              END
+            ) AS courtesy,
+            SUM(
+              CASE
+                WHEN checkin_at IS NOT NULL
+                THEN 1 ELSE 0
+              END
+            ) AS checked_in,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN payment_status='PAID'
+                  THEN price ELSE 0
+                END
+              ),
+              0
+            ) AS revenue
+          FROM tickets
+          WHERE event_id=?
+        `).get(eventId);
+
+        const lotCapacity=db.prepare(`
+          SELECT
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN quantity>0
+                  THEN quantity
+                  ELSE 0
+                END
+              ),
+              0
+            ) AS capacity,
+            COALESCE(
+              SUM(sold),
+              0
+            ) AS sold,
+            SUM(
+              CASE
+                WHEN quantity=0
+                THEN 1 ELSE 0
+              END
+            ) AS unlimited_lots
+          FROM ticket_lots
+          WHERE event_id=?
+        `).get(eventId);
+
+        const orders=db.prepare(`
+          SELECT
+            COUNT(*) AS total,
+            SUM(
+              CASE
+                WHEN payment_status='PENDING'
+                THEN 1 ELSE 0
+              END
+            ) AS pending,
+            SUM(
+              CASE
+                WHEN payment_status='PAID'
+                THEN 1 ELSE 0
+              END
+            ) AS paid,
+            COALESCE(
+              SUM(
+                CASE
+                  WHEN payment_status='PENDING'
+                  THEN total ELSE 0
+                END
+              ),
+              0
+            ) AS pending_value
+          FROM ticket_orders
+          WHERE event_id=?
+        `).get(eventId);
+
+        const issued=n(metrics.issued);
+        const checked=n(metrics.checked_in);
+
+        res.json({
+          event,
+          metrics:{
+            issued,
+            paid:n(metrics.paid),
+            courtesy:n(metrics.courtesy),
+            checked_in:checked,
+            revenue:n(metrics.revenue),
+            attendance_rate:
+              issued>0
+                ? Number(
+                    (
+                      checked/issued*100
+                    ).toFixed(1)
+                  )
+                : 0,
+            lot_capacity:n(lotCapacity.capacity),
+            lot_sold:n(lotCapacity.sold),
+            unlimited_lots:n(
+              lotCapacity.unlimited_lots
+            ),
+            available:
+              n(lotCapacity.unlimited_lots)>0
+                ? null
+                : Math.max(
+                    0,
+                    n(lotCapacity.capacity)-
+                    n(lotCapacity.sold)
+                  )
+          },
+          orders:{
+            total:n(orders.total),
+            pending:n(orders.pending),
+            paid:n(orders.paid),
+            pending_value:n(
+              orders.pending_value
+            )
+          }
+        });
+
+      }catch(error){
+
+        console.error(
+          'TICKET_DASHBOARD_V25',
+          error
+        );
+
+        res.status(500).json({
+          error:'TICKET_DASHBOARD_FAILED',
+          message:error.message
+        });
+      }
+    }
+  );
+
+  app.get(
+    '/api/v25/tickets/orders/:eventId',
+    minRole(40),
+    (req,res)=>{
+      try{
+
+        const rows=db.prepare(`
+          SELECT
+            o.*,
+            e.title AS event_title,
+            l.name AS lot_name
+          FROM ticket_orders o
+          JOIN events e
+            ON e.id=o.event_id
+          JOIN ticket_lots l
+            ON l.id=o.lot_id
+          WHERE o.event_id=?
+          ORDER BY o.id DESC
+          LIMIT 200
+        `).all(
+          n(req.params.eventId)
+        );
+
+        res.json(rows);
+
+      }catch(error){
+
+        res.status(500).json({
+          error:'TICKET_ORDERS_FAILED',
+          message:error.message
+        });
+      }
+    }
+  );
+
+  app.get(
+    '/api/v25/tickets/access/:eventId',
+    minRole(40),
+    (req,res)=>{
+      try{
+
+        const rows=db.prepare(`
+          SELECT
+            a.*,
+            t.attendee_name,
+            t.ticket_code,
+            t.payment_status,
+            e.title AS event_title,
+            l.name AS lot_name,
+            u.name AS operator_name
+          FROM ticket_access_log a
+          LEFT JOIN tickets t
+            ON t.id=a.ticket_id
+          LEFT JOIN events e
+            ON e.id=a.event_id
+          LEFT JOIN ticket_lots l
+            ON l.id=t.lot_id
+          LEFT JOIN users u
+            ON u.id=a.user_id
+          WHERE a.event_id=?
+          ORDER BY a.id DESC
+          LIMIT 200
+        `).all(
+          n(req.params.eventId)
+        );
+
+        res.json(rows);
+
+      }catch(error){
+
+        res.status(500).json({
+          error:'TICKET_ACCESS_HISTORY_FAILED',
+          message:error.message
+        });
+      }
+    }
+  );
+
+  app.get(
+    '/api/v25/tickets/search/:eventId',
+    minRole(40),
+    (req,res)=>{
+      try{
+
+        const q=txt(req.query.q);
+
+        if(!q){
+          return res.json([]);
+        }
+
+        const like='%'+q+'%';
+
+        const rows=db.prepare(`
+          SELECT
+            t.*,
+            e.title AS event_title,
+            l.name AS lot_name
+          FROM tickets t
+          JOIN events e
+            ON e.id=t.event_id
+          LEFT JOIN ticket_lots l
+            ON l.id=t.lot_id
+          WHERE t.event_id=?
+            AND (
+              t.ticket_code LIKE ?
+              OR COALESCE(
+                t.attendee_name,
+                ''
+              ) LIKE ?
+              OR COALESCE(
+                t.attendee_phone,
+                ''
+              ) LIKE ?
+              OR COALESCE(
+                t.buyer_email,
+                ''
+              ) LIKE ?
+            )
+          ORDER BY t.id DESC
+          LIMIT 100
+        `).all(
+          n(req.params.eventId),
+          like,
+          like,
+          like,
+          like
+        );
+
+        res.json(rows);
+
+      }catch(error){
+
+        res.status(500).json({
+          error:'TICKET_SEARCH_FAILED',
+          message:error.message
+        });
+      }
+    }
+  );
+
+  app.post(
+    '/api/v25/tickets/presential',
+    minRole(40),
+    (req,res)=>{
+      try{
+
+        const b=req.body||{};
+        const eventId=n(b.event_id);
+        const lotId=n(b.lot_id);
+        const attendee=txt(
+          b.attendee_name
+        );
+
+        if(
+          !eventId ||
+          !attendee
+        ){
+          return res.status(400).json({
+            error:'TICKET_DATA_REQUIRED'
+          });
+        }
+
+        const paymentStatus=
+          txt(
+            b.payment_status||
+            'PAID'
+          ).toUpperCase();
+
+        if(
+          ![
+            'PAID',
+            'COURTESY'
+          ].includes(paymentStatus)
+        ){
+          return res.status(400).json({
+            error:'INVALID_PAYMENT_STATUS'
+          });
+        }
+
+        const create=db.transaction(
+          ()=>{
+
+            const event=db.prepare(`
+              SELECT *
+              FROM events
+              WHERE id=?
+            `).get(eventId);
+
+            if(!event){
+              throw new Error(
+                'EVENT_NOT_FOUND'
+              );
+            }
+
+            let lot=null;
+
+            if(lotId){
+
+              lot=db.prepare(`
+                SELECT *
+                FROM ticket_lots
+                WHERE id=?
+                  AND event_id=?
+              `).get(
+                lotId,
+                eventId
+              );
+
+              if(!lot){
+                throw new Error(
+                  'LOT_NOT_FOUND'
+                );
+              }
+
+              if(
+                txt(lot.status)
+                  .toUpperCase()!=='ACTIVE'
+              ){
+                throw new Error(
+                  'LOT_NOT_ACTIVE'
+                );
+              }
+
+              if(
+                n(lot.quantity)>0 &&
+                n(lot.sold)>=
+                n(lot.quantity)
+              ){
+                throw new Error(
+                  'LOT_SOLD_OUT'
+                );
+              }
+            }
+
+            const code=ticketCode();
+
+            const price=
+              paymentStatus==='COURTESY'
+                ? 0
+                : lot
+                  ? n(lot.price)
+                  : n(b.price);
+
+            const method=
+              paymentStatus==='COURTESY'
+                ? 'COURTESY'
+                : txt(
+                    b.payment_method||
+                    'DINHEIRO'
+                  ).toUpperCase();
+
+            const insert=
+              db.prepare(`
+                INSERT INTO tickets(
+                  event_id,
+                  lot_id,
+                  attendee_name,
+                  attendee_phone,
+                  ticket_code,
+                  ticket_type,
+                  price,
+                  payment_status,
+                  payment_method,
+                  qr_payload,
+                  buyer_email,
+                  buyer_document
+                )
+                VALUES(
+                  ?,?,?,?,?,?,?,?,?,?,?,?
+                )
+              `).run(
+                eventId,
+                lotId||null,
+                attendee,
+                txt(b.attendee_phone)||null,
+                code,
+                lot
+                  ? lot.name
+                  : txt(b.ticket_type)||'PADRAO',
+                price,
+                paymentStatus,
+                method,
+                code,
+                txt(b.buyer_email)||null,
+                txt(b.buyer_document)||null
+              );
+
+            if(lot){
+              db.prepare(`
+                UPDATE ticket_lots
+                SET sold=sold+1
+                WHERE id=?
+              `).run(lot.id);
+            }
+
+            return Number(
+              insert.lastInsertRowid
+            );
+          }
+        );
+
+        const ticketId=create();
+        const ticket=ticketView(
+          ticketId
+        );
+
+        audit(
+          req.user.id,
+          'CREATE',
+          'TICKET',
+          ticketId,
+          {
+            source:'PRESENTIAL_V25',
+            event_id:eventId,
+            lot_id:lotId||null,
+            payment_status:
+              paymentStatus,
+            ticket_code:
+              ticket.ticket_code
+          }
+        );
+
+        res.status(201).json({
+          ok:true,
+          ticket
+        });
+
+      }catch(error){
+
+        const conflict=[
+          'LOT_SOLD_OUT',
+          'LOT_NOT_ACTIVE'
+        ].includes(error.message);
+
+        const missing=[
+          'EVENT_NOT_FOUND',
+          'LOT_NOT_FOUND'
+        ].includes(error.message);
+
+        res.status(
+          conflict
+            ? 409
+            : missing
+              ? 404
+              : 500
+        ).json({
+          error:error.message||
+            'TICKET_CREATE_FAILED'
+        });
+      }
+    }
+  );
+
+  app.post(
+    '/api/v25/tickets/checkin',
+    minRole(40),
+    (req,res)=>{
+      try{
+
+        const code=
+          txt(req.body?.code)
+            .toUpperCase();
+
+        if(!code){
+          return res.status(400).json({
+            ok:false,
+            result:'INVALID',
+            message:'Informe o codigo do ingresso.'
+          });
+        }
+
+        let ticket=db.prepare(`
+          SELECT
+            t.*,
+            e.title AS event_title,
+            e.starts_at AS event_starts_at,
+            e.venue_name,
+            l.name AS lot_name
+          FROM tickets t
+          JOIN events e
+            ON e.id=t.event_id
+          LEFT JOIN ticket_lots l
+            ON l.id=t.lot_id
+          WHERE upper(t.ticket_code)=?
+        `).get(code);
+
+        if(!ticket){
+
+          db.prepare(`
+            INSERT INTO ticket_access_log(
+              code,
+              result,
+              user_id
+            )
+            VALUES(
+              ?,
+              'INVALID',
+              ?
+            )
+          `).run(
+            code,
+            req.user.id
+          );
+
+          return res.json({
+            ok:false,
+            result:'INVALID',
+            message:'Ingresso invalido.'
+          });
+        }
+
+        if(
+          ![
+            'PAID',
+            'COURTESY'
+          ].includes(
+            txt(ticket.payment_status)
+              .toUpperCase()
+          )
+        ){
+
+          db.prepare(`
+            INSERT INTO ticket_access_log(
+              ticket_id,
+              event_id,
+              code,
+              result,
+              user_id
+            )
+            VALUES(
+              ?,?,?,
+              'PAYMENT_PENDING',
+              ?
+            )
+          `).run(
+            ticket.id,
+            ticket.event_id,
+            code,
+            req.user.id
+          );
+
+          return res.json({
+            ok:false,
+            result:'PAYMENT_PENDING',
+            message:
+              'Pagamento ainda nao confirmado.',
+            ticket
+          });
+        }
+
+        if(ticket.checkin_at){
+
+          db.prepare(`
+            INSERT INTO ticket_access_log(
+              ticket_id,
+              event_id,
+              code,
+              result,
+              user_id
+            )
+            VALUES(
+              ?,?,?,
+              'DUPLICATE',
+              ?
+            )
+          `).run(
+            ticket.id,
+            ticket.event_id,
+            code,
+            req.user.id
+          );
+
+          return res.json({
+            ok:false,
+            result:'DUPLICATE',
+            message:
+              'Ingresso ja utilizado.',
+            ticket
+          });
+        }
+
+        const update=db.prepare(`
+          UPDATE tickets
+          SET
+            checkin_at=CURRENT_TIMESTAMP,
+            checked_in_by=?
+          WHERE id=?
+            AND checkin_at IS NULL
+        `).run(
+          req.user.id,
+          ticket.id
+        );
+
+        if(update.changes!==1){
+
+          ticket=ticketView(
+            ticket.id
+          );
+
+          db.prepare(`
+            INSERT INTO ticket_access_log(
+              ticket_id,
+              event_id,
+              code,
+              result,
+              user_id
+            )
+            VALUES(
+              ?,?,?,
+              'DUPLICATE',
+              ?
+            )
+          `).run(
+            ticket.id,
+            ticket.event_id,
+            code,
+            req.user.id
+          );
+
+          return res.json({
+            ok:false,
+            result:'DUPLICATE',
+            message:
+              'Ingresso ja utilizado.',
+            ticket
+          });
+        }
+
+        ticket=ticketView(
+          ticket.id
+        );
+
+        db.prepare(`
+          INSERT INTO ticket_access_log(
+            ticket_id,
+            event_id,
+            code,
+            result,
+            user_id
+          )
+          VALUES(
+            ?,?,?,
+            'ALLOWED',
+            ?
+          )
+        `).run(
+          ticket.id,
+          ticket.event_id,
+          code,
+          req.user.id
+        );
+
+        audit(
+          req.user.id,
+          'CHECKIN',
+          'TICKET',
+          ticket.id,
+          {
+            result:'ALLOWED',
+            code
+          }
+        );
+
+        return res.json({
+          ok:true,
+          result:'ALLOWED',
+          message:'ACESSO LIBERADO',
+          ticket
+        });
+
+      }catch(error){
+
+        console.error(
+          'TICKET_CHECKIN_V25',
+          error
+        );
+
+        res.status(500).json({
+          ok:false,
+          result:'ERROR',
+          error:'CHECKIN_FAILED',
+          message:error.message
+        });
+      }
+    }
+  );
+}
+
+
+============================================================
+ FILE: server/growth-v12.js
+============================================================
+import {connectPaidTicketOrder} from "./event-experience-v30.js";
+import {asaasRequest,asaasWebhookToken} from './asaas-config.js';
+import crypto from 'node:crypto';
+import {db} from './db.js';import QRCode from 'qrcode';
+const n=v=>Number(v||0);const txt=v=>String(v||'').trim();
+const uid=(p='NX')=>`${p}-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
+const add=(t,c,d)=>{const cols=db.prepare(`PRAGMA table_info(${t})`).all().map(x=>x.name);if(!cols.includes(c))db.exec(`ALTER TABLE ${t} ADD COLUMN ${c} ${d}`)};
+export function initGrowthV12(){
+ db.exec(`
+ CREATE TABLE IF NOT EXISTS asaas_webhook_events(event_id TEXT PRIMARY KEY,event_type TEXT,payment_id TEXT,external_reference TEXT,received_at TEXT DEFAULT CURRENT_TIMESTAMP);
+ CREATE TABLE IF NOT EXISTS public_orders(id INTEGER PRIMARY KEY AUTOINCREMENT,public_code TEXT NOT NULL UNIQUE,customer_name TEXT NOT NULL,phone TEXT,email TEXT,cpf_cnpj TEXT,order_type TEXT NOT NULL DEFAULT 'PICKUP',address TEXT,notes TEXT,items_total REAL NOT NULL DEFAULT 0,delivery_fee REAL NOT NULL DEFAULT 0,total REAL NOT NULL DEFAULT 0,payment_method TEXT NOT NULL DEFAULT 'PIX',payment_status TEXT NOT NULL DEFAULT 'PENDING',asaas_customer_id TEXT,asaas_payment_id TEXT,invoice_url TEXT,pix_payload TEXT,pix_image TEXT,delivery_id INTEGER,status TEXT NOT NULL DEFAULT 'AWAITING_PAYMENT',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+ CREATE TABLE IF NOT EXISTS public_order_items(id INTEGER PRIMARY KEY AUTOINCREMENT,order_id INTEGER NOT NULL,product_id INTEGER NOT NULL,name TEXT NOT NULL,qty REAL NOT NULL DEFAULT 1,unit_price REAL NOT NULL DEFAULT 0,notes TEXT,FOREIGN KEY(order_id) REFERENCES public_orders(id) ON DELETE CASCADE);
+ CREATE TABLE IF NOT EXISTS ticket_orders(id INTEGER PRIMARY KEY AUTOINCREMENT,order_code TEXT NOT NULL UNIQUE,event_id INTEGER NOT NULL,lot_id INTEGER NOT NULL,buyer_name TEXT NOT NULL,buyer_phone TEXT,buyer_email TEXT,buyer_document TEXT,quantity INTEGER NOT NULL DEFAULT 1,total REAL NOT NULL DEFAULT 0,payment_status TEXT NOT NULL DEFAULT 'PENDING',asaas_customer_id TEXT,asaas_payment_id TEXT,invoice_url TEXT,pix_payload TEXT,pix_image TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(event_id) REFERENCES events(id),FOREIGN KEY(lot_id) REFERENCES ticket_lots(id));
+ CREATE TABLE IF NOT EXISTS growth_actions(id INTEGER PRIMARY KEY AUTOINCREMENT,action_date TEXT NOT NULL,title TEXT NOT NULL,reason TEXT,expected_impact REAL NOT NULL DEFAULT 0,status TEXT NOT NULL DEFAULT 'SUGGESTED',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+ `);
+ add('events','public_sales','INTEGER NOT NULL DEFAULT 1');add('events','sales_starts_at','TEXT');add('events','sales_ends_at','TEXT');add('events','description','TEXT');add('events','public_slug','TEXT');
+ add('delivery_orders','payment_status',"TEXT NOT NULL DEFAULT 'PENDING'");add('delivery_orders','public_order_id','INTEGER');
+ add('tickets','qr_payload','TEXT');add('tickets','buyer_email','TEXT');add('tickets','buyer_document','TEXT');add('tickets','ticket_order_id','INTEGER');
+
+ add('ticket_orders','ticket_portal_token_hash','TEXT');
+ add('ticket_orders','ticket_portal_created_at','TEXT');
+
+ db.exec(`
+  CREATE TABLE IF NOT EXISTS ticket_delivery_outbox(
+   id INTEGER PRIMARY KEY AUTOINCREMENT,
+   ticket_order_id INTEGER NOT NULL,
+   ticket_id INTEGER,
+   channel TEXT NOT NULL,
+   destination TEXT,
+   status TEXT NOT NULL DEFAULT 'QUEUED',
+   attempts INTEGER NOT NULL DEFAULT 0,
+   last_error TEXT,
+   provider_message_id TEXT,
+   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   sent_at TEXT,
+   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   FOREIGN KEY(ticket_order_id) REFERENCES ticket_orders(id),
+   FOREIGN KEY(ticket_id) REFERENCES tickets(id)
+  );
+ `);
+}
+
+async function asaas(path,options={}){try{return await asaasRequest(path,options)}catch(e){if(e.message==='ASAAS_API_KEY_NOT_CONFIGURED')e.code='ASAAS_NOT_CONFIGURED';throw e}}
+async function charge({name,phone,email,document,value,description,externalReference}){const customer=await asaas('/customers',{method:'POST',body:{name,cpfCnpj:document||undefined,mobilePhone:phone||undefined,email:email||undefined,externalReference:`NEXUS-${externalReference}`,notificationDisabled:false}});const due=new Date();due.setDate(due.getDate()+1);const dueDate=due.toISOString().slice(0,10);const payment=await asaas('/payments',{method:'POST',body:{customer:customer.id,billingType:'UNDEFINED',value:Number(value.toFixed(2)),dueDate,description,externalReference}});const pix=await asaas(`/payments/${payment.id}/pixQrCode`);return{customer,payment,pix}}
+function publicMenu(){const business=db.prepare("SELECT value FROM settings WHERE key='business_name'").get()?.value||'NEXUS Hospitality';const products=db.prepare(`SELECT id,name,category,description,image_url,price,stock,menu_featured FROM products WHERE active=1 AND menu_visible=1 ORDER BY menu_featured DESC,category,name`).all().map(x=>({...x,available:n(x.stock)>0}));return{business,products}}
+function eventPublic(id){return db.prepare(`SELECT e.*,COALESCE((SELECT SUM(CASE WHEN t.payment_status='PAID' THEN 1 ELSE 0 END) FROM tickets t WHERE t.event_id=e.id),0) sold FROM events e WHERE e.id=? AND e.public_sales=1`).get(n(id))}
+function parseTime(v,fallback){if(!v)return fallback;const t=new Date(v).getTime();return Number.isFinite(t)?t:fallback}
+function lotState(l){
+ const now=Date.now(),start=parseTime(l.starts_at,0),end=parseTime(l.ends_at,Infinity);
+ const status=String(l.status||'ACTIVE').trim().toUpperCase();
+ const capacity=n(l.quantity),sold=n(l.sold),unlimited=capacity<=0,remaining=unlimited?null:Math.max(0,capacity-sold);
+ if(status!=='ACTIVE')return{available:false,state:'INACTIVE',label:'INDISPONÃVEL',remaining,unlimited};
+ if(now<start)return{available:false,state:'UPCOMING',label:'EM BREVE',remaining,unlimited};
+ if(now>end)return{available:false,state:'ENDED',label:'VENDAS ENCERRADAS',remaining,unlimited};
+ if(!unlimited&&sold>=capacity)return{available:false,state:'SOLD_OUT',label:'ESGOTADO',remaining:0,unlimited};
+ if(!unlimited&&remaining<=10)return{available:true,state:'LAST_UNITS',label:'ÃšLTIMAS UNIDADES',remaining,unlimited};
+ return{available:true,state:'ON_SALE',label:'Ã€ VENDA',remaining,unlimited};
+}
+function lotAvailable(l){return lotState(l).available}
+
+function ticketPortalToken(){
+ return crypto.randomBytes(32).toString('hex');
+}
+
+function ticketPortalHash(value){
+ return crypto
+  .createHash('sha256')
+  .update(String(value||''))
+  .digest('hex');
+}
+
+function queueTicketDelivery(order,tickets){
+ const rows=Array.isArray(tickets)?tickets:[];
+ const email=txt(order?.buyer_email);
+ const phone=txt(order?.buyer_phone);
+
+ const exists=db.prepare(`
+  SELECT id
+  FROM ticket_delivery_outbox
+  WHERE ticket_order_id=?
+    AND ticket_id=?
+    AND channel=?
+ `);
+
+ const insert=db.prepare(`
+  INSERT INTO ticket_delivery_outbox(
+   ticket_order_id,
+   ticket_id,
+   channel,
+   destination,
+   status
+  )
+  VALUES(?,?,?,?,?)
+ `);
+
+ for(const ticket of rows){
+
+  if(email){
+
+   const current=exists.get(
+    order.id,
+    ticket.id,
+    'EMAIL'
+   );
+
+   if(!current){
+    insert.run(
+     order.id,
+     ticket.id,
+     'EMAIL',
+     email,
+     'QUEUED'
+    );
+   }
+  }
+
+  if(phone){
+
+   const current=exists.get(
+    order.id,
+    ticket.id,
+    'SMS'
+   );
+
+   if(!current){
+    insert.run(
+     order.id,
+     ticket.id,
+     'SMS',
+     phone,
+     'QUEUED'
+    );
+   }
+  }
+ }
+}
+function activatePublicOrder(orderId){const o=db.prepare('SELECT * FROM public_orders WHERE id=?').get(orderId);if(!o||o.delivery_id)return;const items=db.prepare('SELECT * FROM public_order_items WHERE order_id=?').all(orderId);const info=db.prepare(`INSERT INTO delivery_orders(customer_name,phone,order_type,address,status,total,payment_method,notes,delivery_fee,payment_status,public_order_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)`).run(o.customer_name,o.phone,o.order_type,o.address,'NEW',o.total,o.payment_method,o.notes,o.delivery_fee,'PAID',o.id);for(const x of items)db.prepare('INSERT INTO delivery_items(delivery_id,product_id,qty,unit_price,sale_mode,notes) VALUES(?,?,?,?,?,?)').run(info.lastInsertRowid,x.product_id,x.qty,x.unit_price,'UNIT',x.notes||null);db.prepare("UPDATE public_orders SET payment_status='PAID',status='RECEIVED',delivery_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").run(info.lastInsertRowid,o.id)}
+function activateTicketOrder(orderId){
+ const o=db.prepare(
+  'SELECT * FROM ticket_orders WHERE id=?'
+ ).get(orderId);
+
+ if(!o||o.payment_status==='PAID'){
+  return;
+ }
+
+ const lot=db.prepare(
+  'SELECT * FROM ticket_lots WHERE id=?'
+ ).get(o.lot_id);
+
+ if(
+  !lot ||
+  (
+   n(lot.quantity)>0 &&
+   n(lot.sold)+n(o.quantity)>n(lot.quantity)
+  )
+ ){
+  throw new Error('LOT_CAPACITY_EXCEEDED');
+ }
+
+ const portalToken=ticketPortalToken();
+ const portalHash=ticketPortalHash(portalToken);
+
+ const transaction=db.transaction(()=>{
+
+  for(let i=0;i<n(o.quantity);i++){
+
+   const ticketCode=uid('NX');
+
+   db.prepare(`
+    INSERT INTO tickets(
+     event_id,
+     lot_id,
+     attendee_name,
+     attendee_phone,
+     ticket_code,
+     ticket_type,
+     price,
+     payment_status,
+     payment_method,
+     qr_payload,
+     buyer_email,
+     buyer_document,
+     ticket_order_id
+    )
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+   `).run(
+    o.event_id,
+    o.lot_id,
+    o.buyer_name,
+    o.buyer_phone,
+    ticketCode,
+    lot.name,
+    n(lot.price),
+    'PAID',
+    'PIX',
+    ticketCode,
+    o.buyer_email,
+    o.buyer_document,
+    o.id
+   );
+  }
+
+  db.prepare(
+   'UPDATE ticket_lots SET sold=sold+? WHERE id=?'
+  ).run(
+   o.quantity,
+   o.lot_id
+  );
+
+  db.prepare(`
+   UPDATE ticket_orders
+   SET payment_status='PAID',
+       ticket_portal_token_hash=?,
+       ticket_portal_created_at=CURRENT_TIMESTAMP,
+       updated_at=CURRENT_TIMESTAMP
+   WHERE id=?
+  `).run(
+   portalHash,
+   o.id
+  );
+ });
+
+ transaction();
+
+ const currentOrder=db.prepare(
+  'SELECT * FROM ticket_orders WHERE id=?'
+ ).get(o.id);
+
+ const issued=db.prepare(
+  'SELECT * FROM tickets WHERE ticket_order_id=? ORDER BY id'
+ ).all(o.id);
+
+ queueTicketDelivery(
+  currentOrder,
+  issued
+ );
+
+ let experience=null;
+
+ try{
+  experience=connectPaidTicketOrder(
+   o.id
+  );
+ }catch(error){
+  console.error(
+   "[NEXUS_EVENT_EXPERIENCE]",
+   error?.message||error
+  );
+ }
+
+ return{
+  portal_token:portalToken,
+  tickets:issued,
+  experience
+ };
+}
+export function registerGrowthV12(app,{auth,minRole,audit}){
+ app.get('/api/public/store',(_q,res)=>res.json(publicMenu()));
+ app.post('/api/public/orders',async(req,res)=>{try{const b=req.body||{},items=Array.isArray(b.items)?b.items:[];if(!txt(b.customer_name)||!txt(b.phone)||!items.length)return res.status(400).json({error:'DADOS_DO_PEDIDO_OBRIGATORIOS'});const resolved=items.map(x=>{const p=db.prepare('SELECT * FROM products WHERE id=? AND active=1 AND menu_visible=1').get(n(x.product_id));if(!p||n(p.stock)<=0)throw new Error('PRODUTO_INDISPONIVEL');return{p,qty:Math.max(1,n(x.qty))}});const itemsTotal=resolved.reduce((s,x)=>s+x.qty*n(x.p.price),0),fee=b.order_type==='DELIVERY'?Math.max(0,n(b.delivery_fee)):0,total=itemsTotal+fee,publicCode=uid('PED');const info=db.prepare(`INSERT INTO public_orders(public_code,customer_name,phone,email,cpf_cnpj,order_type,address,notes,items_total,delivery_fee,total,payment_method) VALUES(?,?,?,?,?,?,?,?,?,?,?,'PIX')`).run(publicCode,txt(b.customer_name),txt(b.phone),txt(b.email)||null,txt(b.cpf_cnpj)||null,b.order_type==='DELIVERY'?'DELIVERY':'PICKUP',txt(b.address)||null,txt(b.notes)||null,itemsTotal,fee,total);for(const x of resolved)db.prepare('INSERT INTO public_order_items(order_id,product_id,name,qty,unit_price,notes) VALUES(?,?,?,?,?,?)').run(info.lastInsertRowid,x.p.id,x.p.name,x.qty,x.p.price,null);let pay=null;try{pay=await charge({name:txt(b.customer_name),phone:txt(b.phone),email:txt(b.email),document:txt(b.cpf_cnpj),value:total,description:`Pedido ${publicCode}`,externalReference:`ORDER:${info.lastInsertRowid}`});db.prepare('UPDATE public_orders SET asaas_customer_id=?,asaas_payment_id=?,invoice_url=?,pix_payload=?,pix_image=? WHERE id=?').run(pay.customer.id,pay.payment.id,pay.payment.invoiceUrl||null,pay.pix.payload||null,pay.pix.encodedImage||null,info.lastInsertRowid)}catch(e){if(e.code!=='ASAAS_NOT_CONFIGURED')throw e}const out=db.prepare('SELECT * FROM public_orders WHERE id=?').get(info.lastInsertRowid);res.status(201).json({...out,paymentConfigured:!!pay})}catch(e){res.status(400).json({error:e.message})}});
+ app.get('/api/public/orders/:code',(req,res)=>{const o=db.prepare('SELECT * FROM public_orders WHERE public_code=?').get(txt(req.params.code));if(!o)return res.status(404).json({error:'PEDIDO_NAO_ENCONTRADO'});res.json({...o,items:db.prepare('SELECT * FROM public_order_items WHERE order_id=?').all(o.id)})});
+ app.get('/api/public/my-ticket/:token',async(req,res)=>{
+ try{
+  const token=txt(req.params.token);
+
+  if(
+   !token ||
+   !/^[a-f0-9]{64}$/i.test(token)
+  ){
+   return res.status(404).json({
+    error:'INGRESSO_NAO_ENCONTRADO'
+   });
+  }
+
+  const hash=ticketPortalHash(token);
+
+  const order=db.prepare(`
+   SELECT
+    o.id,
+    o.order_code,
+    o.event_id,
+    o.lot_id,
+    o.buyer_name,
+    o.quantity,
+    o.total,
+    o.payment_status,
+    e.title AS event_title,
+    e.event_type,
+    e.artist_name,
+    e.venue_name,
+    e.starts_at,
+    e.ends_at,
+    e.image_url,
+    l.name AS lot_name
+   FROM ticket_orders o
+   JOIN events e
+    ON e.id=o.event_id
+   JOIN ticket_lots l
+    ON l.id=o.lot_id
+   WHERE o.ticket_portal_token_hash=?
+     AND o.payment_status='PAID'
+  `).get(hash);
+
+  if(!order){
+   return res.status(404).json({
+    error:'INGRESSO_NAO_ENCONTRADO'
+   });
+  }
+
+  const rawTickets=db.prepare(`
+   SELECT
+    id,
+    ticket_code,
+    attendee_name,
+    attendee_phone,
+    ticket_type,
+    price,
+    payment_status,
+    checkin_at
+   FROM tickets
+   WHERE ticket_order_id=?
+   ORDER BY id
+  `).all(order.id);
+
+  const tickets=await Promise.all(
+   rawTickets.map(async ticket=>({
+    ...ticket,
+
+    access_status:
+     ticket.checkin_at
+      ? 'USED'
+      : 'VALID',
+
+    qr_image:
+     await QRCode.toDataURL(
+      ticket.ticket_code,
+      {
+       width:520,
+       margin:2,
+       errorCorrectionLevel:'M'
+      }
+     )
+   }))
+  );
+
+  return res.json({
+   order:{
+    order_code:order.order_code,
+    buyer_name:order.buyer_name,
+    quantity:order.quantity,
+    total:order.total,
+    payment_status:order.payment_status
+   },
+
+   event:{
+    id:order.event_id,
+    title:order.event_title,
+    event_type:order.event_type,
+    artist_name:order.artist_name,
+    venue_name:order.venue_name,
+    starts_at:order.starts_at,
+    ends_at:order.ends_at,
+    image_url:order.image_url
+   },
+
+   lot:{
+    id:order.lot_id,
+    name:order.lot_name
+   },
+
+   tickets
+  });
+
+ }catch(e){
+
+  console.error(
+   '[TICKET_PORTAL]',
+   e
+  );
+
+  return res.status(500).json({
+   error:'TICKET_PORTAL_INTERNAL_ERROR'
+  });
+ }
+});
+app.get('/api/public/events',(_q,res)=>res.json(db.prepare(`SELECT e.*,COALESCE((SELECT SUM(CASE WHEN t.payment_status='PAID' THEN 1 ELSE 0 END) FROM tickets t WHERE t.event_id=e.id),0) sold FROM events e WHERE e.public_sales=1 AND COALESCE(e.status,'') NOT IN ('CANCELLED','DRAFT') ORDER BY datetime(e.starts_at) ASC`).all()));
+ app.get('/api/public/events/:id',(req,res)=>{const e=eventPublic(req.params.id);if(!e)return res.status(404).json({error:'EVENTO_NAO_ENCONTRADO'});const lots=db.prepare('SELECT * FROM ticket_lots WHERE event_id=? ORDER BY id').all(e.id).map(x=>({...x,...lotState(x)}));res.json({...e,lots})});
+ app.post('/api/public/events/:id/buy',async(req,res)=>{
+ try{
+  /* CUSTOMER_LINKED_PUBLIC_BUY_V26 */
+
+  const b=req.body||{};
+  const e=eventPublic(req.params.id);
+  const lot=db.prepare(
+   'SELECT * FROM ticket_lots WHERE id=? AND event_id=?'
+  ).get(
+   n(b.lot_id),
+   n(req.params.id)
+  );
+
+  if(!e||!lot){
+   return res.status(404).json({
+    error:'EVENTO_OU_LOTE_NAO_ENCONTRADO'
+   });
+  }
+
+  const now=Date.now();
+  const salesStart=e.sales_starts_at
+   ?new Date(e.sales_starts_at).getTime()
+   :0;
+
+  const salesEnd=e.sales_ends_at
+   ?new Date(e.sales_ends_at).getTime()
+   :(e.starts_at
+      ?new Date(e.starts_at).getTime()
+      :Infinity);
+
+  if(now<salesStart){
+   return res.status(409).json({
+    error:'VENDAS_AINDA_NAO_INICIADAS'
+   });
+  }
+
+  if(now>salesEnd){
+   return res.status(409).json({
+    error:'VENDAS_ENCERRADAS'
+   });
+  }
+
+  const qty=Math.max(
+   1,
+   Math.min(
+    10,
+    Math.floor(n(b.quantity)||1)
+   )
+  );
+
+  const ls=lotState(lot);
+
+  if(
+   !ls.available ||
+   (
+    !ls.unlimited &&
+    n(lot.sold)+qty>n(lot.quantity)
+   )
+  ){
+   return res.status(409).json({
+    error:'LOTE_INDISPONIVEL',
+    lot_state:ls.state
+   });
+  }
+
+  let ticketCustomer=null;
+
+  const rawCustomerSession=
+   txt(req.headers['x-nexus-customer-session']);
+
+  if(/^[a-f0-9]{64}$/i.test(rawCustomerSession)){
+
+   const customerSessionHash=
+    crypto
+     .createHash('sha256')
+     .update(rawCustomerSession)
+     .digest('hex');
+
+   ticketCustomer=db.prepare(`
+    SELECT c.*
+    FROM ticket_customer_sessions s
+    JOIN ticket_customers c
+     ON c.id=s.customer_id
+    WHERE s.token_hash=?
+      AND s.revoked_at IS NULL
+      AND datetime(s.expires_at)>CURRENT_TIMESTAMP
+      AND c.status='ACTIVE'
+   `).get(customerSessionHash)||null;
+  }
+
+  const buyerName=
+   ticketCustomer?.full_name ||
+   txt(b.name);
+
+  const buyerPhone=
+   ticketCustomer?.phone ||
+   txt(b.phone);
+
+  const buyerEmail=
+   ticketCustomer?.email ||
+   txt(b.email);
+
+  const buyerDocument=
+   ticketCustomer?.document ||
+   txt(b.document);
+
+  if(!buyerName||!buyerPhone){
+   return res.status(400).json({
+    error:'DADOS_DO_COMPRADOR_OBRIGATORIOS'
+   });
+  }
+
+  /*
+   * Age enforcement for authenticated wallet customers.
+   */
+  if(ticketCustomer && e.starts_at){
+
+   const eventDate=
+    new Date(e.starts_at);
+
+   const birth=
+    new Date(
+     ticketCustomer.birth_date+'T12:00:00'
+    );
+
+   let age=
+    eventDate.getFullYear()-
+    birth.getFullYear();
+
+   const month=
+    eventDate.getMonth()-
+    birth.getMonth();
+
+   if(
+    month<0 ||
+    (
+     month===0 &&
+     eventDate.getDate()<birth.getDate()
+    )
+   ){
+    age--;
+   }
+
+   const minimumAge=
+    Number(e.minimum_age||0);
+
+   const minorPolicy=
+    String(
+     e.minor_policy||'UNRESTRICTED'
+    ).toUpperCase();
+
+   if(
+    minimumAge>0 &&
+    age<minimumAge &&
+    minorPolicy==='BLOCK'
+   ){
+    return res.status(403).json({
+     error:'IDADE_MINIMA_NAO_ATENDIDA',
+     age,
+     minimum_age:minimumAge
+    });
+   }
+  }
+
+  const total=n(lot.price)*qty;
+  const orderCode=uid('ING');
+
+  const info=db.prepare(`
+   INSERT INTO ticket_orders(
+    order_code,
+    event_id,
+    lot_id,
+    buyer_name,
+    buyer_phone,
+    buyer_email,
+    buyer_document,
+    quantity,
+    total,
+    ticket_customer_id
+   )
+   VALUES(?,?,?,?,?,?,?,?,?,?)
+  `).run(
+   orderCode,
+   e.id,
+   lot.id,
+   buyerName,
+   buyerPhone,
+   buyerEmail||null,
+   buyerDocument||null,
+   qty,
+   total,
+   ticketCustomer?.id||null
+  );
+
+  let pay=null;
+
+  try{
+   pay=await charge({
+    name:buyerName,
+    phone:buyerPhone,
+    email:buyerEmail,
+    document:buyerDocument,
+    value:total,
+    description:
+     `${e.title} - ${lot.name} - ${qty} ingresso(s)`,
+    externalReference:
+     `TICKET:${info.lastInsertRowid}`
+   });
+
+   db.prepare(`
+    UPDATE ticket_orders
+    SET
+     asaas_customer_id=?,
+     asaas_payment_id=?,
+     invoice_url=?,
+     pix_payload=?,
+     pix_image=?
+    WHERE id=?
+   `).run(
+    pay.customer.id,
+    pay.payment.id,
+    pay.payment.invoiceUrl||null,
+    pay.pix.payload||null,
+    pay.pix.encodedImage||null,
+    info.lastInsertRowid
+   );
+
+  }catch(err){
+
+   if(err.code!=='ASAAS_NOT_CONFIGURED'){
+    throw err;
+   }
+  }
+
+  return res.status(201).json({
+   ...db.prepare(`
+    SELECT *
+    FROM ticket_orders
+    WHERE id=?
+   `).get(info.lastInsertRowid),
+   paymentConfigured:!!pay
+  });
+
+ }catch(e){
+  console.error(
+   'CUSTOMER_LINKED_PUBLIC_BUY_ERROR',
+   e
+  );
+
+  res.status(400).json({
+   error:e.message
+  });
+ }
+});
+ app.get('/api/public/ticket-orders/:code',async(req,res)=>{const o=db.prepare('SELECT * FROM ticket_orders WHERE order_code=?').get(txt(req.params.code));if(!o)return res.status(404).json({error:'COMPRA_NAO_ENCONTRADA'});let tickets=o.payment_status==='PAID'?db.prepare('SELECT ticket_code,attendee_name,ticket_type,price,checkin_at FROM tickets WHERE ticket_order_id=?').all(o.id):[];tickets=await Promise.all(tickets.map(async t=>({...t,qr_image:await QRCode.toDataURL(t.ticket_code,{width:360,margin:2,errorCorrectionLevel:'M'})})));res.json({...o,tickets})});
+ app.post('/api/webhooks/asaas',(req,res)=>{try{const expected=asaasWebhookToken(),received=req.headers['asaas-access-token'];if(!expected)return res.status(503).json({error:'WEBHOOK_TOKEN_NOT_CONFIGURED'});if(received!==expected)return res.status(401).json({error:'INVALID_WEBHOOK_TOKEN'});const ev=txt(req.body?.event),p=req.body?.payment||{},ref=txt(p.externalReference),eventId=txt(req.body?.id)||`${ev}:${txt(p.id)}:${txt(p.status)}`;const seen=db.prepare('SELECT event_id FROM asaas_webhook_events WHERE event_id=?').get(eventId);if(seen)return res.json({received:true,duplicate:true});db.prepare('INSERT INTO asaas_webhook_events(event_id,event_type,payment_id,external_reference) VALUES(?,?,?,?)').run(eventId,ev,txt(p.id)||null,ref||null);if(['PAYMENT_RECEIVED','PAYMENT_CONFIRMED'].includes(ev)){if(ref.startsWith('ORDER:'))activatePublicOrder(n(ref.split(':')[1]));if(ref.startsWith('TICKET:'))activateTicketOrder(n(ref.split(':')[1]))}res.json({received:true})}catch(e){res.status(500).json({error:e.message})}});
+ app.get('/api/v12/growth',auth,minRole(55),(_req,res)=>{const days=db.prepare(`SELECT strftime('%w',s.created_at,'localtime') dow,COUNT(*) sales,COALESCE(SUM(s.total),0) revenue FROM sales s WHERE s.status='PAID' AND datetime(s.created_at)>=datetime('now','-56 days') GROUP BY dow`).all();const products=db.prepare(`SELECT p.id,p.name,p.category,p.stock,p.minimum_stock,p.cost,p.price,p.target_margin,p.suggested_price,p.unit_type,p.package_ml,p.dose_ml,p.stock_factor,p.stock_unit,COALESCE(SUM(CASE WHEN datetime(s.created_at)>=datetime('now','-30 days') THEN si.qty ELSE 0 END),0) qty30,COALESCE(SUM(CASE WHEN datetime(s.created_at)>=datetime('now','-30 days') THEN si.qty*si.unit_price ELSE 0 END),0) revenue30 FROM products p LEFT JOIN sale_items si ON si.product_id=p.id LEFT JOIN sales s ON s.id=si.sale_id AND s.status='PAID' WHERE p.active=1 GROUP BY p.id ORDER BY qty30 DESC`).all();const pricingPolicy=db.prepare('SELECT * FROM pricing_policies WHERE id=1').get()||{default_margin:55,min_margin:35,rounding:.5};
+const growthPriceSuggestion=(cost,margin,rounding=.5)=>{cost=n(cost);margin=Math.min(95,Math.max(1,n(margin)));if(cost<=0)return 0;let price=cost/(1-margin/100);rounding=Math.max(.01,n(rounding));return Math.round((Math.ceil(price/rounding)*rounding)*100)/100};
+const recommendations=products.map(p=>{
+const packageMl=n(p.package_ml),doseMl=n(p.dose_ml),factor=n(p.stock_factor)||1;
+const fractionConfigured=packageMl>0&&doseMl>0&&packageMl>=doseMl;
+const dosesPerPackage=fractionConfigured?(packageMl/doseMl)*factor:1;
+const effectiveCost=fractionConfigured&&dosesPerPackage>0?n(p.cost)/dosesPerPackage:n(p.cost);
+const targetMargin=n(p.target_margin)||n(pricingPolicy.default_margin)||55;
+const suggestedPrice=growthPriceSuggestion(effectiveCost,targetMargin,pricingPolicy.rounding);
+const currentMargin=n(p.price)>0?Math.round(((n(p.price)-effectiveCost)/n(p.price)*100)*100)/100:0;
+const priceGap=Math.round((suggestedPrice-n(p.price))*100)/100;
+const pricingMode=fractionConfigured?'FRACTION':'UNIT';
+const fractionNeedsConfig=!fractionConfigured&&n(p.cost)>n(p.price)*2;
+const daily=n(p.qty30)/30,cover=daily>0?n(p.stock)/daily:999,target=Math.max(n(p.minimum_stock),daily*7),buy=Math.max(0,Math.ceil(target-n(p.stock)));let action='MANTER';if(daily===0&&n(p.stock)>0)action='NAO_COMPRAR';else if(cover<3)action='COMPRAR_URGENTE';else if(cover<7)action='COMPRAR';else if(cover>21)action='REDUZIR_COMPRA';return{...p,effective_cost:Math.round(effectiveCost*100)/100,pricing_mode:pricingMode,fraction_configured:fractionConfigured,fraction_needs_config:fractionNeedsConfig,doses_per_package:Math.round(dosesPerPackage*100)/100,target_margin:targetMargin,current_margin:currentMargin,suggested_price:suggestedPrice,price_gap:priceGap,daily_avg:daily,coverage_days:cover===999?null:cover,recommended_stock:target,recommended_buy:buy,action}});const names=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];const week=Array.from({length:7},(_,i)=>{const r=days.find(x=>n(x.dow)===i)||{sales:0,revenue:0};return{dow:i,day:names[i],sales:n(r.sales),revenue:n(r.revenue)}});const avg=week.reduce((s,x)=>s+x.revenue,0)/7;const weak=week.filter(x=>x.revenue<avg*.75).map(x=>({...x,idea:`Dia abaixo da média: criar ação com produto de boa margem e estoque disponível para ${x.day}.`}));res.json({generated_at:new Date().toISOString(),week,weekly_average:avg,weak_days:weak,top:products.slice(0,8),low:[...products].sort((a,b)=>n(a.qty30)-n(b.qty30)).slice(0,8),purchasing:recommendations.sort((a,b)=>n(b.recommended_buy)-n(a.recommended_buy))})});
+ app.patch('/api/v12/events/:id',auth,minRole(60),(req,res)=>{const b=req.body||{};db.prepare(`UPDATE events SET public_sales=COALESCE(?,public_sales),sales_starts_at=COALESCE(?,sales_starts_at),sales_ends_at=COALESCE(?,sales_ends_at),description=COALESCE(?,description),image_url=COALESCE(?,image_url),status=COALESCE(?,status),ends_at=COALESCE(?,ends_at) WHERE id=?`).run(b.public_sales==null?null:(b.public_sales?1:0),b.sales_starts_at??null,b.sales_ends_at??null,b.description??null,b.image_url??null,b.status??null,b.ends_at??null,n(req.params.id));audit(req.user.id,'UPDATE','EVENT_PUBLIC',req.params.id,b);res.json({ok:true})});
+}
+
+
+
+
+============================================================
+ FIM
+ NENHUM ARQUIVO DO SISTEMA FOI ALTERADO
+============================================================

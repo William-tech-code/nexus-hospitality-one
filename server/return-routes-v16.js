@@ -1,4 +1,4 @@
-﻿import { db } from './db.js';
+import { db } from './db.js';
 
 import {
   validateReturnRequest,
@@ -7,6 +7,7 @@ import {
   calculateReturnTotal,
   returnCoverage
 } from './return-engine-v16.js';
+import { tenantContext } from './tenant-guard.js';
 
 const n = v => Number(v || 0);
 
@@ -33,7 +34,7 @@ function roleLevel(user) {
   ] || 0;
 }
 
-function saleDetail(id) {
+function saleDetail(id, tenantId) {
 
   const sale = db.prepare(`
     SELECT
@@ -46,7 +47,8 @@ function saleDetail(id) {
     LEFT JOIN users ru
       ON ru.id = s.released_by
     WHERE s.id = ?
-  `).get(n(id));
+      AND s.tenant_id = ?
+  `).get(n(id),n(tenantId));
 
   if (!sale) return null;
 
@@ -275,6 +277,7 @@ export function registerReturnRoutesV16(
   app.post(
     '/api/v16/sales/:id/return-preview',
     auth,
+    tenantContext,
     minRole(80),
     (req,res) => {
 
@@ -282,7 +285,7 @@ export function registerReturnRoutesV16(
 
         const id = n(req.params.id);
 
-        const sale = saleDetail(id);
+        const sale = saleDetail(id, req.tenantId);
 
         if (!sale) {
           return res.status(404).json({
@@ -355,6 +358,7 @@ export function registerReturnRoutesV16(
   app.post(
     '/api/v16/sales/:id/return',
     auth,
+    tenantContext,
     minRole(80),
     (req,res) => {
 
@@ -379,7 +383,11 @@ export function registerReturnRoutesV16(
           SELECT *
           FROM sales
           WHERE id = ?
-        `).get(id);
+            AND tenant_id = ?
+        `).get(
+          id,
+          req.tenantId
+        );
 
         if (!sale) {
           return res.status(404).json({
@@ -445,14 +453,16 @@ export function registerReturnRoutesV16(
               sale_id,
               reason,
               total,
-              user_id
+              user_id,
+              tenant_id
             )
-            VALUES(?,?,?,?)
+            VALUES(?,?,?,?,?)
           `).run(
             id,
             reason,
             returnTotal,
-            req.user.id
+            req.user.id,
+            req.tenantId
           );
 
           const returnId =
@@ -464,9 +474,10 @@ export function registerReturnRoutesV16(
               sale_item_id,
               product_id,
               qty,
-              amount
+              amount,
+              tenant_id
             )
-            VALUES(?,?,?,?,?)
+            VALUES(?,?,?,?,?,?)
           `);
 
           for (const item of normalized.requested) {
@@ -479,7 +490,8 @@ export function registerReturnRoutesV16(
               r(
                 n(item.requested_qty) *
                 n(item.unit_price)
-              )
+              ),
+              req.tenantId
             );
           }
 

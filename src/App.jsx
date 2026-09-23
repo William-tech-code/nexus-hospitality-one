@@ -2,13 +2,15 @@ import EventCommandCenterV38 from "./EventCommandCenterV38.jsx";
 import PublicEventsPremiumV33 from "./PublicEventsPremiumV33.jsx";
 import EventMagicAccessV32 from "./EventMagicAccessV32.jsx";
 import FinancialGrowthDashboardV25 from "./FinancialGrowthDashboardV25.jsx";
+import NexusGrowthIntelligenceV1 from "./NexusGrowthIntelligenceV1.jsx";
 import CustomerWalletV26 from "./CustomerWalletV26.jsx";
 import InventoryV49A from './InventoryV49A.jsx';
 import React,{useEffect,useMemo,useState}from'react';import{api,setAuthToken}from'./api.js';import OperationalV03 from './OperationalV03.jsx';import RecipeV04 from './RecipeV04.jsx';import {AIPulse} from './PremiumV05.jsx';import {InventoryV06,CustomersV06,ReservationsV06,DeliveryV06,EventsV06,FiscalV06,ReportsV06} from './SuiteV06.jsx';import SmartPOSV16 from './SmartPOSV16.jsx';import {MenuV11,PublicMenuV11,SalonV11,DeliveryV11} from './OperationsV11.jsx';
 import TicketsV15 from './TicketsV15.jsx';import TicketOrderCenterV25 from './TicketOrderCenterV25.jsx';import GateScannerV25 from './GateScannerV25.jsx';import {PublicCommerceV12,PublicEventsV12,GrowthCenterV12,EventsAdminV12,GateScannerV12} from './GrowthV12.jsx';import {SupplierQuotePublicV13} from './BusinessV13.jsx';
 import BusinessV15 from './BusinessV15.jsx';
 import CustomerTicketPortalV25 from './CustomerTicketPortalV25.jsx';
-import RecentSalesV16 from "./RecentSalesV16.jsx";
+import RecentSalesV16 from "./RecentSalesV16.jsx";
+import {resolveSaasPublicPage} from './SaasCommercialV1.jsx';
 class RecentSalesErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -63,6 +65,9 @@ class RecentSalesErrorBoundary extends React.Component {
 const money=v=>Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2,maximumFractionDigits:2});const pct=v=>`${Number(v||0).toLocaleString('pt-BR',{maximumFractionDigits:1})}%`;const numBR=v=>Number(v||0).toLocaleString('pt-BR',{maximumFractionDigits:2});const roleLabel={OWNER:'Proprietário',MANAGER:'Gerente',FINANCE:'Financeiro',EVENTS:'Eventos',STOCK:'Estoque',CASHIER:'Caixa',WAITER:'Garçom',KITCHEN:'Cozinha'};const roleLevel={OWNER:100,MANAGER:80,FINANCE:70,EVENTS:60,STOCK:55,CASHIER:50,WAITER:40,KITCHEN:30};
 const icons={negocio:'?',crescimento:'?',ingressos:'?',dashboard:'?',caixa:'?',comandas:'?',mesas:'?',cozinha:'?',bebidas:'?',receitas:'?',compras:'?',estoque:'?',financeiro:'?',performance:'?',equipe:'?',cardapio:'?',metas:'?',ia:'?',eventos:'?',fiscal:'?',clientes:'?',reservas:'?',delivery:'?',relatorios:'?',configuracoes:'?'};
 export default function App(){
+  const saasPublicPage=resolveSaasPublicPage();
+  if(saasPublicPage)return saasPublicPage;
+
 
   /* NEXUS_FINANCIAL_GROWTH_ROUTE_V25 */
   if(
@@ -110,13 +115,104 @@ if(customerWalletRoute){
     );
   }
 const cleanPath=location.pathname.replace(/\/+$/,'')||'/';const eventMatch=cleanPath.match(/^\/eventos\/(\d+)$/);const supplierQuoteMatch=cleanPath.match(/^\/fornecedor\/cotacao\/([^/]+)$/);if(supplierQuoteMatch)return <SupplierQuotePublicV13 token={supplierQuoteMatch[1]}/>;if(cleanPath==='/cardapio'||cleanPath==='/loja'||new URLSearchParams(location.search).get('menu')==='public')return <PublicCommerceV12/>;if(cleanPath==='/eventos')return <PublicEventsPremiumV33/>;if(eventMatch)return <PublicEventsPremiumV33 eventId={eventMatch[1]}/>;
- const[introDone,setIntroDone]=useState(false),[user,setUser]=useState(null),[authChecking,setAuthChecking]=useState(true),[tab,setTab]=useState('dashboard');const[data,setData]=useState(null),[products,setProducts]=useState([]),[orders,setOrders]=useState([]),[expenses,setExpenses]=useState([]),[goals,setGoals]=useState([]),[employees,setEmployees]=useState([]),[performance,setPerformance]=useState(null),[cash,setCash]=useState(null),[closing,setClosing]=useState(null),[loading,setLoading]=useState(false);
+ const[introDone,setIntroDone]=useState(false),[user,setUser]=useState(null),[authChecking,setAuthChecking]=useState(true),[tab,setTab]=useState('dashboard');
+ /* NEXUS_FIRST_ACCESS_GATE_STATE_V2 */
+ const[nexusFirstAccess,setNexusFirstAccess]=useState(null),[nexusFirstAccessChecking,setNexusFirstAccessChecking]=useState(false),[nexusFirstAccessChecked,setNexusFirstAccessChecked]=useState(false);const[data,setData]=useState(null),[products,setProducts]=useState([]),[orders,setOrders]=useState([]),[expenses,setExpenses]=useState([]),[goals,setGoals]=useState([]),[employees,setEmployees]=useState([]),[performance,setPerformance]=useState(null),[cash,setCash]=useState(null),[closing,setClosing]=useState(null),[loading,setLoading]=useState(false);
  useEffect(()=>{api.me().then(r=>setUser(r.user)).catch(()=>setAuthToken('')).finally(()=>setAuthChecking(false))},[]);
+ /* NEXUS_FIRST_ACCESS_GATE_EFFECT_V2 */
+ useEffect(()=>{
+   let alive=true;
+
+   if(!user){
+     setNexusFirstAccess(null);
+     setNexusFirstAccessChecked(false);
+     setNexusFirstAccessChecking(false);
+     return ()=>{alive=false};
+   }
+
+   setNexusFirstAccessChecking(true);
+
+   api.firstAccessStatusV1()
+     .then(result=>{
+       if(!alive)return;
+       setNexusFirstAccess(result);
+       setNexusFirstAccessChecked(true);
+     })
+     .catch(error=>{
+       console.error(
+         'NEXUS_FIRST_ACCESS_STATUS_ERROR',
+         error
+       );
+
+       /*
+        * Fail-open:
+        * falha temporaria no status nao pode bloquear
+        * caixa, mesas ou operacao do estabelecimento.
+        */
+       if(!alive)return;
+       setNexusFirstAccess(null);
+       setNexusFirstAccessChecked(true);
+     })
+     .finally(()=>{
+       if(alive){
+         setNexusFirstAccessChecking(false);
+       }
+     });
+
+   return ()=>{
+     alive=false;
+   };
+ },[user]);
+
+ async function nexusRefreshFirstAccess(){
+   try{
+     const result=
+       await api.firstAccessStatusV1();
+
+     setNexusFirstAccess(result);
+     setNexusFirstAccessChecked(true);
+
+     return result;
+   }catch(error){
+     console.error(
+       'NEXUS_FIRST_ACCESS_REFRESH_ERROR',
+       error
+     );
+     return null;
+   }
+ }
+
+ const nexusMustCompleteGrowth=
+   Boolean(
+     user &&
+     nexusFirstAccessChecked &&
+     nexusFirstAccess?.commercial?.first_access_required===true
+   );
+
  async function load(){if(!user)return;setLoading(true);try{const[d,p,o,e,g,em,pe,ca]=await Promise.all([api.dashboard(),api.products(),api.orders(),api.expenses(),api.goals(),api.employees(),api.performance(),api.currentCash()]);setData(d);setProducts(p);setOrders(o);setExpenses(e);setGoals(g);setEmployees(em);setPerformance(pe);setCash(ca);setClosing(await api.closingPlan(d.snapshot.todayRevenue))}catch(err){if(err.status===401){setAuthToken('');setUser(null)}}finally{setLoading(false)}}
  useEffect(()=>{load()},[user]);
  async function doLogin(email,password){const r=await api.login({email,password});setAuthToken(r.token);setUser(r.user)}async function doLogout(){try{await api.logout()}catch{}setAuthToken('');setUser(null);setData(null);setIntroDone(false)}
  if(!introDone)return <CinematicIntro ready={!authChecking} onEnter={()=>setIntroDone(true)}/>;if(authChecking)return <Boot/>;if(!user)return <Login onLogin={doLogin}/>;if(loading&&!data)return <Boot/>;
- const level=roleLevel[user.role]||0;const nav=[['dashboard','Visão Geral',0],['negocio','Inteligência & Crescimento',50],['crescimento','Crescimento & Compras',55],['caixa','Caixa Inteligente',40],['vendas','Ultimas Vendas',40],['mesas','Mesas & Salão',30],['ingressos','Ingressos & Acesso',40],['comandas','Comandas',30],['cozinha','Cozinha KDS',30],['bebidas','Bebidas & Doses',55],['receitas','Fichas & Drinks',55],['estoque','Estoque Inteligente',55],['compras','Compras & Cotações',55],['financeiro','Financeiro',70],['clientes','Clientes & CRM',40],['reservas','Reservas',40],['delivery','Delivery & Retirada',40],['performance','Performance & Rewards',80],['equipe','Equipe & Acessos',80],['cardapio','Cardápio & QR',40],['metas','Metas & Conquistas',40],['eventos','Eventos - legado',999],['ia','NEXUS AI',80],['fiscal','Fiscal & Smart Capture',70],['relatorios','Relatórios',50],['configuracoes','Configurações',80]].filter(([, ,min])=>level>=min);
+ 
+ /* NEXUS_FIRST_ACCESS_PRIVATE_GATE_V2 */
+
+ if(
+   user &&
+   nexusFirstAccessChecking &&
+   !nexusFirstAccessChecked
+ ){
+   return <Boot/>;
+ }
+
+ if(nexusMustCompleteGrowth){
+   return(
+     <NexusGrowthIntelligenceV1
+       firstAccessMode={true}
+       onCompleted={nexusRefreshFirstAccess}
+     />
+   );
+ }
+ const level=roleLevel[user.role]||0;const nav=[['dashboard','Visão Geral',0],['negocio','Inteligência & Crescimento',30],['crescimento','Crescimento & Compras',55],['caixa','Caixa Inteligente',40],['vendas','Ultimas Vendas',40],['mesas','Mesas & Salão',30],['ingressos','Ingressos & Acesso',40],['comandas','Comandas',30],['cozinha','Cozinha KDS',30],['bebidas','Bebidas & Doses',55],['receitas','Fichas & Drinks',55],['estoque','Estoque Inteligente',55],['compras','Compras & Cotações',55],['financeiro','Financeiro',70],['clientes','Clientes & CRM',40],['reservas','Reservas',40],['delivery','Delivery & Retirada',40],['performance','Performance & Rewards',80],['equipe','Equipe & Acessos',80],['cardapio','Cardápio & QR',40],['metas','Metas & Conquistas',40],['eventos','Eventos - legado',999],['ia','NEXUS AI',80],['fiscal','Fiscal & Smart Capture',70],['relatorios','Relatórios',50],['configuracoes','Configurações',80]].filter(([, ,min])=>level>=min);
  return <div className="app-shell"><aside className="sidebar nexus-sidebar-v42"><div className="brand"><div className="brand-mark">N</div><div><strong>NEXUS</strong><small>HOSPITALITY ONE</small></div></div><nav className="nxv42-nav">
   {nav.filter(([k])=>k==='dashboard').map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={tab===k?'active nxv42-home':'nxv42-home'}><span>{icons[k]}</span>{l}</button>)}
   {[
@@ -128,7 +224,7 @@ const cleanPath=location.pathname.replace(/\/+$/,'')||'/';const eventMatch=clean
     ['INTELIGÊNCIA & SISTEMA',['negocio','crescimento','ia','fiscal','relatorios','configuracoes']]
   ].map(([group,keys],gi)=>{const items=nav.filter(([k])=>keys.includes(k));if(!items.length)return null;const active=items.some(([k])=>k===tab);return <details className={`nxv42-group ${active?'has-active':''}`} name="nexus-sidebar-v43" key={group} open={active?true:undefined}><summary><span>{group}</span><i>+</i></summary><div className="nxv42-items">{items.map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={tab===k?'active':''}><span>{icons[k]}</span>{l}</button>)}</div></details>})}
 </nav><div className="side-foot"><span><i className="live-dot"/> OPERATIONAL CORE</span><small>Real Operation Core • v1.4.0</small></div></aside><main><header className="topbar"><div><small>{greeting().toUpperCase()} • {roleLabel[user.role]||user.role}</small><h1>{data?.businessName||'NEXUS Hospitality One'}</h1></div><div className="top-actions"><span className="user-pill"><b>{initials(user.name)}</b><span>{user.name}<small>{roleLabel[user.role]||user.role}</small></span></span><button className="ghost" onClick={doLogout}>Sair</button><button className="primary" onClick={()=>setTab('caixa')}>+ Nova venda</button></div></header>
- {tab==='negocio'&&<GrowthCenterV12/>} {tab==='crescimento'&&<GrowthCenterV12/>} {tab==='dashboard'&&<><Dashboard data={data} closing={closing} cash={cash}/><div className="v05-ai-wrap"><AIPulse onNavigate={setTab}/></div></>} {tab==='caixa'&&<SmartPOSV16 products={products} employees={employees} cash={cash} user={user} onDone={load}/>} {tab==='vendas'&&<RecentSalesErrorBoundary><RecentSalesV16 user={user}/></RecentSalesErrorBoundary>}{tab==='mesas'&&<SalonV11 products={products} employees={employees}/>} {tab==='ingressos'&&<EventCommandCenterV38/>} {tab==='comandas'&&<OperationalV03 mode="orders" products={products} employees={employees} onDone={load}/>} {tab==='cozinha'&&<OperationalV03 mode="kds" products={products} employees={employees} onDone={load}/>} {tab==='bebidas'&&<OperationalV03 mode="beverages" products={products} employees={employees} onDone={load}/>} {tab==='receitas'&&<RecipeV04 products={products} onDone={load}/>} {tab==='estoque'&&<InventoryV49A onDone={load}/>}  {tab==='compras'&&<OperationalV03 mode="procurement" products={products} employees={employees} onDone={load}/>} {tab==='financeiro'&&<Finance expenses={expenses} closing={closing} onDone={load}/>} {tab==='clientes'&&<CustomersV06/>} {tab==='reservas'&&<ReservationsV06/>} {tab==='delivery'&&<DeliveryV11 products={products}/>} {tab==='performance'&&<Performance data={performance} products={products} employees={employees} onDone={load}/>} {tab==='equipe'&&<Team user={user} employees={employees} onDone={load}/>} {tab==='cardapio'&&<MenuV11/>} {tab==='metas'&&<Goals goals={goals} snapshot={data?.snapshot} employees={employees} onDone={load}/>} {tab==='eventos'&&<EventsAdminV12/>} {tab==='ia'&&<OwnerAI data={data} closing={closing} performance={performance}/>} {tab==='fiscal'&&<FiscalV06/>} {tab==='relatorios'&&<ReportsV06/>} {tab==='configuracoes'&&<Settings user={user} onDone={load}/>}</main></div>
+ {tab==='negocio'&&<NexusGrowthIntelligenceV1/>} {tab==='crescimento'&&<GrowthCenterV12/>} {tab==='dashboard'&&<><Dashboard data={data} closing={closing} cash={cash}/><div className="v05-ai-wrap"><AIPulse onNavigate={setTab}/></div></>} {tab==='caixa'&&<SmartPOSV16 products={products} employees={employees} cash={cash} user={user} onDone={load}/>} {tab==='vendas'&&<RecentSalesErrorBoundary><RecentSalesV16 user={user}/></RecentSalesErrorBoundary>}{tab==='mesas'&&<SalonV11 products={products} employees={employees}/>} {tab==='ingressos'&&<EventCommandCenterV38/>} {tab==='comandas'&&<OperationalV03 mode="orders" products={products} employees={employees} onDone={load}/>} {tab==='cozinha'&&<OperationalV03 mode="kds" products={products} employees={employees} onDone={load}/>} {tab==='bebidas'&&<OperationalV03 mode="beverages" products={products} employees={employees} onDone={load}/>} {tab==='receitas'&&<RecipeV04 products={products} onDone={load}/>} {tab==='estoque'&&<InventoryV49A onDone={load}/>}  {tab==='compras'&&<OperationalV03 mode="procurement" products={products} employees={employees} onDone={load}/>} {tab==='financeiro'&&<Finance expenses={expenses} closing={closing} onDone={load}/>} {tab==='clientes'&&<CustomersV06/>} {tab==='reservas'&&<ReservationsV06/>} {tab==='delivery'&&<DeliveryV11 products={products}/>} {tab==='performance'&&<Performance data={performance} products={products} employees={employees} onDone={load}/>} {tab==='equipe'&&<Team user={user} employees={employees} onDone={load}/>} {tab==='cardapio'&&<MenuV11/>} {tab==='metas'&&<Goals goals={goals} snapshot={data?.snapshot} employees={employees} onDone={load}/>} {tab==='eventos'&&<EventsAdminV12/>} {tab==='ia'&&<OwnerAI data={data} closing={closing} performance={performance}/>} {tab==='fiscal'&&<FiscalV06/>} {tab==='relatorios'&&<ReportsV06/>} {tab==='configuracoes'&&<Settings user={user} onDone={load}/>}</main></div>
 }
 function greeting(){const h=new Date().getHours();return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'}function initials(n=''){return n.split(' ').filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()}
 function Boot(){return <div className="boot"><div className="orb"/><b>NEXUS</b><span>sincronizando Enterprise Foundation</span></div>}

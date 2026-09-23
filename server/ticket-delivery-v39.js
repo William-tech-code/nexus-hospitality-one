@@ -1,4 +1,5 @@
-﻿import { db } from "./db.js";
+import { db } from "./db.js";
+import { tenantContext } from './tenant-guard.js';
 
 const txt = value =>
   String(value ?? "").trim();
@@ -936,6 +937,7 @@ function registerTicketDeliveryV39(
   app.get(
     "/api/v39/ticket-delivery/status",
     auth,
+    tenantContext,
     minRole(60),
     (req,res)=>{
       try{
@@ -963,6 +965,7 @@ function registerTicketDeliveryV39(
   app.get(
     "/api/v39/ticket-delivery/providers",
     auth,
+    tenantContext,
     minRole(60),
     (_req,res)=>{
       res.json(
@@ -974,6 +977,7 @@ function registerTicketDeliveryV39(
   app.post(
     "/api/v39/ticket-delivery/dispatch",
     auth,
+    tenantContext,
     minRole(60),
     async(req,res)=>{
       try{
@@ -1026,6 +1030,7 @@ function registerTicketDeliveryV39(
   app.post(
     "/api/v39/ticket-delivery/:id/resend",
     auth,
+    tenantContext,
     minRole(60),
     async(req,res)=>{
       try{

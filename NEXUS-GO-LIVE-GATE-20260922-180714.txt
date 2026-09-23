@@ -1,0 +1,429 @@
+PACKAGE=nexus-hospitality-one
+VERSION=1.5.4
+DATE=2026-09-22 18:07:14
+CRITICAL_FILES=PASS
+SERVER_SYNTAX=PASS
+INDEX_ORDER|1|import {tenantContext} from "./tenant-guard.js";
+INDEX_ORDER|9|import {registerEventAccessV31} from "./event-access-routes-v31.js";
+INDEX_ORDER|13|import {db,initDb,setting} from './db.js';import {dashboardSnapshot,closingPlan,growthBrief,performanceSnapshot} from './intelligence.js';import {verifyPassword,hashPassword,sessionToken,tokenHash} from './security.js';import {registerOperations} from './operations.js';import {registerRecipeEngine,consumeProduct} from './recipe-engine.js';import {registerPremiumV05} from './premium-v05.js';import {initSuiteV06,registerSuiteV06,smartSalePrice,smartUnitCost} from './suite-v06.js';import {registerOperationalV1} from './operational-v1.js';import {initOperationsV11,registerPublicV11,registerOperationsV11} from './operations-v11.js';
+INDEX_ORDER|15|import {initGrowthV12,registerGrowthV12} from './growth-v12.js';
+INDEX_ORDER|16|import {initBusinessV13,registerBusinessV13} from './business-v13.js';
+INDEX_ORDER|18|import {initOperationV14,registerOperationV14} from './operation-v14.js';
+INDEX_ORDER|19|import {registerPaymentsV15} from './payments-v15.js';
+INDEX_ORDER|20|import {initOperationV16,registerOperationV16} from './operation-v16.js';
+INDEX_ORDER|23|import { initReturnRoutesV16, registerReturnRoutesV16 } from './return-routes-v16.js';
+INDEX_ORDER|41|app.get('/api/health',(_req,res)=>res.json({ok:true,service:'NEXUS HOSPITALITY ONE API',version:'1.5.0',codename:'PREMIUM POS & TICKETING PAYMENT ENGINE',time:new Date().toISOString()}));registerPublicV11(app);
+INDEX_ORDER|42|registerGrowthV12(app,{auth,minRole,audit});
+INDEX_ORDER|43|registerBusinessV13(app,{auth,minRole,audit});
+INDEX_ORDER|47|registerOperationV14(app,{auth,minRole,audit});registerPaymentsV15(app,{auth,minRole,audit});registerOperationV16(app,{auth,minRole,audit});
+INDEX_ORDER|48|registerReturnRoutesV16(app,{auth,minRole,audit});
+INDEX_ORDER|435|app.use('/api',auth,tenantContext);
+INDEX_ORDER|6106|registerOperations(app,{minRole,audit});registerRecipeEngine(app,minRole,audit);registerPremiumV05(app,minRole,audit);registerSuiteV06(app,minRole,audit);registerOperationalV1(app,{minRole,audit});registerOperationsV11(app,{minRole,audit});
+INDEX_ORDER|6141|app.use('/api',(req,res)=>res.status(404).json({error:'API_ROUTE_NOT_FOUND',message:`Rota API não encontrada: ${req.method} ${req.originalUrl}`,version:'1.5.0'}));
+TENANT_MIDDLEWARE_LINE=435
+BUSINESS_REGISTRATION|16|import {initBusinessV13,registerBusinessV13} from './business-v13.js';
+BUSINESS_REGISTRATION|28|initGrowthV12();initBusinessV13();initOperationV14();initOperationV16();
+BUSINESS_REGISTRATION|43|registerBusinessV13(app,{auth,minRole,audit});
+GROWTH_REGISTRATION|15|import {initGrowthV12,registerGrowthV12} from './growth-v12.js';
+GROWTH_REGISTRATION|17|import {initFinancialIntelligence,registerFinancialIntelligence,registerGrowthIntelligenceV25} from './financial-intelligence-v25.js';
+GROWTH_REGISTRATION|28|initGrowthV12();initBusinessV13();initOperationV14();initOperationV16();
+GROWTH_REGISTRATION|42|registerGrowthV12(app,{auth,minRole,audit});
+GROWTH_REGISTRATION|45|registerGrowthIntelligenceV25(app,{auth,minRole,audit});
+ROUTES_TOTAL=232
+PUBLIC_ROUTES=14
+WEBHOOK_ROUTES=1
+ROUTES_REVIEW=163
+ROUTE_REVIEW|customer-wallet-v26.js:314: app.post(
+ROUTE_REVIEW|customer-wallet-v26.js:546: app.get(
+ROUTE_REVIEW|customer-wallet-v26.js:559: app.get(
+ROUTE_REVIEW|customer-wallet-v26.js:591: app.get(
+ROUTE_REVIEW|customer-wallet-v26.js:635: app.get(
+ROUTE_REVIEW|customer-wallet-v26.js:674: app.put(
+ROUTE_REVIEW|customer-wallet-v26.js:764: app.post(
+ROUTE_REVIEW|customer-wallet-v26.js:785: app.post(
+ROUTE_REVIEW|event-access-routes-v31.js:46: app.post(
+ROUTE_REVIEW|event-intelligence-v37.js:60: app.get(
+ROUTE_REVIEW|event-payment-tracker-v35.js:137: app.post(
+ROUTE_REVIEW|event-payment-tracker-v35.js:224: app.get(
+ROUTE_REVIEW|financial-intelligence-v25.js:901: app.get(
+ROUTE_REVIEW|financial-intelligence-v25.js:924: app.get(
+ROUTE_REVIEW|financial-intelligence-v25.js:943: app.post(
+ROUTE_REVIEW|financial-intelligence-v25.js:980: app.post(
+ROUTE_REVIEW|financial-intelligence-v25.js:1656: app.get(
+ROUTE_REVIEW|financial-intelligence-v25.js:1680: app.get(
+ROUTE_REVIEW|financial-intelligence-v25.js:1691: app.put(
+ROUTE_REVIEW|financial-net-intelligence-v25.js:583: app.get(
+ROUTE_REVIEW|index.js:41: app.get('/api/health',(_req,res)=>res.json({ok:true,service:'NEXUS HOSPITALITY ONE API',version:'1.5.0',codename:'PREMIUM POS & TICKETING PAYMENT ENGINE',time:new Date().toISOString()}));registerPublicV11(app);
+ROUTE_REVIEW|index.js:61: app.post(
+ROUTE_REVIEW|index.js:164: app.get(
+ROUTE_REVIEW|index.js:193: app.get(
+ROUTE_REVIEW|index.js:225: app.post(
+ROUTE_REVIEW|index.js:277: app.post(
+ROUTE_REVIEW|index.js:325: app.post(
+ROUTE_REVIEW|index.js:380: app.post(
+ROUTE_REVIEW|index.js:436: app.get('/api/dashboard',(_req,res)=>res.json({businessName:setting('business_name','Meu Bar & Restaurante'),snapshot:dashboardSnapshot(),growth:growthBrief(),performance:performanceSnapshot()}));
+ROUTE_REVIEW|index.js:444: app.post('/api/sales',minRole(40),(req,res)=>{
+ROUTE_REVIEW|index.js:479: app.get('/api/users',minRole(80),(req,res)=>res.json(db.prepare('SELECT id,name,email,role,active,force_password_change,last_login_at,created_at FROM users ORDER BY name').all()));
+ROUTE_REVIEW|index.js:480: app.post('/api/users',minRole(100),(req,res)=>{const {name,email,password,role='CASHIER'}=req.body||{};if(!name||!email||String(password||'').length<10)return res.status(400).json({error:'INVALID_USER_DATA'});try{const info=db.prepare('INSERT INTO users(name,email,password_hash,role,force_password_change) VALUES(?,?,?,?,1)').run(name,String(email).toLowerCase(),hashPassword(password),role);db.prepare('INSERT INTO employees(user_id,name,role_label) VALUES(?,?,?)').run(info.lastInsertRowid,name,role);audit(req.user.id,'CREATE','USER',info.lastInsertRowid,{email,role});res.status(201).json({id:info.lastInsertRowid,name,email,role})}catch(e){res.status(400).json({error:'USER_CREATE_ERROR',message:e.message})}});
+ROUTE_REVIEW|index.js:481: app.get('/api/audit',minRole(80),(_req,res)=>res.json(db.prepare(`SELECT a.*,u.name user_name FROM audit_log a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.id DESC LIMIT 150`).all()));
+ROUTE_REVIEW|index.js:483: app.get('/api/performance',(_req,res)=>res.json({employees:performanceSnapshot(),rules:db.prepare('SELECT * FROM incentive_rules WHERE active=1 ORDER BY id DESC').all(),pendingTips:db.prepare("SELECT COALESCE(SUM(amount),0) total FROM tips WHERE status='PENDING'").get().total,pendingRewards:db.prepare("SELECT COALESCE(SUM(amount),0) total FROM employee_rewards WHERE status='PENDING'").get().total}));
+ROUTE_REVIEW|index.js:484: app.post('/api/incentive-rules',minRole(80),(req,res)=>{const {title,scope='ANY',scope_value=null,reward_type='FIXED_PER_UNIT',reward_value=0,start_date=null,end_date=null}=req.body||{};if(!String(title||'').trim())return res.status(400).json({error:'TITLE_REQUIRED'});const info=db.prepare('INSERT INTO incentive_rules(title,scope,scope_value,reward_type,reward_value,start_date,end_date) VALUES(?,?,?,?,?,?,?)').run(title,scope,scope_value,reward_type,Number(reward_value),start_date,end_date);audit(req.user.id,'CREATE','INCENTIVE_RULE',info.lastInsertRowid,{title});res.status(201).json(db.prepare('SELECT * FROM incentive_rules WHERE id=?').get(info.lastInsertRowid))});
+ROUTE_REVIEW|index.js:485: app.post('/api/tips',minRole(50),(req,res)=>{const {employee_id,amount,method='MANUAL'}=req.body||{};if(!employee_id||Number(amount)<=0)return res.status(400).json({error:'INVALID_TIP'});const info=db.prepare("INSERT INTO tips(employee_id,amount,method,status) VALUES(?,?,?,'PENDING')").run(Number(employee_id),Number(amount),method);audit(req.user.id,'CREATE','TIP',info.lastInsertRowid,{employee_id,amount});res.status(201).json({id:info.lastInsertRowid})});
+ROUTE_REVIEW|index.js:1139: app.get(
+ROUTE_REVIEW|index.js:1160: app.get(
+ROUTE_REVIEW|index.js:1181: app.post(
+ROUTE_REVIEW|index.js:1371: app.post(
+ROUTE_REVIEW|index.js:1537: app.put(
+ROUTE_REVIEW|index.js:1790: app.get(
+ROUTE_REVIEW|index.js:1838: app.post(
+ROUTE_REVIEW|index.js:2027: app.get(
+ROUTE_REVIEW|index.js:2215: app.get(
+ROUTE_REVIEW|index.js:3646: app.get(
+ROUTE_REVIEW|index.js:4760: app.get(
+ROUTE_REVIEW|index.js:5967: app.get(
+ROUTE_REVIEW|index.js:5996: app.get('/api/expenses',(_req,res)=>res.json(db.prepare('SELECT * FROM expenses ORDER BY paid ASC,COALESCE(due_date,created_at) ASC').all()));
+ROUTE_REVIEW|index.js:5998: app.post('/api/expenses',minRole(70),(req,res)=>{
+ROUTE_REVIEW|index.js:6100: app.get('/api/goals',(_req,res)=>res.json(db.prepare('SELECT * FROM goals WHERE active=1 ORDER BY created_at DESC').all()));
+ROUTE_REVIEW|index.js:6101: app.post('/api/goals',(req,res)=>{const {title,type='BUSINESS',target_value=0,current_value=0,deadline=null,employee_id=null}=req.body||{};if(!String(title||'').trim())return res.status(400).json({error:'TITLE_REQUIRED'});const info=db.prepare('INSERT INTO goals(title,type,target_value,current_value,deadline,employee_id) VALUES(?,?,?,?,?,?)').run(title,type,Number(target_value),Number(current_value),deadline,employee_id?Number(employee_id):null);audit(req.user.id,'CREATE','GOAL',info.lastInsertRowid,{title});res.status(201).json(db.prepare('SELECT * FROM goals WHERE id=?').get(info.lastInsertRowid))});
+ROUTE_REVIEW|index.js:6102: app.get('/api/closing-plan',(req,res)=>res.json(closingPlan(Number(req.query.revenue||dashboardSnapshot().todayRevenue||0))));
+ROUTE_REVIEW|index.js:6103: app.get('/api/settings',(_req,res)=>{const rows=db.prepare('SELECT key,value FROM settings ORDER BY key').all();res.json(Object.fromEntries(rows.map(r=>[r.key,r.value]))) });
+ROUTE_REVIEW|index.js:6104: app.put('/api/settings',minRole(80),(req,res)=>{const allowed=new Set(['business_name','reserve_percent','tax_percent','salary_percent','owner_percent','reinvest_percent','daily_goal']);const upsert=db.prepare('INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value');db.transaction(()=>{for(const [k,v] of Object.entries(req.body||{}))if(allowed.has(k))upsert.run(k,String(v))})();audit(req.user.id,'UPDATE','SETTINGS');res.json({ok:true})});
+ROUTE_REVIEW|index.js:6112: app.get(
+ROUTE_REVIEW|index.js:6143: const dist=path.resolve(process.cwd(),'dist');if(fs.existsSync(dist)){app.use(express.static(dist));app.get(/.*/,(_req,res)=>res.sendFile(path.join(dist,'index.html')))}
+ROUTE_REVIEW|inventory-v49a.js:291: app.get(
+ROUTE_REVIEW|inventory-v49a.js:367: app.get(
+ROUTE_REVIEW|inventory-v49a.js:395: app.post(
+ROUTE_REVIEW|inventory-v49a.js:425: app.get(
+ROUTE_REVIEW|inventory-v49a.js:505: app.post(
+ROUTE_REVIEW|inventory-v49a.js:644: app.post(
+ROUTE_REVIEW|inventory-v49a.js:716: app.post(
+ROUTE_REVIEW|inventory-v49a.js:893: app.post(
+ROUTE_REVIEW|operation-v16.js:193: app.get(
+ROUTE_REVIEW|operation-v16.js:227: app.get(
+ROUTE_REVIEW|operation-v16.js:247: app.post(
+ROUTE_REVIEW|operational-v1.js:4: app.get('/api/operation/status',(req,res)=>{const cash=currentCash();res.json({cash,cash_summary:cash?cashSummary(cash.id):null,open_orders:db.prepare("SELECT COUNT(*) n FROM orders WHERE status='OPEN'").get().n,kitchen_pending:db.prepare("SELECT COUNT(*) n FROM order_items oi JOIN orders o ON o.id=oi.order_id WHERE o.status='OPEN' AND oi.status NOT IN ('SERVED','CANCELLED')").get().n,low_stock:db.prepare('SELECT COUNT(*) n FROM products WHERE active=1 AND stock<=minimum_stock').get().n})});
+ROUTE_REVIEW|operational-v1.js:5: app.get('/api/cash-sessions/:id/summary',minRole(50),(req,res)=>{const s=cashSummary(req.params.id);return s?res.json(s):res.status(404).json({error:'CASH_NOT_FOUND'})});
+ROUTE_REVIEW|operational-v1.js:6: app.post('/api/sales-v1',minRole(40),(req,res)=>{try{const emp=req.body?.employee_id?Number(req.body.employee_id):(db.prepare('SELECT id FROM employees WHERE user_id=?').get(req.user.id)?.id||null);const sale=createUnifiedSale({...req.body,user_id:req.user.id,employee_id:emp,source:'POS'});audit(req.user.id,'CREATE','SALE_V1',sale.id,{total:sale.total,payment_method:sale.payment_method});res.status(201).json({sale,cash_summary:cashSummary(sale.cash_session_id)})}catch(e){res.status(409).json({error:'SALE_V1_ERROR',message:e.message})}});
+ROUTE_REVIEW|operational-v1.js:7: app.post('/api/orders-v1/:id/close',minRole(40),(req,res)=>{const id=n(req.params.id);const order=db.prepare("SELECT * FROM orders WHERE id=? AND status='OPEN'").get(id);if(!order)return res.status(404).json({error:'ORDER_NOT_FOUND'});const items=db.prepare("SELECT oi.*,p.name FROM order_items oi JOIN products p ON p.id=oi.product_id WHERE oi.order_id=? AND oi.status<>'CANCELLED'").all(id);if(!items.length)return res.status(400).json({error:'EMPTY_ORDER'});try{const sale=createUnifiedSale({items:items.map(x=>({product_id:x.product_id,qty:x.qty,mode:x.sale_mode||'UNIT'})),payment_method:req.body?.payment_method||'DINHEIRO',payments:req.body?.payments||[],table_label:order.label,customer_name:order.customer_name,employee_id:order.employee_id,tip_amount:req.body?.tip_amount||0,user_id:req.user.id,source:'ORDER',source_id:id});db.prepare("UPDATE orders SET status='CLOSED',closed_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?").run(id);if(order.table_id)db.prepare("UPDATE dining_tables SET status='FREE' WHERE id=?").run(order.table_id);audit(req.user.id,'CLOSE','ORDER_V1',id,{sale_id:sale.id});res.json({sale,order_id:id})}catch(e){res.status(409).json({error:'ORDER_CLOSE_ERROR',message:e.message})}});
+ROUTE_REVIEW|operational-v1.js:8: app.post('/api/cash-sessions/:id/close-v1',minRole(50),(req,res)=>{const id=n(req.params.id),sum=cashSummary(id);if(!sum||sum.session.status!=='OPEN')return res.status(404).json({error:'CASH_NOT_OPEN'});const counted=n(req.body?.counted_cash ?? req.body?.closing_amount),difference=counted-sum.expected_cash;db.prepare("UPDATE cash_sessions SET status='CLOSED',closing_amount=?,expected_amount=?,closed_at=CURRENT_TIMESTAMP,notes=COALESCE(?,notes) WHERE id=?").run(counted,sum.expected_cash,String(req.body?.notes||''),id);audit(req.user.id,'CLOSE','CASH_SESSION_V1',id,{expected_cash:sum.expected_cash,counted_cash:counted,difference});res.json({...sum,session:db.prepare('SELECT * FROM cash_sessions WHERE id=?').get(id),counted_cash:counted,difference})});
+ROUTE_REVIEW|operational-v1.js:9: app.patch('/api/products/:id/full',minRole(55),(req,res)=>{const id=n(req.params.id),p=db.prepare('SELECT * FROM products WHERE id=?').get(id);if(!p)return res.status(404).json({error:'PRODUCT_NOT_FOUND'});const allowed=['name','category','barcode','image_url','description','unit_type','package_ml','dose_ml','price','cost','stock','minimum_stock','active'];const entries=Object.entries(req.body||{}).filter(([k])=>allowed.includes(k));if(!entries.length)return res.json(p);db.prepare(`UPDATE products SET ${entries.map(([k])=>`${k}=?`).join(',')} WHERE id=?`).run(...entries.map(([,v])=>v),id);audit(req.user.id,'UPDATE','PRODUCT_FULL',id);res.json(db.prepare('SELECT * FROM products WHERE id=?').get(id))});
+ROUTE_REVIEW|operational-v1.js:10: app.post('/api/purchases/receive',minRole(55),(req,res)=>{const {supplier_id=null,items=[],notes=''}=req.body||{};if(!items.length)return res.status(400).json({error:'ITEMS_REQUIRED'});try{const out=db.transaction(()=>{let total=0;for(const i of items){const id=n(i.product_id),qty=n(i.qty),cost=n(i.unit_cost);if(qty<=0)throw new Error('INVALID_QTY');total+=qty*cost;db.prepare('UPDATE products SET stock=stock+?,cost=? WHERE id=?').run(qty,cost,id);db.prepare("INSERT INTO stock_movements(product_id,type,qty,reference_type,user_id,notes) VALUES(?,'PURCHASE',?,'PURCHASE_RECEIPT',?,?)").run(id,qty,req.user.id,notes)}const po=db.prepare("INSERT INTO purchase_orders(supplier_id,status,total,received_at,notes) VALUES(?,'RECEIVED',?,CURRENT_TIMESTAMP,?)").run(supplier_id||1,total,notes);return{id:po.lastInsertRowid,total}})();audit(req.user.id,'RECEIVE','PURCHASE',out.id,out);res.status(201).json(out)}catch(e){res.status(409).json({error:'PURCHASE_RECEIVE_ERROR',message:e.message})}});
+ROUTE_REVIEW|operational-v1.js:11: app.get('/api/backup/export',minRole(100),(req,res)=>{res.json({ok:true,message:'Use o backup automÃ¡tico do instalador para cÃ³pia fÃ­sica do banco.',database:'data/nexus-hospitality.sqlite',schema:'1.0.0'})});
+ROUTE_REVIEW|operations-v11.js:25: app.post('/api/v11/tickets/lots',minRole(60),(req,res)=>{const b=req.body||{};if(!b.event_id||!String(b.name||'').trim())return res.status(400).json({error:'LOT_DATA_REQUIRED'});const i=db.prepare('INSERT INTO ticket_lots(event_id,name,price,quantity,starts_at,ends_at,status) VALUES(?,?,?,?,?,?,?)').run(n(b.event_id),String(b.name).trim(),n(b.price),Math.max(0,n(b.quantity)),b.starts_at||null,b.ends_at||null,b.status||'ACTIVE');audit(req.user.id,'CREATE','TICKET_LOT',i.lastInsertRowid,b);res.status(201).json({id:i.lastInsertRowid})});
+ROUTE_REVIEW|operations-v11.js:26: app.get('/api/v11/tickets/:eventId',minRole(40),(req,res)=>res.json(db.prepare(`SELECT t.*,l.name lot_name,e.title event_title FROM tickets t LEFT JOIN ticket_lots l ON l.id=t.lot_id JOIN events e ON e.id=t.event_id WHERE t.event_id=? ORDER BY t.id DESC`).all(n(req.params.eventId))));
+ROUTE_REVIEW|operations-v11.js:27: app.post('/api/v11/tickets',minRole(40),(req,res)=>{const b=req.body||{},lot=b.lot_id?db.prepare('SELECT * FROM ticket_lots WHERE id=?').get(n(b.lot_id)):null;if(!b.event_id||!String(b.attendee_name||'').trim())return res.status(400).json({error:'TICKET_DATA_REQUIRED'});if(lot&&lot.quantity>0&&lot.sold>=lot.quantity)return res.status(409).json({error:'LOT_SOLD_OUT'});const ticketCode=code(),price=lot?n(lot.price):n(b.price);const i=db.prepare(`INSERT INTO tickets(event_id,lot_id,attendee_name,attendee_phone,ticket_code,ticket_type,price,payment_status,payment_method) VALUES(?,?,?,?,?,?,?,?,?)`).run(n(b.event_id),b.lot_id?n(b.lot_id):null,String(b.attendee_name).trim(),b.attendee_phone||null,ticketCode,lot?.name||b.ticket_type||'INGRESSO',price,b.payment_status||'PAID',b.payment_method||'PIX');if(lot)db.prepare('UPDATE ticket_lots SET sold=sold+1 WHERE id=?').run(lot.id);audit(req.user.id,'CREATE','TICKET',i.lastInsertRowid,{event_id:b.event_id,code:ticketCode});res.status(201).json(db.prepare('SELECT * FROM tickets WHERE id=?').get(i.lastInsertRowid))});
+ROUTE_REVIEW|operations-v11.js:28: app.post('/api/v11/access/checkin',minRole(40),(req,res)=>{const c=String(req.body?.code||'').trim().toUpperCase();const t=db.prepare(`SELECT t.*,e.title event_title FROM tickets t JOIN events e ON e.id=t.event_id WHERE upper(t.ticket_code)=?`).get(c);if(!t){db.prepare("INSERT INTO ticket_access_log(code,result,user_id) VALUES(?,'INVALID',?)").run(c,req.user.id);return res.status(404).json({ok:false,result:'INVALID',message:'Ingresso invÃ¡lido.'})}if(t.payment_status!=='PAID'&&t.payment_status!=='COURTESY'){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'PAYMENT_PENDING',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'PAYMENT_PENDING',message:'Pagamento nÃ£o confirmado.',ticket:t})}if(t.checkin_at){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'DUPLICATE',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'DUPLICATE',message:'Ingresso jÃ¡ utilizado.',ticket:t})}db.prepare('UPDATE tickets SET checkin_at=CURRENT_TIMESTAMP,checked_in_by=? WHERE id=?').run(req.user.id,t.id);db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'ALLOWED',?)").run(t.id,t.event_id,c,req.user.id);audit(req.user.id,'CHECKIN','TICKET',t.id,{code:c});res.json({ok:true,result:'ALLOWED',message:'Acesso liberado.',ticket:{...t,checkin_at:new Date().toISOString()}})});
+ROUTE_REVIEW|operations-v11.js:31: app.get('/api/v11/salon',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT dt.*,o.id order_id,o.customer_name,o.subtotal,o.employee_id,o.created_at order_opened_at,e.name employee_name,(SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=o.id AND oi.status<>'CANCELLED') item_count FROM dining_tables dt LEFT JOIN orders o ON o.table_id=dt.id AND o.status='OPEN' LEFT JOIN employees e ON e.id=o.employee_id WHERE dt.active=1 ORDER BY dt.area,dt.id`).all()));
+ROUTE_REVIEW|operations-v11.js:33: app.get('/api/v11/delivery',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT d.*,COALESCE((SELECT SUM(di.qty*di.unit_price) FROM delivery_items di WHERE di.delivery_id=d.id),0) items_total FROM delivery_orders d ORDER BY d.id DESC LIMIT 200`).all()));
+ROUTE_REVIEW|operations.js:53: app.get('/api/operations/summary',(req,res)=>{
+ROUTE_REVIEW|operations.js:74: app.get('/api/tables',(req,res)=>{
+ROUTE_REVIEW|operations.js:88: app.post('/api/tables',minRole(80),(req,res)=>{
+ROUTE_REVIEW|operations.js:105: app.post('/api/tables/:id/open',minRole(40),(req,res)=>{
+ROUTE_REVIEW|operations.js:157: app.get('/api/orders-v03',(req,res)=>{
+ROUTE_REVIEW|operations.js:170: app.get('/api/orders-v03/:id',(req,res)=>{
+ROUTE_REVIEW|operations.js:175: app.post('/api/orders-v03/:id/items',minRole(30),(req,res)=>{
+ROUTE_REVIEW|operations.js:235: app.patch('/api/order-items/:id/status',minRole(30),(req,res)=>{
+ROUTE_REVIEW|operations.js:272: app.delete('/api/order-items/:id',minRole(40),(req,res)=>{
+ROUTE_REVIEW|operations.js:290: app.post('/api/orders-v03/:id/transfer',minRole(40),(req,res)=>{
+ROUTE_REVIEW|operations.js:326: app.post('/api/orders-v03/:id/split',minRole(40),(req,res)=>{
+ROUTE_REVIEW|operations.js:384: app.post('/api/orders-v03/:id/close',minRole(40),(req,res)=>{
+ROUTE_REVIEW|operations.js:500: app.get('/api/kitchen',minRole(30),(req,res)=>{
+ROUTE_REVIEW|operations.js:522: app.get('/api/beverage-control',minRole(55),(req,res)=>{
+ROUTE_REVIEW|operations.js:541: app.patch('/api/products/:id/beverage',minRole(55),(req,res)=>{
+ROUTE_REVIEW|operations.js:573: app.post('/api/products/:id/stock-adjust',minRole(55),(req,res)=>{
+ROUTE_REVIEW|operations.js:604: app.get('/api/suppliers-v03',minRole(55),(req,res)=>{
+ROUTE_REVIEW|operations.js:612: app.post('/api/suppliers-v03',minRole(55),(req,res)=>{
+ROUTE_REVIEW|operations.js:632: app.get('/api/quotes-v03',minRole(55),(req,res)=>{
+ROUTE_REVIEW|operations.js:644: app.post('/api/quotes-v03',minRole(55),(req,res)=>{
+ROUTE_REVIEW|operations.js:662: app.get('/api/quotes-v03/:id',(req,res)=>{
+ROUTE_REVIEW|operations.js:685: app.post('/api/quotes-v03/:id/items',minRole(55),(req,res)=>{
+ROUTE_REVIEW|operations.js:746: app.get('/api/quotes-v03/:id/best',minRole(55),(req,res)=>{
+ROUTE_REVIEW|payments-v15.js:16: app.get(
+ROUTE_REVIEW|payments-v15.js:48: app.put(
+ROUTE_REVIEW|payments-v15.js:99: app.post(
+ROUTE_REVIEW|premium-v05.js:7: app.patch('/api/products/:id',minRole(55),(req,res)=>{
+ROUTE_REVIEW|premium-v05.js:22: app.get('/api/ai/operations-brief',minRole(40),(_req,res)=>{
+ROUTE_REVIEW|recipe-engine.js:179: app.get('/api/recipes',minRole(40),(req,res)=>{
+ROUTE_REVIEW|recipe-engine.js:199: app.get('/api/recipes/:id',minRole(40),(req,res)=>{
+ROUTE_REVIEW|recipe-engine.js:207: app.post('/api/recipes',minRole(55),(req,res)=>{
+ROUTE_REVIEW|recipe-engine.js:251: app.post('/api/recipes/:id/items',minRole(55),(req,res)=>{
+ROUTE_REVIEW|recipe-engine.js:300: app.delete('/api/recipes/:id/items/:itemId',minRole(55),(req,res)=>{
+ROUTE_REVIEW|recipe-engine.js:333: app.post('/api/stock-counts',minRole(55),(req,res)=>{
+ROUTE_REVIEW|recipe-engine.js:391: app.get('/api/smart-closing',minRole(50),(req,res)=>{
+ROUTE_REVIEW|return-routes-v16.js:275: app.post(
+ROUTE_REVIEW|return-routes-v16.js:355: app.post(
+ROUTE_REVIEW|saas-commercial-core.js:367: app.get(
+ROUTE_REVIEW|saas-commercial-core.js:382: app.patch(
+ROUTE_REVIEW|saas-commercial-core.js:485: app.get(
+ROUTE_REVIEW|saas-commercial-core.js:504: app.post(
+ROUTE_REVIEW|saas-commercial-core.js:628: app.patch(
+ROUTE_REVIEW|saas-contracting-engine.js:1172: app.post(
+ROUTE_REVIEW|saas-contracting-engine.js:1213: app.get(
+ROUTE_REVIEW|saas-contracting-engine.js:1261: app.post(
+ROUTE_REVIEW|saas-subscription-core.js:915: app.get(
+ROUTE_REVIEW|saas-subscription-core.js:947: app.get(
+ROUTE_REVIEW|saas-subscription-core.js:979: app.get(
+ROUTE_REVIEW|saas-subscription-core.js:1003: app.post(
+ROUTE_REVIEW|saas-subscription-core.js:1030: app.post(
+ROUTE_REVIEW|saas-subscription-core.js:1068: app.post(
+ROUTE_REVIEW|saas-subscription-core.js:1100: app.get(
+ROUTE_REVIEW|suite-v06.js:113: app.get('/api/inventory/smart',minRole(40),(_req,res)=>{
+ROUTE_REVIEW|suite-v06.js:123: app.post('/api/inventory/smart-product',minRole(55),(req,res)=>{
+ROUTE_REVIEW|suite-v06.js:138: app.patch('/api/inventory/:id/profile',minRole(55),(req,res)=>{
+ROUTE_REVIEW|suite-v06.js:523: app.post('/api/cash-movements',minRole(50),(req,res)=>{const cs=db.prepare("SELECT * FROM cash_sessions WHERE status='OPEN' ORDER BY id DESC LIMIT 1").get();if(!cs)return res.status(409).json({error:'CASH_SESSION_REQUIRED'});const type=String(req.body?.type||'').toUpperCase();if(!['SUPRIMENTO','SANGRIA'].includes(type))return res.status(400).json({error:'INVALID_CASH_MOVEMENT'});const amount=Math.max(0,n(req.body?.amount));if(!amount)return res.status(400).json({error:'AMOUNT_REQUIRED'});const info=db.prepare('INSERT INTO cash_movements(cash_session_id,user_id,type,amount,description) VALUES(?,?,?,?,?)').run(cs.id,req.user.id,type,amount,String(req.body?.description||''));audit(req.user.id,'CREATE',type,info.lastInsertRowid,{amount});res.status(201).json({id:info.lastInsertRowid,ok:true})});
+ROUTE_REVIEW|suite-v06.js:524: app.get('/api/cash-movements/current',minRole(50),(_req,res)=>{const cs=db.prepare("SELECT id FROM cash_sessions WHERE status='OPEN' ORDER BY id DESC LIMIT 1").get();res.json(cs?db.prepare('SELECT * FROM cash_movements WHERE cash_session_id=? ORDER BY id DESC').all(cs.id):[])});
+ROUTE_REVIEW|suite-v06.js:526: app.get('/api/customers',minRole(40),(_req,res)=>res.json(db.prepare('SELECT * FROM customers WHERE active=1 ORDER BY total_spent DESC,name').all()));
+ROUTE_REVIEW|suite-v06.js:527: app.post('/api/customers',minRole(40),(req,res)=>{const b=req.body||{};if(!String(b.name||'').trim())return res.status(400).json({error:'NAME_REQUIRED'});const i=db.prepare('INSERT INTO customers(name,phone,email,birthday,notes) VALUES(?,?,?,?,?)').run(String(b.name).trim(),b.phone||null,b.email||null,b.birthday||null,b.notes||null);audit(req.user.id,'CREATE','CUSTOMER',i.lastInsertRowid);res.status(201).json(db.prepare('SELECT * FROM customers WHERE id=?').get(i.lastInsertRowid))});
+ROUTE_REVIEW|suite-v06.js:529: app.get('/api/reservations',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT r.*,t.label table_label FROM reservations r LEFT JOIN dining_tables t ON t.id=r.table_id ORDER BY datetime(r.reserved_at) ASC`).all()));
+ROUTE_REVIEW|suite-v06.js:530: app.post('/api/reservations',minRole(40),(req,res)=>{const b=req.body||{};if(!b.customer_name||!b.reserved_at)return res.status(400).json({error:'RESERVATION_DATA_REQUIRED'});const i=db.prepare('INSERT INTO reservations(customer_id,customer_name,phone,reserved_at,party_size,table_id,status,notes) VALUES(?,?,?,?,?,?,?,?)').run(b.customer_id||null,String(b.customer_name),b.phone||null,b.reserved_at,n(b.party_size)||2,b.table_id||null,String(b.status||'CONFIRMED'),b.notes||null);audit(req.user.id,'CREATE','RESERVATION',i.lastInsertRowid);res.status(201).json({id:i.lastInsertRowid,ok:true})});
+ROUTE_REVIEW|suite-v06.js:531: app.patch('/api/reservations/:id/status',minRole(40),(req,res)=>{db.prepare('UPDATE reservations SET status=? WHERE id=?').run(String(req.body?.status||'CONFIRMED'),n(req.params.id));audit(req.user.id,'UPDATE_STATUS','RESERVATION',req.params.id,{status:req.body?.status});res.json({ok:true})});
+ROUTE_REVIEW|suite-v06.js:533: app.get('/api/delivery',minRole(40),(_req,res)=>res.json(db.prepare('SELECT * FROM delivery_orders ORDER BY id DESC LIMIT 100').all()));
+ROUTE_REVIEW|suite-v06.js:534: app.post('/api/delivery',minRole(40),(req,res)=>{const b=req.body||{};if(!b.customer_name)return res.status(400).json({error:'CUSTOMER_REQUIRED'});const i=db.prepare('INSERT INTO delivery_orders(customer_name,phone,order_type,address,status,total,payment_method,notes) VALUES(?,?,?,?,?,?,?,?)').run(String(b.customer_name),b.phone||null,String(b.order_type||'DELIVERY'),b.address||null,'NEW',n(b.total),b.payment_method||null,b.notes||null);audit(req.user.id,'CREATE','DELIVERY_ORDER',i.lastInsertRowid);res.status(201).json({id:i.lastInsertRowid,ok:true})});
+ROUTE_REVIEW|suite-v06.js:535: app.patch('/api/delivery/:id/status',minRole(40),(req,res)=>{db.prepare('UPDATE delivery_orders SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(String(req.body?.status||'NEW'),n(req.params.id));audit(req.user.id,'UPDATE_STATUS','DELIVERY_ORDER',req.params.id,{status:req.body?.status});res.json({ok:true})});
+ROUTE_REVIEW|suite-v06.js:537: app.get('/api/events-v06',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT e.*,COALESCE((SELECT SUM(amount) FROM event_costs c WHERE c.event_id=e.id),0) costs FROM events e ORDER BY COALESCE(starts_at,created_at) DESC`).all()));
+ROUTE_REVIEW|suite-v06.js:538: app.post('/api/events-v06',minRole(60),(req,res)=>{const b=req.body||{};if(!b.title)return res.status(400).json({error:'TITLE_REQUIRED'});const i=db.prepare('INSERT INTO events(title,event_type,venue_name,starts_at,status,artist_name,capacity,cost_estimate) VALUES(?,?,?,?,?,?,?,?)').run(String(b.title),String(b.event_type||'SHOW'),b.venue_name||null,b.starts_at||null,String(b.status||'PLANNED'),b.artist_name||null,n(b.capacity),n(b.cost_estimate));audit(req.user.id,'CREATE','EVENT',i.lastInsertRowid);res.status(201).json({id:i.lastInsertRowid,ok:true})});
+ROUTE_REVIEW|suite-v06.js:539: app.post('/api/events-v06/:id/costs',minRole(60),(req,res)=>{const b=req.body||{},i=db.prepare('INSERT INTO event_costs(event_id,description,category,amount) VALUES(?,?,?,?)').run(n(req.params.id),String(b.description||'Custo'),String(b.category||'GERAL'),n(b.amount));audit(req.user.id,'CREATE','EVENT_COST',i.lastInsertRowid);res.status(201).json({id:i.lastInsertRowid,ok:true})});
+ROUTE_REVIEW|suite-v06.js:541: app.get('/api/fiscal-captures',minRole(70),(_req,res)=>res.json(db.prepare('SELECT * FROM fiscal_captures ORDER BY id DESC LIMIT 100').all()));
+ROUTE_REVIEW|suite-v06.js:542: app.post('/api/fiscal-captures',minRole(70),(req,res)=>{const b=req.body||{},i=db.prepare('INSERT INTO fiscal_captures(supplier,document_number,document_type,issue_date,total,image_url,status,notes) VALUES(?,?,?,?,?,?,?,?)').run(b.supplier||null,b.document_number||null,String(b.document_type||'NOTA'),b.issue_date||null,n(b.total),b.image_url||null,'PENDING_CONFIRMATION',b.notes||null);audit(req.user.id,'CREATE','FISCAL_CAPTURE',i.lastInsertRowid);res.status(201).json({id:i.lastInsertRowid,ok:true})});
+ROUTE_REVIEW|suite-v06.js:544: app.get('/api/reports/executive',minRole(50),(_req,res)=>{
+ROUTE_REVIEW|ticket-delivery-v39.js:936: app.get(
+ROUTE_REVIEW|ticket-delivery-v39.js:963: app.get(
+ROUTE_REVIEW|ticket-delivery-v39.js:974: app.post(
+ROUTE_REVIEW|ticket-delivery-v39.js:1026: app.post(
+ROUTE_REVIEW|tickets-v25.js:41: app.get(
+ROUTE_REVIEW|tickets-v25.js:207: app.get(
+ROUTE_REVIEW|tickets-v25.js:242: app.get(
+ROUTE_REVIEW|tickets-v25.js:285: app.get(
+ROUTE_REVIEW|tickets-v25.js:347: app.post(
+ROUTE_REVIEW|tickets-v25.js:560: app.post(
+SQL_TABLE_REFS|products|182
+SQL_TABLE_REFS|sales|191
+SQL_TABLE_REFS|orders|75
+SQL_TABLE_REFS|cash_sessions|19
+SQL_TABLE_REFS|employees|27
+SQL_TABLE_REFS|customers|11
+SQL_TABLE_REFS|events|66
+SQL_TABLE_REFS|suppliers|35
+SQL_TABLE_REFS|quote_requests|17
+SQL_TABLE_REFS|quote_invitations|9
+SQL_TABLE_REFS|quote_supplier_prices|7
+SQL_TABLE_REFS|supplier_dispatches|8
+SQL_TABLE_REFS|financial_obligations|20
+SQL_TABLE_REFS|expenses|57
+SQL_TABLE_REFS|settings|9
+SQL_TABLE_REFS|dining_tables|22
+LEGACY_PRICING_RUNTIME=NONE
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|9|return String(value||'sandbox').toLowerCase()==='production'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|10|? 'production'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|11|: 'sandbox';
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|16|process.env.ASAAS_ENV ||
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|17|globalThis.__NEXUS_ASAAS_CONFIG__?.environment ||
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|18|'sandbox'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|23|const cfg=globalThis.__NEXUS_ASAAS_CONFIG__||{};
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|27|process.env.ASAAS_BASE_URL ||
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|30|env==='production'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|32|: 'https://api-sandbox.asaas.com/v3'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|170|environment==='production'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|172|: 'https://api-sandbox.asaas.com/v3'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|176|globalThis.__NEXUS_ASAAS_CONFIG__={
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|184|globalThis.__NEXUS_ASAAS_CONFIG__.api_key=
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|191|globalThis.__NEXUS_ASAAS_CONFIG__.webhook_token=
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|200|process.env.ASAAS_API_KEY ||
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|201|globalThis.__NEXUS_ASAAS_CONFIG__?.api_key ||
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|208|process.env.ASAAS_WEBHOOK_TOKEN ||
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|209|globalThis.__NEXUS_ASAAS_CONFIG__?.webhook_token ||
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|261|globalThis.__NEXUS_ASAAS_CONFIG__||{};
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|273|environment==='production'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|275|: 'https://api-sandbox.asaas.com/v3'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|295|'ASAAS_API_KEY_REQUIRED'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|301|'ASAAS_WEBHOOK_TOKEN_REQUIRED'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|316|'ASAAS_DPAPI_ENCRYPTION_FAILED'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|343|globalThis.__NEXUS_ASAAS_CONFIG__={
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|366|'ASAAS_API_KEY_NOT_CONFIGURED'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\asaas-config.js|400|`ASAAS_HTTP_${response.status}`
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\document-renderer.js|135|export function renderProduction({
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\event-payment-tracker-v35.js|162|!order.asaas_payment_id ||
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\event-payment-tracker-v35.js|166|String(order.asaas_payment_id)
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\growth-v12.js|10|CREATE TABLE IF NOT EXISTS asaas_webhook_events(event_id TEXT PRIMARY KEY,event_type TEXT,payment_id TEXT,external_reference TEXT,received_at TEXT DEFAULT CURRENT_TIMESTAMP);
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\growth-v12.js|11|CREATE TABLE IF NOT EXISTS public_orders(id INTEGER PRIMARY KEY AUTOINCREMENT,public_code TEXT NOT NULL UNIQUE,customer_name TEXT NOT NULL,phone TEXT,email TEXT,cpf_cnpj TEXT,order_type TEXT NOT NULL DEFAULT 'PICKUP',address TEXT,notes TEXT,items_total REAL NOT NULL DEFAULT 0,delivery_fee REAL NOT NULL DEFAULT 0,total REAL NOT NULL DEFAULT 0,payment_method TEXT NOT NULL DEFAULT 'PIX',payment_status TEXT NOT NULL DEFAULT 'PENDING',asaas_customer_id TEXT,asaas_payment_id TEXT,invoice_url TEXT,pix_payload TEXT,pix_image TEXT,delivery_id INTEGER,status TEXT NOT NULL DEFAULT 'AWAITING_PAYMENT',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\growth-v12.js|13|CREATE TABLE IF NOT EXISTS ticket_orders(id INTEGER PRIMARY KEY AUTOINCREMENT,order_code TEXT NOT NULL UNIQUE,event_id INTEGER NOT NULL,lot_id INTEGER NOT NULL,buyer_name TEXT NOT NULL,buyer_phone TEXT,buyer_email TEXT,buyer_document TEXT,quantity INTEGER NOT NULL DEFAULT 1,total REAL NOT NULL DEFAULT 0,payment_status TEXT NOT NULL DEFAULT 'PENDING',asaas_customer_id TEXT,asaas_payment_id TEXT,invoice_url TEXT,pix_payload TEXT,pix_image TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(event_id) REFERENCES events(id),FOREIGN KEY(lot_id) REFERENCES ticket_lots(id));
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\growth-v12.js|43|async function asaas(path,options={}){try{return await asaasRequest(path,options)}catch(e){if(e.message==='ASAAS_API_KEY_NOT_CONFIGURED')e.code='ASAAS_NOT_CONFIGURED';throw e}}
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\growth-v12.js|260|app.post('/api/public/orders',async(req,res)=>{try{const b=req.body||{},items=Array.isArray(b.items)?b.items:[];if(!txt(b.customer_name)||!txt(b.phone)||!items.length)return res.status(400).json({error:'DADOS_DO_PEDIDO_OBRIGATORIOS'});const resolved=items.map(x=>{const p=db.prepare('SELECT * FROM products WHERE id=? AND active=1 AND menu_visible=1').get(n(x.product_id));if(!p||n(p.stock)<=0)throw new Error('PRODUTO_INDISPONIVEL');return{p,qty:Math.max(1,n(x.qty))}});const itemsTotal=resolved.reduce((s,x)=>s+x.qty*n(x.p.price),0),fee=b.order_type==='DELIVERY'?Math.max(0,n(b.delivery_fee)):0,total=itemsTotal+fee,publicCode=uid('PED');const info=db.prepare(`INSERT INTO public_orders(public_code,customer_name,phone,email,cpf_cnpj,order_type,address,notes,items_total,delivery_fee,total,payment_method) VALUES(?,?,?,?,?,?,?,?,?,?,?,'PIX')`).run(publicCode,txt(b.customer_name),txt(b.phone),txt(b.email)||null,txt(b.cpf_cnpj)||null,b.order_type==='DELIVERY'?'DELIVERY':'PICKUP',txt(b.address)||null,txt(b.notes)||null,itemsTotal,fee,total);for(const x of resolved)db.prepare('INSERT INTO public_order_items(order_id,product_id,name,qty,unit_price,notes) VALUES(?,?,?,?,?,?)').run(info.lastInsertRowid,x.p.id,x.p.name,x.qty,x.p.price,null);let pay=null;try{pay=await charge({name:txt(b.customer_name),phone:txt(b.phone),email:txt(b.email),document:txt(b.cpf_cnpj),value:total,description:`Pedido ${publicCode}`,externalReference:`ORDER:${info.lastInsertRowid}`});db.prepare('UPDATE public_orders SET asaas_customer_id=?,asaas_payment_id=?,invoice_url=?,pix_payload=?,pix_image=? WHERE id=?').run(pay.customer.id,pay.payment.id,pay.payment.invoiceUrl||null,pay.pix.payload||null,pay.pix.encodedImage||null,info.lastInsertRowid)}catch(e){if(e.code!=='ASAAS_NOT_CONFIGURED')throw e}const out=db.prepare('SELECT * FROM public_orders WHERE id=?').get(info.lastInsertRowid);res.status(201).json({...out,paymentConfigured:!!pay})}catch(e){res.status(400).json({error:e.message})}});
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\growth-v12.js|612|if(!String(process.env.ASAAS_API_KEY||'').trim()){
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\growth-v12.js|667|asaas_customer_id=?,
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\growth-v12.js|668|asaas_payment_id=?,
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\growth-v12.js|707|if(err.code==='ASAAS_NOT_CONFIGURED'){
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\growth-v12.js|746|app.post('/api/webhooks/asaas',(req,res)=>{try{const expected=asaasWebhookToken(),received=req.headers['asaas-access-token'];if(!expected)return res.status(503).json({error:'WEBHOOK_TOKEN_NOT_CONFIGURED'});if(received!==expected)return res.status(401).json({error:'INVALID_WEBHOOK_TOKEN'});const ev=txt(req.body?.event),p=req.body?.payment||{},ref=txt(p.externalReference),eventId=txt(req.body?.id)||`${ev}:${txt(p.id)}:${txt(p.status)}`;const seen=db.prepare('SELECT event_id FROM asaas_webhook_events WHERE event_id=?').get(eventId);if(seen)return res.json({received:true,duplicate:true});db.prepare('INSERT INTO asaas_webhook_events(event_id,event_type,payment_id,external_reference) VALUES(?,?,?,?)').run(eventId,ev,txt(p.id)||null,ref||null);if(['PAYMENT_RECEIVED','PAYMENT_CONFIRMED'].includes(ev)){if(ref.startsWith('ORDER:'))activatePublicOrder(n(ref.split(':')[1]));if(ref.startsWith('TICKET:'))activateTicketOrder(n(ref.split(':')[1]))}res.json({received:true})}catch(e){res.status(500).json({error:e.message})}});
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\index.js|31|const IS_HOSTED=Boolean(process.env.RAILWAY_ENVIRONMENT||process.env.RAILWAY_PROJECT_ID||process.env.NODE_ENV==='production');
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\index.js|124|'PRODUCTION',
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\operation-v14.js|442|app.get('/api/v14/payment-config',auth,minRole(80),(_req,res)=>res.json({asaas:{configured:Boolean(process.env.ASAAS_API_KEY),webhook_configured:Boolean(process.env.ASAAS_WEBHOOK_TOKEN),base_url:process.env.ASAAS_BASE_URL||'https://api.asaas.com/v3'},methods:['DINHEIRO','PIX','DEBITO','CREDITO','MISTO']}));
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\payments-v15.js|64|'ASAAS_CONFIG',
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\payments-v15.js|115|'ASAAS_CONNECTION',
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\payments-v15.js|144|'ASAAS_CONNECTION',
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\print-jobs-engine.js|23|"PRODUCTION",
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\print-jobs-engine.js|413|2. PRODUCTION
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\print-jobs-engine.js|437|const production =
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\print-jobs-engine.js|441|"PRODUCTION",
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\print-jobs-engine.js|462|production,
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\saas-asaas-subscription-adapter.js|134|'ASAAS_CUSTOMER_NAME_REQUIRED'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\saas-asaas-subscription-adapter.js|161|'ASAAS_CUSTOMER_ID_REQUIRED'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\saas-contracting-engine.js|36|const ASAAS_DRY_RUN = true;
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\saas-contracting-engine.js|416|dryRun:ASAAS_DRY_RUN
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\saas-contracting-engine.js|455|dryRun:ASAAS_DRY_RUN
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\saas-contracting-engine.js|544|ASAAS_DRY_RUN
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\saas-contracting-engine.js|557|ASAAS_DRY_RUN,
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\saas-contracting-engine.js|560|ASAAS_DRY_RUN
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\saas-contracting-engine.js|565|asaas_preview:{
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\saas-contracting-engine.js|827|source:'ASAAS_WEBHOOK'
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\saas-contracting-engine.js|944|'ASAAS_WEBHOOK',
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\saas-contracting-engine.js|1026|'ASAAS_WEBHOOK',
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\saas-contracting-engine.js|1071|'ASAAS_WEBHOOK',
+ASAAS|C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE\server\saas-contracting-engine.js|1275|req.headers['asaas-access-token'] || ''
+ASAAS_SAAS_DRY_RUN=TRUE
+PAYMENT_GO_LIVE_BLOCKER=YES
+SAAS_WEBHOOK_TOKEN_CHECK=True
+SENSITIVE_FILE_NAMES=NONE
+GITIGNORE|# ============================================================
+GITIGNORE|# NEXUS HOSPITALITY ONE
+GITIGNORE|# Git Ignore - Production Safe
+GITIGNORE|# Dependencies
+GITIGNORE|node_modules/
+GITIGNORE|# Production / Vite builds
+GITIGNORE|dist/
+GITIGNORE|release/
+GITIGNORE|out/
+GITIGNORE|build/
+GITIGNORE|# Local database and persistent operational data
+GITIGNORE|data/
+GITIGNORE|*.sqlite
+GITIGNORE|*.sqlite3
+GITIGNORE|*.db
+GITIGNORE|*.db-journal
+GITIGNORE|*.sqlite-journal
+GITIGNORE|*.sqlite-wal
+GITIGNORE|*.sqlite-shm
+GITIGNORE|# Environment / secrets
+GITIGNORE|.env
+GITIGNORE|.env.*
+GITIGNORE|!.env.example
+GITIGNORE|*.pem
+GITIGNORE|*.key
+GITIGNORE|*.p12
+GITIGNORE|*.pfx
+GITIGNORE|# Logs
+GITIGNORE|*.log
+GITIGNORE|logs/
+GITIGNORE|npm-debug.log*
+GITIGNORE|yarn-debug.log*
+GITIGNORE|yarn-error.log*
+GITIGNORE|pnpm-debug.log*
+GITIGNORE|# NEXUS local backups
+GITIGNORE|backup-*/
+GITIGNORE|BACKUP-*/
+GITIGNORE|*.BACKUP*
+GITIGNORE|*.backup
+GITIGNORE|# Windows / OS
+GITIGNORE|Thumbs.db
+GITIGNORE|Desktop.ini
+GITIGNORE|.DS_Store
+GITIGNORE|# Editors
+GITIGNORE|.vscode/
+GITIGNORE|.idea/
+GITIGNORE|# Temporary files
+GITIGNORE|tmp/
+GITIGNORE|temp/
+GITIGNORE|*.tmp
+GITIGNORE|*.temp
+GITIGNORE|# Coverage / cache
+GITIGNORE|coverage/
+GITIGNORE|.cache/
+GITIGNORE|.vite/
+GITIGNORE|# Electron generated packages
+GITIGNORE|*.exe
+GITIGNORE|*.msi
+GITIGNORE|*.AppImage
+GITIGNORE|*.dmg
+GITIGNORE|NEXUS-*-MAP.txt
+GITIGNORE|NEXUS-FINAL-RELEASE-AUDIT-*.txt
+DATABASE_GO_LIVE_GATE=PASS
+PRODUCTION_BUILD=PASS
+GIT_BRANCH=main
+GIT_STATUS| M server/business-v13.js
+GIT_STATUS| M server/growth-v12.js
+GIT_STATUS| M server/index.js
+GIT_STATUS| M server/operations-v11.js
+GIT_STATUS| M server/operations.js
+GIT_STATUS| M server/recipe-engine.js
+GIT_STATUS| M server/transaction-engine.js
+GIT_STATUS| M src/App.jsx
+GIT_STATUS|?? NEXUS-EVENTS-AUDIT.txt
+GIT_STATUS|?? NEXUS-EVENTS-FINAL-DIAG.txt
+GIT_STATUS|?? NEXUS-QR-SCANNER-DIAG.txt
+GIT_STATUS|?? NEXUS-QUERY-ISOLATION-MAP-V1.json
+GIT_STATUS|?? NEXUS-ROUTE-ARCHITECTURE-V1.json
+GIT_STATUS|?? NEXUS-TENANT-IMPLEMENTATION-SOURCE-V1.txt
+GIT_STATUS|?? NEXUS-TENANT-MIGRATION-V1.json
+GIT_STATUS|?? NEXUS-V3B-BUSINESS-V13-CURRENT.txt
+GIT_STATUS|?? __nexus_go_live_db_probe.cjs
+GIT_STATUS|?? server/growth-v12.js.PRE-PAYMENT-FAILURE-V2-20260922-123954.bak
+GIT_STATUS|?? server/growth-v12.js.PRE-PAYMENT-ROLLBACK-20260922-123902.bak
+GIT_STATUS|?? server/growth-v12.js.PRE-SAFE-TICKET-CHECKOUT-20260922-013548.bak
+GIT_STATUS|?? server/index.js.PRE-ENCODING-FIX-20260922-140346.bak
+GIT_STATUS|?? server/saas-asaas-subscription-adapter.js
+GIT_STATUS|?? server/saas-commercial-core.js
+GIT_STATUS|?? server/saas-contracting-engine.js
+GIT_STATUS|?? server/saas-contracting-engine.js.WEBHOOK-FINAL-20260922-150025.bak
+GIT_STATUS|?? server/saas-contracting-engine.js.WEBHOOK-SECURITY-20260922-145931.bak
+GIT_STATUS|?? server/saas-contracting-engine.js.WEBHOOK-SECURITY-20260922-145933.bak
+GIT_STATUS|?? server/saas-subscription-core.js
+GIT_STATUS|?? server/tenant-context.js
+GIT_STATUS|?? server/tenant-guard.js
+GIT_STATUS|?? src/SaasCommercialV1.css
+GIT_STATUS|?? src/SaasCommercialV1.jsx
+GIT_STATUS|?? src/SaasCommercialV1.jsx.EMAIL-FIX-20260922-145450.bak
+GIT_STATUS|?? src/saas-public-api.js
+CHANGED|server/business-v13.js
+CHANGED|server/growth-v12.js
+CHANGED|server/index.js
+CHANGED|server/operations-v11.js
+CHANGED|server/operations.js
+CHANGED|server/recipe-engine.js
+CHANGED|server/transaction-engine.js
+CHANGED|src/App.jsx
+UNTRACKED|NEXUS-EVENTS-AUDIT.txt
+UNTRACKED|NEXUS-EVENTS-FINAL-DIAG.txt
+UNTRACKED|NEXUS-QR-SCANNER-DIAG.txt
+UNTRACKED|NEXUS-QUERY-ISOLATION-MAP-V1.json
+UNTRACKED|NEXUS-ROUTE-ARCHITECTURE-V1.json
+UNTRACKED|NEXUS-TENANT-IMPLEMENTATION-SOURCE-V1.txt
+UNTRACKED|NEXUS-TENANT-MIGRATION-V1.json
+UNTRACKED|NEXUS-V3B-BUSINESS-V13-CURRENT.txt
+UNTRACKED|__nexus_go_live_db_probe.cjs
+UNTRACKED|server/growth-v12.js.PRE-PAYMENT-FAILURE-V2-20260922-123954.bak
+UNTRACKED|server/growth-v12.js.PRE-PAYMENT-ROLLBACK-20260922-123902.bak
+UNTRACKED|server/growth-v12.js.PRE-SAFE-TICKET-CHECKOUT-20260922-013548.bak
+UNTRACKED|server/index.js.PRE-ENCODING-FIX-20260922-140346.bak
+UNTRACKED|server/saas-asaas-subscription-adapter.js
+UNTRACKED|server/saas-commercial-core.js
+UNTRACKED|server/saas-contracting-engine.js
+UNTRACKED|server/saas-contracting-engine.js.WEBHOOK-FINAL-20260922-150025.bak
+UNTRACKED|server/saas-contracting-engine.js.WEBHOOK-SECURITY-20260922-145931.bak
+UNTRACKED|server/saas-contracting-engine.js.WEBHOOK-SECURITY-20260922-145933.bak
+UNTRACKED|server/saas-subscription-core.js
+UNTRACKED|server/tenant-context.js
+UNTRACKED|server/tenant-guard.js
+UNTRACKED|src/SaasCommercialV1.css
+UNTRACKED|src/SaasCommercialV1.jsx
+UNTRACKED|src/SaasCommercialV1.jsx.EMAIL-FIX-20260922-145450.bak
+UNTRACKED|src/saas-public-api.js
+LAST_COMMIT=31a8bf1 Protect ticket orders from payment gateway failures
+REMOTE|origin	https://github.com/William-tech-code/nexus-hospitality-one.git (fetch)
+REMOTE|origin	https://github.com/William-tech-code/nexus-hospitality-one.git (push)
+FINAL_PAYMENT_STATE=DRY_RUN_BLOCKER
+FINAL_ROUTE_REVIEW=REQUIRED
+SOURCE_CHANGE_BY_GATE=NO
+DATABASE_CHANGE_BY_GATE=NO
+REAL_ASAAS=NO
+COMMIT=NO
+PUSH=NO
+DEPLOY=NO

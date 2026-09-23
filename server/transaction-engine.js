@@ -2,8 +2,8 @@ import {db} from './db.js';
 import {consumeProduct} from './recipe-engine.js';
 import {smartSalePrice,smartUnitCost} from './suite-v06.js';
 const n=v=>Number(v||0);
-function inventorySnapshot(){const products=db.prepare('SELECT id,stock FROM products').all();const prof=Object.fromEntries(db.prepare('SELECT product_id,closed_units,open_base FROM inventory_profiles').all().map(x=>[x.product_id,x]));return Object.fromEntries(products.map(x=>[x.id,{stock:n(x.stock),closed:n(prof[x.id]?.closed_units),open:n(prof[x.id]?.open_base)}]))}
-function ledgerDiff(saleId,before){const after=inventorySnapshot(),ins=db.prepare('INSERT INTO sale_inventory_ledger(sale_id,product_id,stock_delta,closed_delta,open_delta) VALUES(?,?,?,?,?)');for(const [id,b] of Object.entries(before)){const a=after[id]||b,ds=n(a.stock)-n(b.stock),dc=n(a.closed)-n(b.closed),doo=n(a.open)-n(b.open);if(Math.abs(ds)>1e-9||Math.abs(dc)>1e-9||Math.abs(doo)>1e-9)ins.run(saleId,n(id),ds,dc,doo)}}
+function inventorySnapshot(tenantId){const products=db.prepare('SELECT id,stock FROM products WHERE tenant_id=?').all(n(tenantId));const prof=Object.fromEntries(db.prepare('SELECT ip.product_id,ip.closed_units,ip.open_base FROM inventory_profiles ip JOIN products p ON p.id=ip.product_id WHERE p.tenant_id=?').all(n(tenantId)).map(x=>[x.product_id,x]));return Object.fromEntries(products.map(x=>[x.id,{stock:n(x.stock),closed:n(prof[x.id]?.closed_units),open:n(prof[x.id]?.open_base)}]))}
+function ledgerDiff(saleId,before,tenantId){const after=inventorySnapshot(tenantId),ins=db.prepare('INSERT INTO sale_inventory_ledger(sale_id,product_id,stock_delta,closed_delta,open_delta) VALUES(?,?,?,?,?)');for(const [id,b] of Object.entries(before)){const a=after[id]||b,ds=n(a.stock)-n(b.stock),dc=n(a.closed)-n(b.closed),doo=n(a.open)-n(b.open);if(Math.abs(ds)>1e-9||Math.abs(dc)>1e-9||Math.abs(doo)>1e-9)ins.run(saleId,n(id),ds,dc,doo)}}
 
 function ensureItemInventoryLedger(){
   db.exec(`
@@ -29,8 +29,8 @@ function ensureItemInventoryLedger(){
 
 ensureItemInventoryLedger();
 
-function itemLedgerDiff(saleId,saleItemId,before,mode){
-  const after=inventorySnapshot();
+function itemLedgerDiff(saleId,saleItemId,before,mode,tenantId){
+  const after=inventorySnapshot(tenantId);
 
   const ins=db.prepare(`
     INSERT INTO sale_item_inventory_ledger(
@@ -70,8 +70,8 @@ function itemLedgerDiff(saleId,saleItemId,before,mode){
   }
 }
 
-export function currentCash(){return db.prepare("SELECT * FROM cash_sessions WHERE status='OPEN' ORDER BY id DESC LIMIT 1").get()||null}
-export function resolveItems(items=[]){const get=db.prepare('SELECT * FROM products WHERE id=? AND active=1');return items.map(i=>{const p=get.get(n(i.product_id));if(!p)throw new Error(`Produto inválido: ${i.product_id}`);const qty=Math.max(.01,n(i.qty||1)),mode=String(i.mode||'UNIT').toUpperCase();return{p,qty,mode,price:smartSalePrice(p.id,mode,p.price),cost:smartUnitCost(p.id,mode,p.cost)}})}
+export function currentCash(tenantId){return db.prepare("SELECT * FROM cash_sessions WHERE status='OPEN' AND tenant_id=? ORDER BY id DESC LIMIT 1").get(n(tenantId))||null}
+export function resolveItems(items=[],tenantId){const get=db.prepare('SELECT * FROM products WHERE id=? AND tenant_id=? AND active=1');return items.map(i=>{const p=get.get(n(i.product_id),n(tenantId));if(!p)throw new Error(`Produto inválido: ${i.product_id}`);const qty=Math.max(.01,n(i.qty||1)),mode=String(i.mode||'UNIT').toUpperCase();return{p,qty,mode,price:smartSalePrice(p.id,mode,p.price,tenantId),cost:smartUnitCost(p.id,mode,p.cost,tenantId)}})}
 export function createUnifiedSale({
   items,
   payment_method='DINHEIRO',
@@ -83,13 +83,18 @@ export function createUnifiedSale({
   tip_amount=0,
   user_id,
   source='POS',
-  source_id=null
+  source_id=null,
+  tenant_id
 }){
-  const cs=currentCash();
+  const tenantId=n(tenant_id);
+
+  if(!tenantId)throw new Error('TENANT_CONTEXT_REQUIRED');
+
+  const cs=currentCash(tenantId);
 
   if(!cs)throw new Error('CASH_SESSION_REQUIRED');
 
-  const resolved=resolveItems(items);
+  const resolved=resolveItems(items,tenantId);
 
   if(!resolved.length){
     throw new Error('VENDA_SEM_ITENS');
@@ -123,10 +128,11 @@ export function createUnifiedSale({
 
   return db.transaction(()=>{
 
-    const saleBefore=inventorySnapshot();
+    const saleBefore=inventorySnapshot(tenantId);
 
     const s=db.prepare(`
       INSERT INTO sales(
+        tenant_id,
         total,
         payment_method,
         status,
@@ -137,8 +143,9 @@ export function createUnifiedSale({
         employee_id,
         tip_amount
       )
-      VALUES(?,?,'PAID',?,?,?,?,?,?)
+      VALUES(?,?,?,'PAID',?,?,?,?,?,?)
     `).run(
+      tenantId,
       total,
       splits.length>1
         ? 'MISTO'
@@ -184,7 +191,7 @@ export function createUnifiedSale({
        * Assim receitas e estoque inteligente ficam vinculados
        * ao sale_item correto.
        */
-      const itemBefore=inventorySnapshot();
+      const itemBefore=inventorySnapshot(tenantId);
 
       consumeProduct(
         x.p.id,
@@ -192,14 +199,16 @@ export function createUnifiedSale({
         user_id,
         source,
         source_id||saleId,
-        x.mode
+        x.mode,
+        tenantId
       );
 
       itemLedgerDiff(
         saleId,
         saleItemId,
         itemBefore,
-        x.mode
+        x.mode,
+        tenantId
       );
     }
 
@@ -231,9 +240,11 @@ export function createUnifiedSale({
           total_spent=COALESCE(total_spent,0)+?,
           updated_at=CURRENT_TIMESTAMP
         WHERE id=?
+          AND tenant_id=?
       `).run(
         due,
-        n(customer_id)
+        n(customer_id),
+        tenantId
       );
     }
 
@@ -241,7 +252,7 @@ export function createUnifiedSale({
      * Ledger legado permanece para cancelamento integral
      * e compatibilidade das vendas existentes.
      */
-    ledgerDiff(saleId,saleBefore);
+    ledgerDiff(saleId,saleBefore,tenantId);
 
     if(employee_id&&tip>0){
       db.prepare(
@@ -254,16 +265,16 @@ export function createUnifiedSale({
     }
 
     return db.prepare(
-      'SELECT * FROM sales WHERE id=?'
-    ).get(saleId);
+      'SELECT * FROM sales WHERE id=? AND tenant_id=?'
+    ).get(saleId,tenantId);
 
   })();
 }
 
-export function cashSummary(id){
+export function cashSummary(id,tenantId){
   const cs=db.prepare(
-    'SELECT * FROM cash_sessions WHERE id=?'
-  ).get(n(id));
+    'SELECT * FROM cash_sessions WHERE id=? AND tenant_id=?'
+  ).get(n(id),n(tenantId));
 
   if(!cs)return null;
 

@@ -1,4 +1,5 @@
-﻿import { db } from "./db.js";
+import { db } from "./db.js";
+import { tenantContext } from './tenant-guard.js';
 
 
 
@@ -583,6 +584,7 @@ export function registerNetIntelligenceV25(
  app.get(
   "/api/v25/intelligence/net-overview",
   auth,
+  tenantContext,
   minRole(70),
   (_req,res) => {
 

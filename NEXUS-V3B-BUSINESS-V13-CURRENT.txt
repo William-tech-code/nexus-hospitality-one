@@ -1,6 +1,5 @@
 import crypto from 'node:crypto';
 import {db} from './db.js';
-import { tenantContext } from './tenant-guard.js';
 const n=v=>Number(v||0), txt=v=>String(v||'').trim(), round=v=>Math.round((n(v)+Number.EPSILON)*100)/100;
 const token=(p='NX')=>`${p}-${crypto.randomBytes(8).toString('hex').toUpperCase()}`;
 const add=(t,c,d)=>{const cols=db.prepare(`PRAGMA table_info(${t})`).all().map(x=>x.name);if(!cols.includes(c))db.exec(`ALTER TABLE ${t} ADD COLUMN ${c} ${d}`)};
@@ -65,222 +64,43 @@ function priceSuggestion(cost,margin,rounding=.5){
  return round(Math.ceil(p/rounding)*rounding)
 }
 export function registerBusinessV13(app,{auth,minRole,audit}){
- app.get('/api/public/supplier-quote/:token',(req,res)=>{const tokenValue=txt(req.params.token);const inv=db.prepare(`SELECT qi.*,qr.title,qr.deadline_at,qr.notes request_notes,s.name supplier_name FROM quote_invitations qi JOIN quote_requests qr ON qr.id=qi.request_id AND qr.tenant_id=qi.tenant_id JOIN suppliers s ON s.id=qi.supplier_id AND s.tenant_id=qi.tenant_id WHERE qi.invite_token=? AND qr.status='OPEN'`).get(tokenValue);if(!inv)return res.status(404).json({error:'COTACAO_INDISPONIVEL'});const tenantId=n(inv.tenant_id);if(!tenantId)return res.status(404).json({error:'COTACAO_INDISPONIVEL'});db.prepare('UPDATE supplier_portal_users SET last_access_at=CURRENT_TIMESTAMP WHERE supplier_id=? AND tenant_id=?').run(inv.supplier_id,tenantId);const items=db.prepare(`SELECT qri.id item_id,qri.qty,qri.unit,p.name,p.category,qsp.unit_price,qsp.available,qsp.brand,qsp.notes FROM quote_request_items qri JOIN quote_requests qr ON qr.id=qri.request_id AND qr.tenant_id=? JOIN products p ON p.id=qri.product_id AND p.tenant_id=? LEFT JOIN quote_supplier_prices qsp ON qsp.item_id=qri.id AND qsp.invitation_id=? AND qsp.tenant_id=? WHERE qri.request_id=?`).all(tenantId,tenantId,inv.id,tenantId,inv.request_id);res.json({...inv,tenant_id:undefined,items})});
- app.post('/api/public/supplier-quote/:token',(req,res)=>{try{const tokenValue=txt(req.params.token);const inv=db.prepare(`SELECT qi.*,qr.status request_status,qr.deadline_at FROM quote_invitations qi JOIN quote_requests qr ON qr.id=qi.request_id AND qr.tenant_id=qi.tenant_id JOIN suppliers s ON s.id=qi.supplier_id AND s.tenant_id=qi.tenant_id WHERE qi.invite_token=?`).get(tokenValue);if(!inv||inv.request_status!=='OPEN')return res.status(404).json({error:'COTACAO_INDISPONIVEL'});const tenantId=n(inv.tenant_id);if(!tenantId)return res.status(404).json({error:'COTACAO_INDISPONIVEL'});if(inv.deadline_at&&Date.now()>new Date(inv.deadline_at).getTime())return res.status(409).json({error:'PRAZO_ENCERRADO'});const b=req.body||{},items=Array.isArray(b.items)?b.items:[];db.transaction(()=>{for(const x of items){const item=db.prepare(`SELECT qri.id FROM quote_request_items qri JOIN quote_requests qr ON qr.id=qri.request_id AND qr.tenant_id=? JOIN products p ON p.id=qri.product_id AND p.tenant_id=? WHERE qri.id=? AND qri.request_id=?`).get(tenantId,tenantId,n(x.item_id),inv.request_id);if(!item)throw new Error('ITEM_FORA_DA_COTACAO');db.prepare(`INSERT INTO quote_supplier_prices(invitation_id,item_id,unit_price,available,brand,notes,tenant_id) VALUES(?,?,?,?,?,?,?) ON CONFLICT(invitation_id,item_id) DO UPDATE SET unit_price=excluded.unit_price,available=excluded.available,brand=excluded.brand,notes=excluded.notes,tenant_id=excluded.tenant_id`).run(inv.id,item.id,n(x.unit_price),x.available===false?0:1,txt(x.brand)||null,txt(x.notes)||null,tenantId)}const updated=db.prepare("UPDATE quote_invitations SET status='SUBMITTED',submitted_at=CURRENT_TIMESTAMP,freight=?,delivery_days=?,validity_days=?,notes=? WHERE id=? AND tenant_id=?").run(n(b.freight),n(b.delivery_days),n(b.validity_days),txt(b.notes)||null,inv.id,tenantId);if(Number(updated.changes)!==1)throw new Error('COTACAO_INDISPONIVEL')})();res.json({ok:true,message:'Cotação enviada com sucesso.'})}catch(e){res.status(400).json({error:e.message})}});
- app.get('/api/v13/pricing',auth,tenantContext,minRole(55),(req,res)=>{try{
-  const policy=db.prepare(
-    'SELECT * FROM tenant_pricing_policies WHERE tenant_id=?'
-  ).get(req.tenantId)||{
-    tenant_id:req.tenantId,
-    default_margin:55,
-    min_margin:35,
-    rounding:.5
-  };
+ app.get('/api/public/supplier-quote/:token',(req,res)=>{const inv=db.prepare(`SELECT qi.*,qr.title,qr.deadline_at,qr.notes request_notes,s.name supplier_name FROM quote_invitations qi JOIN quote_requests qr ON qr.id=qi.request_id JOIN suppliers s ON s.id=qi.supplier_id WHERE qi.invite_token=? AND qr.status='OPEN'`).get(txt(req.params.token));if(!inv)return res.status(404).json({error:'COTACAO_INDISPONIVEL'});db.prepare('UPDATE supplier_portal_users SET last_access_at=CURRENT_TIMESTAMP WHERE supplier_id=?').run(inv.supplier_id);const items=db.prepare(`SELECT qri.id item_id,qri.qty,qri.unit,p.name,p.category,qsp.unit_price,qsp.available,qsp.brand,qsp.notes FROM quote_request_items qri JOIN products p ON p.id=qri.product_id LEFT JOIN quote_supplier_prices qsp ON qsp.item_id=qri.id AND qsp.invitation_id=? WHERE qri.request_id=?`).all(inv.id,inv.request_id);res.json({...inv,items})});
+ app.post('/api/public/supplier-quote/:token',(req,res)=>{try{const inv=db.prepare(`SELECT qi.*,qr.status request_status,qr.deadline_at FROM quote_invitations qi JOIN quote_requests qr ON qr.id=qi.request_id WHERE qi.invite_token=?`).get(txt(req.params.token));if(!inv||inv.request_status!=='OPEN')return res.status(404).json({error:'COTACAO_INDISPONIVEL'});if(inv.deadline_at&&Date.now()>new Date(inv.deadline_at).getTime())return res.status(409).json({error:'PRAZO_ENCERRADO'});const b=req.body||{},items=Array.isArray(b.items)?b.items:[];db.transaction(()=>{for(const x of items)db.prepare(`INSERT INTO quote_supplier_prices(invitation_id,item_id,unit_price,available,brand,notes) VALUES(?,?,?,?,?,?) ON CONFLICT(invitation_id,item_id) DO UPDATE SET unit_price=excluded.unit_price,available=excluded.available,brand=excluded.brand,notes=excluded.notes`).run(inv.id,n(x.item_id),n(x.unit_price),x.available===false?0:1,txt(x.brand)||null,txt(x.notes)||null);db.prepare("UPDATE quote_invitations SET status='SUBMITTED',submitted_at=CURRENT_TIMESTAMP,freight=?,delivery_days=?,validity_days=?,notes=? WHERE id=?").run(n(b.freight),n(b.delivery_days),n(b.validity_days),txt(b.notes)||null,inv.id)})();res.json({ok:true,message:'Cotação enviada com sucesso.'})}catch(e){res.status(400).json({error:e.message})}});
+ app.get('/api/v13/pricing',auth,minRole(55),(_req,res)=>{const policy=db.prepare('SELECT * FROM pricing_policies WHERE id=1').get();const products=db.prepare('SELECT id,name,category,cost,price,target_margin,suggested_price,unit_type,package_ml,dose_ml,stock_factor,stock_unit FROM products WHERE active=1 ORDER BY category,name').all().map(p=>{
+ const margin=n(p.target_margin)||n(policy.default_margin);
+ const fraction=fractionCost(p);
+ const effectiveCost=fraction.unit_cost;
+ const suggested=priceSuggestion(effectiveCost,margin,policy.rounding);
+ const currentMargin=n(p.price)>0
+   ?round((n(p.price)-effectiveCost)/n(p.price)*100)
+   :0;
 
-  const products=db.prepare(
-    'SELECT id,name,category,cost,price,target_margin,suggested_price,unit_type,package_ml,dose_ml,stock_factor,stock_unit FROM products WHERE active=1 AND tenant_id=? ORDER BY category,name'
-  ).all(req.tenantId).map(p=>{
-    const margin=n(p.target_margin)||n(policy.default_margin);
-    const fraction=fractionCost(p);
-    const effectiveCost=fraction.unit_cost;
-    const suggested=priceSuggestion(
-      effectiveCost,
-      margin,
-      policy.rounding
-    );
-
-    const currentMargin=n(p.price)>0
-      ?round(
-        (n(p.price)-effectiveCost)/
-        n(p.price)*100
-      )
-      :0;
-
-    return{
-      ...p,
-      target_margin:margin,
-      effective_cost:effectiveCost,
-      pricing_mode:fraction.mode,
-      fraction_configured:fraction.configured,
-      doses_per_package:fraction.doses_per_package,
-      package_cost:fraction.package_cost,
-      suggested_price:suggested,
-      current_margin:currentMargin
-    };
-  });
-
-  res.json({
-    policy,
-    products
-  });
-
- }catch(e){
-  res.status(400).json({
-    error:e.message
-  });
- }});
-
- app.put('/api/v13/pricing/policy',auth,tenantContext,minRole(80),(req,res)=>{try{
-  const b=req.body||{};
-
-  const defaultMargin=
-    n(b.default_margin)||55;
-
-  const minMargin=
-    n(b.min_margin)||35;
-
-  const rounding=
-    n(b.rounding)||.5;
-
-  db.prepare(`
-    INSERT INTO tenant_pricing_policies(
-      tenant_id,
-      default_margin,
-      min_margin,
-      rounding,
-      created_at,
-      updated_at
-    )
-    VALUES(
-      ?,?,?,?,
-      CURRENT_TIMESTAMP,
-      CURRENT_TIMESTAMP
-    )
-    ON CONFLICT(tenant_id)
-    DO UPDATE SET
-      default_margin=excluded.default_margin,
-      min_margin=excluded.min_margin,
-      rounding=excluded.rounding,
-      updated_at=CURRENT_TIMESTAMP
-  `).run(
-    req.tenantId,
-    defaultMargin,
-    minMargin,
-    rounding
-  );
-
-  audit(
-    req.user.id,
-    'UPDATE',
-    'PRICING_POLICY',
-    req.tenantId,
-    {
-      default_margin:defaultMargin,
-      min_margin:minMargin,
-      rounding,
-      tenant_id:req.tenantId
-    }
-  );
-
-  res.json({
-    ok:true
-  });
-
- }catch(e){
-  res.status(400).json({
-    error:e.message
-  });
- }});
-
- app.patch('/api/v13/pricing/product/:id',auth,tenantContext,minRole(55),(req,res)=>{try{
-  const b=req.body||{};
-
-  const p=db.prepare(
-    'SELECT * FROM products WHERE id=? AND tenant_id=?'
-  ).get(
-    n(req.params.id),
-    req.tenantId
-  );
-
-  if(!p)
-    return res.status(404).json({
-      error:'PRODUCT_NOT_FOUND'
-    });
-
-  const policy=db.prepare(
-    'SELECT * FROM tenant_pricing_policies WHERE tenant_id=?'
-  ).get(req.tenantId)||{
-    tenant_id:req.tenantId,
-    default_margin:55,
-    min_margin:35,
-    rounding:.5
-  };
-
-  const margin=
-    n(b.target_margin)||
-    n(policy.default_margin);
-
-  const fraction=
-    fractionCost(p);
-
-  const suggested=
-    priceSuggestion(
-      fraction.unit_cost,
-      margin,
-      policy.rounding
-    );
-
-  const updated=db.prepare(`
-    UPDATE products
-    SET
-      target_margin=?,
-      suggested_price=?,
-      price=CASE
-        WHEN ?=1 THEN ?
-        ELSE price
-      END
-    WHERE id=?
-      AND tenant_id=?
-  `).run(
-    margin,
-    suggested,
-    b.apply?1:0,
-    suggested,
-    p.id,
-    req.tenantId
-  );
-
-  if(Number(updated.changes)!==1)
-    return res.status(404).json({
-      error:'PRODUCT_NOT_FOUND'
-    });
-
-  audit(
-    req.user.id,
-    'PRICE_SUGGESTION',
-    'PRODUCT',
-    p.id,
-    {
-      margin,
-      suggested,
-      apply:!!b.apply,
-      tenant_id:req.tenantId
-    }
-  );
-
-  res.json({
-    ok:true,
-    suggested_price:suggested
-  });
-
- }catch(e){
-  res.status(400).json({
-    error:e.message
-  });
- }});
-
- app.get('/api/v13/sales/recent',auth,tenantContext,minRole(50),(req,res)=>res.json(db.prepare(`SELECT s.*,u.name user_name,(SELECT group_concat(method||': '||printf('%.2f',amount),' | ') FROM payment_splits WHERE sale_id=s.id) payments FROM sales s LEFT JOIN users u ON u.id=s.user_id WHERE s.tenant_id=? ORDER BY s.id DESC LIMIT 100`).all(req.tenantId)));
- app.post('/api/v13/sales/:id/cancel',auth,tenantContext,minRole(80),(req,res)=>{try{const id=n(req.params.id),reason=txt(req.body?.reason);if(reason.length<4)return res.status(400).json({error:'MOTIVO_OBRIGATORIO'});const out=db.transaction(()=>{const s=db.prepare('SELECT * FROM sales WHERE id=? AND tenant_id=?').get(id,req.tenantId);if(!s)throw new Error('VENDA_NAO_ENCONTRADA');if(s.status==='CANCELLED')throw new Error('VENDA_JA_CANCELADA');const led=db.prepare('SELECT * FROM sale_inventory_ledger WHERE sale_id=? AND tenant_id=?').all(id,req.tenantId);for(const l of led){const product=db.prepare('SELECT id FROM products WHERE id=? AND tenant_id=?').get(l.product_id,req.tenantId);if(!product)throw new Error('PRODUTO_FORA_DO_TENANT');db.prepare('UPDATE products SET stock=stock-? WHERE id=? AND tenant_id=?').run(n(l.stock_delta),l.product_id,req.tenantId);const ip=db.prepare('SELECT ip.product_id FROM inventory_profiles ip JOIN products p ON p.id=ip.product_id WHERE ip.product_id=? AND p.tenant_id=?').get(l.product_id,req.tenantId);if(ip)db.prepare('UPDATE inventory_profiles SET closed_units=closed_units-?,open_base=open_base-?,updated_at=CURRENT_TIMESTAMP WHERE product_id=?').run(n(l.closed_delta),n(l.open_delta),l.product_id);db.prepare("INSERT INTO stock_movements(product_id,type,qty,reference_type,reference_id,user_id,notes) VALUES(?,'SALE_CANCEL',?,'SALE_CANCEL',?,?,?)").run(l.product_id,-n(l.stock_delta),String(id),req.user.id,reason)}const saleUpdate=db.prepare("UPDATE sales SET status='CANCELLED',cancelled_at=CURRENT_TIMESTAMP,cancel_reason=? WHERE id=? AND tenant_id=?").run(reason,id,req.tenantId);if(Number(saleUpdate.changes)!==1)throw new Error('VENDA_NAO_ENCONTRADA');db.prepare('INSERT INTO sale_cancellations(sale_id,reason,user_id,refund_total,tenant_id) VALUES(?,?,?,?,?)').run(id,reason,req.user.id,n(s.total)+n(s.tip_amount),req.tenantId);if(s.customer_name){/* histórico preservado */}return{sale_id:id,refund_total:round(n(s.total)+n(s.tip_amount)),payments:db.prepare('SELECT ps.method,ps.amount FROM payment_splits ps JOIN sales sx ON sx.id=ps.sale_id WHERE ps.sale_id=? AND sx.tenant_id=?').all(id,req.tenantId)}})();audit(req.user.id,'CANCEL','SALE',id,{reason,...out,tenant_id:req.tenantId});res.json({ok:true,...out})}catch(e){res.status(409).json({error:e.message})}});
- app.post('/api/v13/sales/split-payment',auth,tenantContext,minRole(50),(req,res)=>{try{const b=req.body||{},parts=Array.isArray(b.participants)?b.participants:[],items=Array.isArray(b.items)?b.items:[];if(parts.length<2||parts.length>6)return res.status(400).json({error:'DIVISAO_DEVE_TER_2_A_6_PESSOAS'});const payments=parts.flatMap((p,i)=>(p.payments||[]).map(x=>({...x,participant_no:i+1})));const totalPay=round(payments.reduce((s,x)=>s+n(x.amount),0));const tip=n(b.tip_amount);const resolvedTotal=round(items.reduce((sum,x)=>{const product=db.prepare('SELECT price FROM products WHERE id=? AND tenant_id=?').get(n(x.product_id),req.tenantId);if(!product)throw new Error('PRODUTO_NAO_ENCONTRADO');return sum+n(product.price)*n(x.qty||1)},0)+tip);if(Math.abs(totalPay-resolvedTotal)>.01)return res.status(400).json({error:'VALORES_NAO_FECHAM',expected:resolvedTotal,received:totalPay});const {createUnifiedSale}=globalThis.__NEXUS_TX__||{};if(!createUnifiedSale)throw new Error('TRANSACTION_ENGINE_UNAVAILABLE');const sale=createUnifiedSale({items,payments:payments.map(({method,amount})=>({method,amount})),customer_name:b.customer_name||null,tip_amount:tip,user_id:req.user.id,source:'POS_SPLIT',tenant_id:req.tenantId});db.transaction(()=>{const ownedSale=db.prepare('SELECT id FROM sales WHERE id=? AND tenant_id=?').get(sale.id,req.tenantId);if(!ownedSale)throw new Error('VENDA_FORA_DO_TENANT');for(let i=0;i<parts.length;i++){const p=parts[i],pt=(p.payments||[]).reduce((sum,x)=>sum+n(x.amount),0),pi=db.prepare('INSERT INTO sale_participants(sale_id,participant_no,label,payment_total,tenant_id) VALUES(?,?,?,?,?)').run(sale.id,i+1,txt(p.label)||`Pessoa ${i+1}`,pt,req.tenantId);for(const x of p.payments||[])db.prepare('INSERT INTO sale_participant_payments(participant_id,method,amount,tenant_id) VALUES(?,?,?,?)').run(pi.lastInsertRowid,txt(x.method).toUpperCase(),n(x.amount),req.tenantId)}})();res.status(201).json({sale,participants:parts.length})}catch(e){res.status(400).json({error:e.message})}});
- app.get('/api/v13/cash/withdrawal-advice',auth,tenantContext,minRole(70),(req,res)=>{const cash=db.prepare("SELECT * FROM cash_sessions WHERE status='OPEN' AND tenant_id=? ORDER BY id DESC LIMIT 1").get(req.tenantId);if(!cash)return res.status(409).json({error:'CAIXA_FECHADO'});const cashSales=n(db.prepare(`SELECT COALESCE(SUM(ps.amount),0) v FROM payment_splits ps JOIN sales s ON s.id=ps.sale_id WHERE s.cash_session_id=? AND s.tenant_id=? AND s.status='PAID' AND ps.method='DINHEIRO'`).get(cash.id,req.tenantId)?.v);const mov=db.prepare(`SELECT COALESCE(SUM(CASE WHEN cm.type='SUPRIMENTO' THEN cm.amount ELSE 0 END),0) sup,COALESCE(SUM(CASE WHEN cm.type='SANGRIA' THEN cm.amount ELSE 0 END),0) sang FROM cash_movements cm JOIN cash_sessions cs ON cs.id=cm.cash_session_id WHERE cm.cash_session_id=? AND cs.tenant_id=?`).get(cash.id,req.tenantId);const physical=round(n(cash.opening_amount)+cashSales+n(mov.sup)-n(mov.sang));const obligations=n(db.prepare("SELECT COALESCE(SUM(amount),0) v FROM financial_obligations WHERE status='OPEN' AND tenant_id=? AND date(due_date)<=date('now','+14 days')").get(req.tenantId)?.v);const exp=n(db.prepare("SELECT COALESCE(SUM(amount),0) v FROM expenses WHERE tenant_id=? AND date(due_date)>=date('now') AND date(due_date)<=date('now','+14 days')").get(req.tenantId)?.v);const avg=n(db.prepare("SELECT COALESCE(AVG(day_total),0) v FROM (SELECT date(created_at) d,SUM(total) day_total FROM sales WHERE status='PAID' AND tenant_id=? AND date(created_at)>=date('now','-30 days') GROUP BY date(created_at))").get(req.tenantId)?.v);const reserve=round(Math.max(avg*3,(obligations+exp)*.2));const safe=round(Math.max(0,physical-obligations-exp-reserve));res.json({question:'Posso tirar dinheiro do caixa hoje?',recommendation:safe>0?'SIM_COM_LIMITE':'NAO_RECOMENDADO',safe_withdrawal:safe,physical_cash:physical,obligations_14d:round(obligations),planned_expenses_14d:round(exp),safety_reserve:reserve,rationale:safe>0?`Retirada máxima sugerida de R$ ${safe.toFixed(2)}, preservando compromissos e reserva operacional.`:'O caixa disponível deve ser preservado para compromissos e capital de giro.'})});
- app.get('/api/v13/obligations',auth,tenantContext,minRole(70),(req,res)=>res.json(db.prepare("SELECT * FROM financial_obligations WHERE status='OPEN' AND tenant_id=? ORDER BY due_date").all(req.tenantId)));
- app.post('/api/v13/obligations',auth,tenantContext,minRole(70),(req,res)=>{const b=req.body||{};if(!txt(b.title)||n(b.amount)<=0||!b.due_date)return res.status(400).json({error:'DADOS_OBRIGATORIOS'});const i=db.prepare('INSERT INTO financial_obligations(title,category,amount,due_date,essential,tenant_id) VALUES(?,?,?,?,?,?)').run(txt(b.title),txt(b.category)||'OUTROS',n(b.amount),b.due_date,b.essential===false?0:1,req.tenantId);res.status(201).json({id:i.lastInsertRowid})});
+ return{
+   ...p,
+   target_margin:margin,
+   effective_cost:effectiveCost,
+   pricing_mode:fraction.mode,
+   fraction_configured:fraction.configured,
+   doses_per_package:fraction.doses_per_package,
+   package_cost:fraction.package_cost,
+   suggested_price:suggested,
+   current_margin:currentMargin
+ };
+});res.json({policy,products})});
+ app.put('/api/v13/pricing/policy',auth,minRole(80),(req,res)=>{const b=req.body||{};db.prepare('UPDATE pricing_policies SET default_margin=?,min_margin=?,rounding=?,updated_at=CURRENT_TIMESTAMP WHERE id=1').run(n(b.default_margin),n(b.min_margin),n(b.rounding)||.5);audit(req.user.id,'UPDATE','PRICING_POLICY',1,b);res.json({ok:true})});
+ app.patch('/api/v13/pricing/product/:id',auth,minRole(55),(req,res)=>{const b=req.body||{},p=db.prepare('SELECT * FROM products WHERE id=?').get(n(req.params.id)),policy=db.prepare('SELECT * FROM pricing_policies WHERE id=1').get();if(!p)return res.status(404).json({error:'PRODUCT_NOT_FOUND'});const margin=n(b.target_margin)||n(policy.default_margin),suggested=priceSuggestion(p.cost,margin,policy.rounding);db.prepare('UPDATE products SET target_margin=?,suggested_price=?,price=CASE WHEN ?=1 THEN ? ELSE price END WHERE id=?').run(margin,suggested,b.apply?1:0,suggested,p.id);audit(req.user.id,'PRICE_SUGGESTION','PRODUCT',p.id,{margin,suggested,apply:!!b.apply});res.json({ok:true,suggested_price:suggested})});
+ app.get('/api/v13/sales/recent',auth,minRole(50),(_req,res)=>res.json(db.prepare(`SELECT s.*,u.name user_name,(SELECT group_concat(method||': '||printf('%.2f',amount),' | ') FROM payment_splits WHERE sale_id=s.id) payments FROM sales s LEFT JOIN users u ON u.id=s.user_id ORDER BY s.id DESC LIMIT 100`).all()));
+ app.post('/api/v13/sales/:id/cancel',auth,minRole(80),(req,res)=>{try{const id=n(req.params.id),reason=txt(req.body?.reason);if(reason.length<4)return res.status(400).json({error:'MOTIVO_OBRIGATORIO'});const out=db.transaction(()=>{const s=db.prepare('SELECT * FROM sales WHERE id=?').get(id);if(!s)throw new Error('VENDA_NAO_ENCONTRADA');if(s.status==='CANCELLED')throw new Error('VENDA_JA_CANCELADA');const led=db.prepare('SELECT * FROM sale_inventory_ledger WHERE sale_id=?').all(id);for(const l of led){db.prepare('UPDATE products SET stock=stock-? WHERE id=?').run(n(l.stock_delta),l.product_id);const ip=db.prepare('SELECT product_id FROM inventory_profiles WHERE product_id=?').get(l.product_id);if(ip)db.prepare('UPDATE inventory_profiles SET closed_units=closed_units-?,open_base=open_base-?,updated_at=CURRENT_TIMESTAMP WHERE product_id=?').run(n(l.closed_delta),n(l.open_delta),l.product_id);db.prepare("INSERT INTO stock_movements(product_id,type,qty,reference_type,reference_id,user_id,notes) VALUES(?,'SALE_CANCEL',?,'SALE_CANCEL',?,?,?)").run(l.product_id,-n(l.stock_delta),String(id),req.user.id,reason)}db.prepare("UPDATE sales SET status='CANCELLED',cancelled_at=CURRENT_TIMESTAMP,cancel_reason=? WHERE id=?").run(reason,id);db.prepare('INSERT INTO sale_cancellations(sale_id,reason,user_id,refund_total) VALUES(?,?,?,?)').run(id,reason,req.user.id,n(s.total)+n(s.tip_amount));if(s.customer_name){/* histórico preservado */}return{sale_id:id,refund_total:round(n(s.total)+n(s.tip_amount)),payments:db.prepare('SELECT method,amount FROM payment_splits WHERE sale_id=?').all(id)}})();audit(req.user.id,'CANCEL','SALE',id,{reason,...out});res.json({ok:true,...out})}catch(e){res.status(409).json({error:e.message})}});
+ app.post('/api/v13/sales/split-payment',auth,minRole(50),(req,res)=>{try{const b=req.body||{},parts=Array.isArray(b.participants)?b.participants:[],items=Array.isArray(b.items)?b.items:[];if(parts.length<2||parts.length>6)return res.status(400).json({error:'DIVISAO_DEVE_TER_2_A_6_PESSOAS'});const payments=parts.flatMap((p,i)=>(p.payments||[]).map(x=>({...x,participant_no:i+1})));const totalPay=round(payments.reduce((s,x)=>s+n(x.amount),0));const tip=n(b.tip_amount);const resolvedTotal=round(items.reduce((s,x)=>{const p=db.prepare('SELECT price FROM products WHERE id=?').get(n(x.product_id));return s+n(p?.price)*n(x.qty||1)},0)+tip);if(Math.abs(totalPay-resolvedTotal)>.01)return res.status(400).json({error:'VALORES_NAO_FECHAM',expected:resolvedTotal,received:totalPay});const {createUnifiedSale}=globalThis.__NEXUS_TX__||{};if(!createUnifiedSale)throw new Error('TRANSACTION_ENGINE_UNAVAILABLE');const sale=createUnifiedSale({items,payments:payments.map(({method,amount})=>({method,amount})),customer_name:b.customer_name||null,tip_amount:tip,user_id:req.user.id,source:'POS_SPLIT'});db.transaction(()=>{for(let i=0;i<parts.length;i++){const p=parts[i],pt=(p.payments||[]).reduce((s,x)=>s+n(x.amount),0),pi=db.prepare('INSERT INTO sale_participants(sale_id,participant_no,label,payment_total) VALUES(?,?,?,?)').run(sale.id,i+1,txt(p.label)||`Pessoa ${i+1}`,pt);for(const x of p.payments||[])db.prepare('INSERT INTO sale_participant_payments(participant_id,method,amount) VALUES(?,?,?)').run(pi.lastInsertRowid,txt(x.method).toUpperCase(),n(x.amount))}})();res.status(201).json({sale,participants:parts.length})}catch(e){res.status(400).json({error:e.message})}});
+ app.get('/api/v13/cash/withdrawal-advice',auth,minRole(70),(_req,res)=>{const cash=db.prepare("SELECT * FROM cash_sessions WHERE status='OPEN' ORDER BY id DESC LIMIT 1").get();if(!cash)return res.status(409).json({error:'CAIXA_FECHADO'});const cashSales=n(db.prepare(`SELECT COALESCE(SUM(ps.amount),0) v FROM payment_splits ps JOIN sales s ON s.id=ps.sale_id WHERE s.cash_session_id=? AND s.status='PAID' AND ps.method='DINHEIRO'`).get(cash.id)?.v);const mov=db.prepare(`SELECT COALESCE(SUM(CASE WHEN type='SUPRIMENTO' THEN amount ELSE 0 END),0) sup,COALESCE(SUM(CASE WHEN type='SANGRIA' THEN amount ELSE 0 END),0) sang FROM cash_movements WHERE cash_session_id=?`).get(cash.id);const physical=round(n(cash.opening_amount)+cashSales+n(mov.sup)-n(mov.sang));const obligations=n(db.prepare("SELECT COALESCE(SUM(amount),0) v FROM financial_obligations WHERE status='OPEN' AND date(due_date)<=date('now','+14 days')").get()?.v);const exp=n(db.prepare("SELECT COALESCE(SUM(amount),0) v FROM expenses WHERE date(due_date)>=date('now') AND date(due_date)<=date('now','+14 days')").get()?.v);const avg=n(db.prepare("SELECT COALESCE(AVG(day_total),0) v FROM (SELECT date(created_at) d,SUM(total) day_total FROM sales WHERE status='PAID' AND date(created_at)>=date('now','-30 days') GROUP BY date(created_at))").get()?.v);const reserve=round(Math.max(avg*3,(obligations+exp)*.2));const safe=round(Math.max(0,physical-obligations-exp-reserve));res.json({question:'Posso tirar dinheiro do caixa hoje?',recommendation:safe>0?'SIM_COM_LIMITE':'NAO_RECOMENDADO',safe_withdrawal:safe,physical_cash:physical,obligations_14d:round(obligations),planned_expenses_14d:round(exp),safety_reserve:reserve,rationale:safe>0?`Retirada máxima sugerida de R$ ${safe.toFixed(2)}, preservando compromissos e reserva operacional.`:'O caixa disponível deve ser preservado para compromissos e capital de giro.'})});
+ app.get('/api/v13/obligations',auth,minRole(70),(_req,res)=>res.json(db.prepare("SELECT * FROM financial_obligations WHERE status='OPEN' ORDER BY due_date").all()));
+ app.post('/api/v13/obligations',auth,minRole(70),(req,res)=>{const b=req.body||{};if(!txt(b.title)||n(b.amount)<=0||!b.due_date)return res.status(400).json({error:'DADOS_OBRIGATORIOS'});const i=db.prepare('INSERT INTO financial_obligations(title,category,amount,due_date,essential) VALUES(?,?,?,?,?)').run(txt(b.title),txt(b.category)||'OUTROS',n(b.amount),b.due_date,b.essential===false?0:1);res.status(201).json({id:i.lastInsertRowid})});
  
   // ==========================================================
   // NEXUS V4.9B - SMART PROCUREMENT
   // ==========================================================
 
-  app.get('/api/v49b/procurement/need',auth,tenantContext,minRole(55),(req,res)=>{
+  app.get('/api/v49b/procurement/need',auth,minRole(55),(req,res)=>{
     try{
       const rows=db.prepare(`
         SELECT
@@ -298,12 +118,11 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
           END suggested_qty
         FROM products p
         WHERE p.active=1
-          AND p.tenant_id=?
         ORDER BY
           CASE WHEN p.stock<=p.minimum_stock THEN 0 ELSE 1 END,
           p.category,
           p.name
-      `).all(req.tenantId);
+      `).all();
 
       const low=rows.filter(x=>n(x.suggested_qty)>0);
 
@@ -317,13 +136,13 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
     }
   });
 
-  app.get('/api/v49b/quotes/:id/smart-analysis',auth,tenantContext,minRole(55),(req,res)=>{
+  app.get('/api/v49b/quotes/:id/smart-analysis',auth,minRole(55),(req,res)=>{
     try{
       const id=n(req.params.id);
 
       const request=db.prepare(
-        'SELECT * FROM quote_requests WHERE id=? AND tenant_id=?'
-      ).get(id,req.tenantId);
+        'SELECT * FROM quote_requests WHERE id=?'
+      ).get(id);
 
       if(!request)
         return res.status(404).json({error:'COTACAO_NAO_ENCONTRADA'});
@@ -338,15 +157,10 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
           p.name product_name,
           p.category
         FROM quote_request_items qri
-        JOIN quote_requests qr
-          ON qr.id=qri.request_id
-         AND qr.tenant_id=?
-        JOIN products p
-          ON p.id=qri.product_id
-         AND p.tenant_id=?
+        JOIN products p ON p.id=qri.product_id
         WHERE qri.request_id=?
         ORDER BY qri.id
-      `).all(req.tenantId,req.tenantId,id);
+      `).all(id);
 
       const proposals=db.prepare(`
         SELECT
@@ -367,32 +181,18 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
           qsp.brand,
           qsp.notes
         FROM quote_request_items qri
-        JOIN quote_requests qr
-          ON qr.id=qri.request_id
-         AND qr.tenant_id=?
         JOIN products p
           ON p.id=qri.product_id
-         AND p.tenant_id=?
         JOIN quote_invitations qi
           ON qi.request_id=qri.request_id
-         AND qi.tenant_id=?
         JOIN suppliers s
           ON s.id=qi.supplier_id
-         AND s.tenant_id=?
         LEFT JOIN quote_supplier_prices qsp
           ON qsp.item_id=qri.id
          AND qsp.invitation_id=qi.id
-         AND qsp.tenant_id=?
         WHERE qri.request_id=?
         ORDER BY qri.id,s.name
-      `).all(
-        req.tenantId,
-        req.tenantId,
-        req.tenantId,
-        req.tenantId,
-        req.tenantId,
-        id
-      );
+      `).all(id);
 
       const comparison=items.map(item=>{
         const offers=proposals
@@ -518,13 +318,13 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
     }
   });
 
-  app.post('/api/v49b/quotes/:id/finalize-smart',auth,tenantContext,minRole(80),(req,res)=>{
+  app.post('/api/v49b/quotes/:id/finalize-smart',auth,minRole(80),(req,res)=>{
     try{
       const id=n(req.params.id);
 
       const request=db.prepare(
-        'SELECT * FROM quote_requests WHERE id=? AND tenant_id=?'
-      ).get(id,req.tenantId);
+        'SELECT * FROM quote_requests WHERE id=?'
+      ).get(id);
 
       if(!request)
         return res.status(404).json({error:'COTACAO_NAO_ENCONTRADA'});
@@ -540,15 +340,10 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
           qri.unit,
           p.name product_name
         FROM quote_request_items qri
-        JOIN quote_requests qr
-          ON qr.id=qri.request_id
-         AND qr.tenant_id=?
-        JOIN products p
-          ON p.id=qri.product_id
-         AND p.tenant_id=?
+        JOIN products p ON p.id=qri.product_id
         WHERE qri.request_id=?
         ORDER BY qri.id
-      `).all(req.tenantId,req.tenantId,id);
+      `).all(id);
 
       if(!items.length)
         return res.status(400).json({error:'COTACAO_SEM_ITENS'});
@@ -567,23 +362,14 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
           qsp.available,
           qsp.brand
         FROM quote_request_items qri
-        JOIN quote_requests qr
-          ON qr.id=qri.request_id
-         AND qr.tenant_id=?
-        JOIN products p
-          ON p.id=qri.product_id
-         AND p.tenant_id=?
         JOIN quote_invitations qi
           ON qi.request_id=qri.request_id
          AND qi.status='SUBMITTED'
-         AND qi.tenant_id=?
         JOIN suppliers s
           ON s.id=qi.supplier_id
-         AND s.tenant_id=?
         JOIN quote_supplier_prices qsp
           ON qsp.item_id=qri.id
          AND qsp.invitation_id=qi.id
-         AND qsp.tenant_id=?
         WHERE qri.request_id=?
           AND qsp.available=1
           AND qsp.unit_price>0
@@ -595,14 +381,7 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
             ELSE 0
           END ASC,
           qi.delivery_days ASC
-      `).all(
-        req.tenantId,
-        req.tenantId,
-        req.tenantId,
-        req.tenantId,
-        req.tenantId,
-        id
-      );
+      `).all(id);
 
       const selected=[];
 
@@ -650,17 +429,6 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
         for(const x of selected){
           const sid=n(x.supplier_id);
 
-          const ownedSupplier=db.prepare(`
-            SELECT id
-            FROM suppliers
-            WHERE id=?
-              AND tenant_id=?
-              AND active=1
-          `).get(sid,req.tenantId);
-
-          if(!ownedSupplier)
-            throw new Error('FORNECEDOR_FORA_DO_TENANT');
-
           if(!groups[sid]){
             groups[sid]={
               supplier_id:sid,
@@ -678,17 +446,6 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
         let grandTotal=0;
 
         for(const group of Object.values(groups)){
-
-          const ownedSupplier=db.prepare(`
-            SELECT id
-            FROM suppliers
-            WHERE id=?
-              AND tenant_id=?
-              AND active=1
-          `).get(group.supplier_id,req.tenantId);
-
-          if(!ownedSupplier)
-            throw new Error('FORNECEDOR_FORA_DO_TENANT');
 
           const subtotal=round(
             group.items.reduce(
@@ -727,17 +484,6 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
           );
 
           for(const x of group.items){
-
-            const ownedProduct=db.prepare(`
-              SELECT id
-              FROM products
-              WHERE id=?
-                AND tenant_id=?
-            `).get(x.product_id,req.tenantId);
-
-            if(!ownedProduct)
-              throw new Error('PRODUTO_FORA_DO_TENANT');
-
             db.prepare(`
               INSERT INTO purchase_items(
                 purchase_order_id,
@@ -780,16 +526,14 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
               purchase_order_id,
               status,
               payload,
-              sent_at,
-              tenant_id
+              sent_at
             )
-            VALUES(?,?,?,'READY',?,NULL,?)
+            VALUES(?,?,?,'READY',?,NULL)
           `).run(
             id,
             group.supplier_id,
             po.lastInsertRowid,
-            JSON.stringify(payload),
-            req.tenantId
+            JSON.stringify(payload)
           );
 
           orders.push({
@@ -808,7 +552,7 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
 
         grandTotal=round(grandTotal);
 
-        const finalized=db.prepare(`
+        db.prepare(`
           UPDATE quote_requests
           SET
             status='FINALIZED',
@@ -816,16 +560,7 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
             selected_total=?,
             finalized_at=CURRENT_TIMESTAMP
           WHERE id=?
-            AND tenant_id=?
-            AND status='OPEN'
-        `).run(
-          grandTotal,
-          id,
-          req.tenantId
-        );
-
-        if(Number(finalized.changes)!==1)
-          throw new Error('COTACAO_NAO_ENCONTRADA');
+        `).run(grandTotal,id);
 
         return {
           quote_request_id:id,
@@ -842,10 +577,7 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
         'FINALIZE_SMART',
         'QUOTE_REQUEST',
         id,
-        {
-          ...out,
-          tenant_id:req.tenantId
-        }
+        out
       );
 
       res.json({
@@ -866,7 +598,7 @@ export function registerBusinessV13(app,{auth,minRole,audit}){
    V4.9C PURCHASE RECEIVING BRIDGE
    ============================================================ */
 
-app.get('/api/v49c/purchase-orders',auth,tenantContext,minRole(55),(req,res)=>{
+app.get('/api/v49c/purchase-orders',auth,minRole(55),(req,res)=>{
   try{
 
     const orders=db.prepare(`
@@ -894,7 +626,6 @@ app.get('/api/v49c/purchase-orders',auth,tenantContext,minRole(55),(req,res)=>{
         ON s.id=po.supplier_id
       LEFT JOIN purchase_items pi
         ON pi.purchase_order_id=po.id
-      WHERE s.tenant_id=?
       GROUP BY po.id
       ORDER BY
         CASE
@@ -904,7 +635,7 @@ app.get('/api/v49c/purchase-orders',auth,tenantContext,minRole(55),(req,res)=>{
           ELSE 3
         END,
         po.id DESC
-    `).all(req.tenantId);
+    `).all();
 
     res.json(orders);
 
@@ -913,7 +644,7 @@ app.get('/api/v49c/purchase-orders',auth,tenantContext,minRole(55),(req,res)=>{
   }
 });
 
-app.get('/api/v49c/purchase-orders/:id',auth,tenantContext,minRole(55),(req,res)=>{
+app.get('/api/v49c/purchase-orders/:id',auth,minRole(55),(req,res)=>{
   try{
 
     const id=Number(req.params.id)||0;
@@ -929,11 +660,7 @@ app.get('/api/v49c/purchase-orders/:id',auth,tenantContext,minRole(55),(req,res)
       JOIN suppliers s
         ON s.id=po.supplier_id
       WHERE po.id=?
-        AND s.tenant_id=?
-    `).get(
-      id,
-      req.tenantId
-    );
+    `).get(id);
 
     if(!order){
       return res.status(404).json({
@@ -962,21 +689,8 @@ app.get('/api/v49c/purchase-orders/:id',auth,tenantContext,minRole(55),(req,res)
       JOIN products p
         ON p.id=pi.product_id
       WHERE pi.purchase_order_id=?
-        AND p.tenant_id=?
-        AND EXISTS(
-          SELECT 1
-          FROM purchase_orders po2
-          JOIN suppliers s2
-            ON s2.id=po2.supplier_id
-          WHERE po2.id=pi.purchase_order_id
-            AND s2.tenant_id=?
-        )
       ORDER BY pi.id
-    `).all(
-      id,
-      req.tenantId,
-      req.tenantId
-    );
+    `).all(id);
 
     const batches=db.prepare(`
       SELECT
@@ -1011,7 +725,7 @@ app.get('/api/v49c/purchase-orders/:id',auth,tenantContext,minRole(55),(req,res)
   }
 });
 
-app.post('/api/v49c/purchase-orders/:id/receive',auth,tenantContext,minRole(55),(req,res)=>{
+app.post('/api/v49c/purchase-orders/:id/receive',auth,minRole(55),(req,res)=>{
   try{
 
     const id=Number(req.params.id)||0;
@@ -1027,16 +741,10 @@ app.post('/api/v49c/purchase-orders/:id/receive',auth,tenantContext,minRole(55),
     }
 
     const order=db.prepare(`
-      SELECT po.*
-      FROM purchase_orders po
-      JOIN suppliers s
-        ON s.id=po.supplier_id
-      WHERE po.id=?
-        AND s.tenant_id=?
-    `).get(
-      id,
-      req.tenantId
-    );
+      SELECT *
+      FROM purchase_orders
+      WHERE id=?
+    `).get(id);
 
     if(!order){
       return res.status(404).json({
@@ -1061,20 +769,7 @@ app.post('/api/v49c/purchase-orders/:id/receive',auth,tenantContext,minRole(55),
       JOIN products p
         ON p.id=pi.product_id
       WHERE pi.purchase_order_id=?
-        AND p.tenant_id=?
-        AND EXISTS(
-          SELECT 1
-          FROM purchase_orders po2
-          JOIN suppliers s2
-            ON s2.id=po2.supplier_id
-          WHERE po2.id=pi.purchase_order_id
-            AND s2.tenant_id=?
-        )
-    `).all(
-      id,
-      req.tenantId,
-      req.tenantId
-    );
+    `).all(id);
 
     const byId=new Map(
       purchaseItems.map(x=>[
@@ -1151,12 +846,10 @@ app.post('/api/v49c/purchase-orders/:id/receive',auth,tenantContext,minRole(55),
             stock=stock+?,
             cost=?
           WHERE id=?
-            AND tenant_id=?
         `).run(
           qty,
           unitCost,
-          item.product_id,
-          req.tenantId
+          item.product_id
         );
 
         const movement=db.prepare(`
@@ -1247,20 +940,9 @@ app.post('/api/v49c/purchase-orders/:id/receive',auth,tenantContext,minRole(55),
           UPDATE purchase_items
           SET received_qty=received_qty+?
           WHERE id=?
-            AND purchase_order_id=?
-            AND EXISTS(
-              SELECT 1
-              FROM purchase_orders po2
-              JOIN suppliers s2
-                ON s2.id=po2.supplier_id
-              WHERE po2.id=purchase_items.purchase_order_id
-                AND s2.tenant_id=?
-            )
         `).run(
           qty,
-          item.id,
-          id,
-          req.tenantId
+          item.id
         );
 
         received.push({
@@ -1373,7 +1055,7 @@ app.post('/api/v49c/purchase-orders/:id/receive',auth,tenantContext,minRole(55),
    NEXUS SUPPLIER DISPATCH V4.9D
    ============================================================ */
 
-app.get('/api/v49d/dispatches',auth,tenantContext,minRole(55),(req,res)=>{
+app.get('/api/v49d/dispatches',auth,minRole(55),(req,res)=>{
   try{
 
     const rows=db.prepare(`
@@ -1411,25 +1093,6 @@ app.get('/api/v49d/dispatches',auth,tenantContext,minRole(55),(req,res)=>{
       LEFT JOIN quote_requests qr
         ON qr.id=sd.request_id
 
-      WHERE sd.tenant_id=?
-        AND (
-          s.id IS NULL
-          OR s.tenant_id=?
-        )
-        AND (
-          qr.id IS NULL
-          OR qr.tenant_id=?
-        )
-        AND (
-          po.id IS NULL
-          OR EXISTS(
-            SELECT 1
-            FROM suppliers pos
-            WHERE pos.id=po.supplier_id
-              AND pos.tenant_id=?
-          )
-        )
-
       ORDER BY
         CASE
           WHEN sd.status='READY' THEN 0
@@ -1437,12 +1100,7 @@ app.get('/api/v49d/dispatches',auth,tenantContext,minRole(55),(req,res)=>{
           ELSE 2
         END,
         sd.id DESC
-    `).all(
-      req.tenantId,
-      req.tenantId,
-      req.tenantId,
-      req.tenantId
-    );
+    `).all();
 
     const data=rows.map(row=>{
 
@@ -1470,7 +1128,7 @@ app.get('/api/v49d/dispatches',auth,tenantContext,minRole(55),(req,res)=>{
   }
 });
 
-app.get('/api/v49d/dispatches/:id',auth,tenantContext,minRole(55),(req,res)=>{
+app.get('/api/v49d/dispatches/:id',auth,minRole(55),(req,res)=>{
   try{
 
     const id=n(req.params.id);
@@ -1504,31 +1162,7 @@ app.get('/api/v49d/dispatches/:id',auth,tenantContext,minRole(55),(req,res)=>{
         ON qr.id=sd.request_id
 
       WHERE sd.id=?
-        AND sd.tenant_id=?
-        AND (
-          s.id IS NULL
-          OR s.tenant_id=?
-        )
-        AND (
-          qr.id IS NULL
-          OR qr.tenant_id=?
-        )
-        AND (
-          po.id IS NULL
-          OR EXISTS(
-            SELECT 1
-            FROM suppliers pos
-            WHERE pos.id=po.supplier_id
-              AND pos.tenant_id=?
-          )
-        )
-    `).get(
-      id,
-      req.tenantId,
-      req.tenantId,
-      req.tenantId,
-      req.tenantId
-    );
+    `).get(id);
 
     if(!dispatch){
 
@@ -1581,7 +1215,7 @@ app.get('/api/v49d/dispatches/:id',auth,tenantContext,minRole(55),(req,res)=>{
   }
 });
 
-app.post('/api/v49d/dispatches/:id/sent',auth,tenantContext,minRole(80),(req,res)=>{
+app.post('/api/v49d/dispatches/:id/sent',auth,minRole(80),(req,res)=>{
   try{
 
     const id=n(req.params.id);
@@ -1591,11 +1225,7 @@ app.post('/api/v49d/dispatches/:id/sent',auth,tenantContext,minRole(80),(req,res
       SELECT *
       FROM supplier_dispatches
       WHERE id=?
-        AND tenant_id=?
-    `).get(
-      id,
-      req.tenantId
-    );
+    `).get(id);
 
     if(!dispatch){
 
@@ -1651,23 +1281,13 @@ app.post('/api/v49d/dispatches/:id/sent',auth,tenantContext,minRole(80),(req,res
         email
       FROM suppliers
       WHERE id=?
-        AND tenant_id=?
-    `).get(
-      dispatch.supplier_id,
-      req.tenantId
-    );
+    `).get(dispatch.supplier_id);
 
     const purchaseOrder=db.prepare(`
-      SELECT po.*
-      FROM purchase_orders po
-      JOIN suppliers s
-        ON s.id=po.supplier_id
-      WHERE po.id=?
-        AND s.tenant_id=?
-    `).get(
-      dispatch.purchase_order_id,
-      req.tenantId
-    );
+      SELECT *
+      FROM purchase_orders
+      WHERE id=?
+    `).get(dispatch.purchase_order_id);
 
     const items=db.prepare(`
       SELECT
@@ -1730,12 +1350,10 @@ app.post('/api/v49d/dispatches/:id/sent',auth,tenantContext,minRole(80),(req,res
         payload=?,
         sent_at=CURRENT_TIMESTAMP
       WHERE id=?
-        AND tenant_id=?
         AND status='READY'
     `).run(
       JSON.stringify(newPayload),
-      id,
-      req.tenantId
+      id
     );
 
     if(!result.changes){
@@ -1749,11 +1367,7 @@ app.post('/api/v49d/dispatches/:id/sent',auth,tenantContext,minRole(80),(req,res
       SELECT *
       FROM supplier_dispatches
       WHERE id=?
-        AND tenant_id=?
-    `).get(
-      id,
-      req.tenantId
-    );
+    `).get(id);
 
     audit(
       req.user.id,
@@ -1790,8 +1404,9 @@ app.post('/api/v49d/dispatches/:id/sent',auth,tenantContext,minRole(80),(req,res
 
 /* END NEXUS SUPPLIER DISPATCH V4.9D */
 
- app.get('/api/v13/quotes',auth,tenantContext,minRole(55),(req,res)=>res.json(db.prepare(`SELECT qr.*,(SELECT COUNT(*) FROM quote_invitations qi WHERE qi.request_id=qr.id AND qi.tenant_id=qr.tenant_id) invited,(SELECT COUNT(*) FROM quote_invitations qi WHERE qi.request_id=qr.id AND qi.tenant_id=qr.tenant_id AND qi.status='SUBMITTED') submitted FROM quote_requests qr WHERE qr.tenant_id=? ORDER BY qr.id DESC`).all(req.tenantId)));
- app.post('/api/v13/quotes',auth,tenantContext,minRole(55),(req,res)=>{try{const b=req.body||{},items=Array.isArray(b.items)?b.items:[],suppliers=Array.isArray(b.supplier_ids)?b.supplier_ids:[];if(!txt(b.title)||!items.length||!suppliers.length)return res.status(400).json({error:'COTACAO_REQUER_ITENS_E_FORNECEDORES'});const out=db.transaction(()=>{for(const x of items){const p=db.prepare('SELECT id FROM products WHERE id=? AND tenant_id=?').get(n(x.product_id),req.tenantId);if(!p)throw new Error('PRODUTO_FORA_DO_TENANT')}for(const sid of suppliers){const s=db.prepare('SELECT id FROM suppliers WHERE id=? AND tenant_id=?').get(n(sid),req.tenantId);if(!s)throw new Error('FORNECEDOR_FORA_DO_TENANT')}const code=token('COT'),q=db.prepare('INSERT INTO quote_requests(title,public_code,deadline_at,notes,created_by,tenant_id) VALUES(?,?,?,?,?,?)').run(txt(b.title),code,b.deadline_at||null,txt(b.notes)||null,req.user.id,req.tenantId);for(const x of items)db.prepare('INSERT INTO quote_request_items(request_id,product_id,qty,unit,target_price) VALUES(?,?,?,?,?)').run(q.lastInsertRowid,n(x.product_id),n(x.qty),txt(x.unit)||'UN',x.target_price==null?null:n(x.target_price));const links=[];for(const sid of suppliers){const supplierId=n(sid),t=token('FORN');db.prepare('INSERT INTO quote_invitations(request_id,supplier_id,invite_token,tenant_id) VALUES(?,?,?,?)').run(q.lastInsertRowid,supplierId,t,req.tenantId);db.prepare(`INSERT INTO supplier_portal_users(supplier_id,access_token,tenant_id) VALUES(?,?,?) ON CONFLICT(supplier_id) DO UPDATE SET active=1,tenant_id=excluded.tenant_id`).run(supplierId,token('LOGIN'),req.tenantId);links.push({supplier_id:supplierId,token:t,path:`/fornecedor/cotacao/${t}`})}return{id:q.lastInsertRowid,code,links}})();audit(req.user.id,'CREATE','QUOTE_REQUEST',out.id,{...out,tenant_id:req.tenantId});res.status(201).json(out)}catch(e){res.status(400).json({error:e.message})}});
- app.get('/api/v13/quotes/:id/analysis',auth,tenantContext,minRole(55),(req,res)=>{const id=n(req.params.id),request=db.prepare('SELECT * FROM quote_requests WHERE id=? AND tenant_id=?').get(id,req.tenantId);if(!request)return res.status(404).json({error:'COTACAO_NAO_ENCONTRADA'});const invs=db.prepare(`SELECT qi.*,s.name supplier_name FROM quote_invitations qi JOIN suppliers s ON s.id=qi.supplier_id WHERE qi.request_id=? AND qi.tenant_id=? AND s.tenant_id=?`).all(id,req.tenantId,req.tenantId);const result=invs.map(i=>{const subtotal=n(db.prepare(`SELECT COALESCE(SUM(qsp.unit_price*qri.qty),0) v FROM quote_supplier_prices qsp JOIN quote_request_items qri ON qri.id=qsp.item_id JOIN products p ON p.id=qri.product_id WHERE qsp.invitation_id=? AND qsp.tenant_id=? AND qri.request_id=? AND p.tenant_id=? AND qsp.available=1`).get(i.id,req.tenantId,id,req.tenantId)?.v);return{...i,subtotal:round(subtotal),total:round(subtotal+n(i.freight)),score:round(subtotal+n(i.freight)+n(i.delivery_days)*.25)}}).sort((a,b)=>a.score-b.score);res.json({request,ranking:result,best:result.find(x=>x.status==='SUBMITTED')||null})});
- app.post('/api/v13/quotes/:id/finalize',auth,tenantContext,minRole(80),(req,res)=>{try{const id=n(req.params.id),sid=n(req.body?.supplier_id),request=db.prepare('SELECT * FROM quote_requests WHERE id=? AND tenant_id=?').get(id,req.tenantId);if(!request)return res.status(404).json({error:'COTACAO_NAO_ENCONTRADA'});const analysis=db.prepare(`SELECT qi.id invitation_id,qi.freight,s.id supplier_id,s.name FROM quote_invitations qi JOIN suppliers s ON s.id=qi.supplier_id WHERE qi.request_id=? AND qi.supplier_id=? AND qi.tenant_id=? AND s.tenant_id=? AND qi.status='SUBMITTED'`).get(id,sid,req.tenantId,req.tenantId);if(!analysis)return res.status(400).json({error:'PROPOSTA_INVALIDA'});const out=db.transaction(()=>{const items=db.prepare(`SELECT qri.product_id,qri.qty,qsp.unit_price FROM quote_request_items qri JOIN quote_supplier_prices qsp ON qsp.item_id=qri.id AND qsp.invitation_id=? JOIN products p ON p.id=qri.product_id WHERE qri.request_id=? AND qsp.tenant_id=? AND p.tenant_id=? AND qsp.available=1`).all(analysis.invitation_id,id,req.tenantId,req.tenantId);if(!items.length)throw new Error('COTACAO_SEM_ITENS_VALIDOS');const supplier=db.prepare('SELECT id FROM suppliers WHERE id=? AND tenant_id=?').get(sid,req.tenantId);if(!supplier)throw new Error('FORNECEDOR_FORA_DO_TENANT');const subtotal=items.reduce((s,x)=>s+n(x.qty)*n(x.unit_price),0),total=round(subtotal+n(analysis.freight));const po=db.prepare("INSERT INTO purchase_orders(supplier_id,status,total) VALUES(?,'ORDERED',?)").run(sid,total);for(const x of items){const p=db.prepare('SELECT id FROM products WHERE id=? AND tenant_id=?').get(x.product_id,req.tenantId);if(!p)throw new Error('PRODUTO_FORA_DO_TENANT');db.prepare('INSERT INTO purchase_items(purchase_order_id,product_id,qty,unit_cost) VALUES(?,?,?,?)').run(po.lastInsertRowid,x.product_id,x.qty,x.unit_price)}const payload=JSON.stringify({purchase_order_id:po.lastInsertRowid,total,items});db.prepare("INSERT INTO supplier_dispatches(request_id,supplier_id,purchase_order_id,status,payload,sent_at,tenant_id) VALUES(?,?,?,'SENT',?,CURRENT_TIMESTAMP,?)").run(id,sid,po.lastInsertRowid,payload,req.tenantId);const updated=db.prepare("UPDATE quote_requests SET status='FINALIZED',selected_supplier_id=?,selected_total=?,finalized_at=CURRENT_TIMESTAMP WHERE id=? AND tenant_id=?").run(sid,total,id,req.tenantId);if(Number(updated.changes)!==1)throw new Error('COTACAO_NAO_ENCONTRADA');return{purchase_order_id:po.lastInsertRowid,total,supplier:analysis.name,dispatch_status:'SENT'}})();audit(req.user.id,'FINALIZE','QUOTE_REQUEST',id,{...out,tenant_id:req.tenantId});res.json({ok:true,...out})}catch(e){res.status(400).json({error:e.message})}});
+app.get('/api/v13/quotes',auth,minRole(55),(_req,res)=>res.json(db.prepare(`SELECT qr.*,(SELECT COUNT(*) FROM quote_invitations qi WHERE qi.request_id=qr.id) invited,(SELECT COUNT(*) FROM quote_invitations qi WHERE qi.request_id=qr.id AND qi.status='SUBMITTED') submitted FROM quote_requests qr ORDER BY qr.id DESC`).all()));
+ app.post('/api/v13/quotes',auth,minRole(55),(req,res)=>{try{const b=req.body||{},items=b.items||[],suppliers=b.supplier_ids||[];if(!txt(b.title)||!items.length||!suppliers.length)return res.status(400).json({error:'COTACAO_REQUER_ITENS_E_FORNECEDORES'});const out=db.transaction(()=>{const code=token('COT'),q=db.prepare('INSERT INTO quote_requests(title,public_code,deadline_at,notes,created_by) VALUES(?,?,?,?,?)').run(txt(b.title),code,b.deadline_at||null,txt(b.notes)||null,req.user.id);for(const x of items)db.prepare('INSERT INTO quote_request_items(request_id,product_id,qty,unit,target_price) VALUES(?,?,?,?,?)').run(q.lastInsertRowid,n(x.product_id),n(x.qty),txt(x.unit)||'UN',x.target_price==null?null:n(x.target_price));const links=[];for(const sid of suppliers){const t=token('FORN');db.prepare('INSERT INTO quote_invitations(request_id,supplier_id,invite_token) VALUES(?,?,?)').run(q.lastInsertRowid,n(sid),t);db.prepare(`INSERT INTO supplier_portal_users(supplier_id,access_token) VALUES(?,?) ON CONFLICT(supplier_id) DO UPDATE SET active=1`).run(n(sid),token('LOGIN'));links.push({supplier_id:n(sid),token:t,path:`/fornecedor/cotacao/${t}`})}return{id:q.lastInsertRowid,code,links}})();audit(req.user.id,'CREATE','QUOTE_REQUEST',out.id,out);res.status(201).json(out)}catch(e){res.status(400).json({error:e.message})}});
+ app.get('/api/v13/quotes/:id/analysis',auth,minRole(55),(req,res)=>{const id=n(req.params.id),invs=db.prepare(`SELECT qi.*,s.name supplier_name FROM quote_invitations qi JOIN suppliers s ON s.id=qi.supplier_id WHERE qi.request_id=?`).all(id);const result=invs.map(i=>{const subtotal=n(db.prepare(`SELECT COALESCE(SUM(qsp.unit_price*qri.qty),0) v FROM quote_supplier_prices qsp JOIN quote_request_items qri ON qri.id=qsp.item_id WHERE qsp.invitation_id=? AND qsp.available=1`).get(i.id)?.v);return{...i,subtotal:round(subtotal),total:round(subtotal+n(i.freight)),score:round(subtotal+n(i.freight)+n(i.delivery_days)*.25)}}).sort((a,b)=>a.score-b.score);res.json({request:db.prepare('SELECT * FROM quote_requests WHERE id=?').get(id),ranking:result,best:result.find(x=>x.status==='SUBMITTED')||null})});
+ app.post('/api/v13/quotes/:id/finalize',auth,minRole(80),(req,res)=>{try{const id=n(req.params.id),sid=n(req.body?.supplier_id),analysis=db.prepare(`SELECT qi.id invitation_id,qi.freight,s.id supplier_id,s.name FROM quote_invitations qi JOIN suppliers s ON s.id=qi.supplier_id WHERE qi.request_id=? AND qi.supplier_id=? AND qi.status='SUBMITTED'`).get(id,sid);if(!analysis)return res.status(400).json({error:'PROPOSTA_INVALIDA'});const out=db.transaction(()=>{const items=db.prepare(`SELECT qri.product_id,qri.qty,qsp.unit_price FROM quote_request_items qri JOIN quote_supplier_prices qsp ON qsp.item_id=qri.id AND qsp.invitation_id=? WHERE qri.request_id=? AND qsp.available=1`).all(analysis.invitation_id,id);const subtotal=items.reduce((s,x)=>s+n(x.qty)*n(x.unit_price),0),total=round(subtotal+n(analysis.freight));const po=db.prepare("INSERT INTO purchase_orders(supplier_id,status,total) VALUES(?,'ORDERED',?)").run(sid,total);for(const x of items)db.prepare('INSERT INTO purchase_items(purchase_order_id,product_id,qty,unit_cost) VALUES(?,?,?,?)').run(po.lastInsertRowid,x.product_id,x.qty,x.unit_price);const payload=JSON.stringify({purchase_order_id:po.lastInsertRowid,total,items});db.prepare("INSERT INTO supplier_dispatches(request_id,supplier_id,purchase_order_id,status,payload,sent_at) VALUES(?,?,?,'SENT',?,CURRENT_TIMESTAMP)").run(id,sid,po.lastInsertRowid,payload);db.prepare("UPDATE quote_requests SET status='FINALIZED',selected_supplier_id=?,selected_total=?,finalized_at=CURRENT_TIMESTAMP WHERE id=?").run(sid,total,id);return{purchase_order_id:po.lastInsertRowid,total,supplier:analysis.name,dispatch_status:'SENT'}})();audit(req.user.id,'FINALIZE','QUOTE_REQUEST',id,out);res.json({ok:true,...out})}catch(e){res.status(400).json({error:e.message})}});
 }
+

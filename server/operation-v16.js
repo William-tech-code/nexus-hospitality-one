@@ -1,5 +1,6 @@
 import { db } from './db.js';
 import { returnCoverage } from './return-engine-v16.js';
+import { tenantContext } from './tenant-guard.js';
 
 const n = v => Number(v || 0);
 const t = v => String(v || '').trim();
@@ -193,6 +194,7 @@ export function registerOperationV16(
   app.get(
     '/api/v16/sales/recent',
     auth,
+    tenantContext,
     minRole(50),
     (req, res) => {
       const rows = db.prepare(`
@@ -227,6 +229,7 @@ export function registerOperationV16(
   app.get(
     '/api/v16/sales/:id',
     auth,
+    tenantContext,
     minRole(40),
     (req, res) => {
       const sale = saleDetail(n(req.params.id));
@@ -247,6 +250,7 @@ export function registerOperationV16(
   app.post(
     '/api/v16/sales/:id/cancel',
     auth,
+    tenantContext,
     minRole(80),
     (req, res) => {
       try {

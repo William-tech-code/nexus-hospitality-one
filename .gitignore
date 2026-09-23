@@ -60,3 +60,38 @@ coverage/
 *.dmg
 NEXUS-*-MAP.txt
 NEXUS-FINAL-RELEASE-AUDIT-*.txt
+
+*.bak
+__nexus_*
+*BACKUP*
+
+# ============================================================
+# NEXUS LOCAL / SECURITY / RELEASE EXCLUSIONS
+# ============================================================
+*.bak
+*.bak.*
+*.backup
+*.backup.*
+*~
+*.tmp
+*.temp
+.env
+.env.*
+!.env.example
+_local_backups/
+local_backups/
+backups/
+data/*.sqlite
+data/*.sqlite-*
+data/*.db
+data/*.db-*
+NEXUS-V*-SOURCE-LOCK.txt
+NEXUS-*-AUDIT*.txt
+NEXUS-*-MAP*.txt
+__*_probe.*
+__*_gate.*
+__*_strategy.*
+*.log
+npm-debug.log*
+dist/
+node_modules/

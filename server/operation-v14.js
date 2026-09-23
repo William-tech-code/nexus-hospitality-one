@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import {db} from './db.js';
+import { tenantContext } from './tenant-guard.js';
 const n=v=>Number(v||0), t=v=>String(v||'').trim(), r=v=>Math.round((n(v)+Number.EPSILON)*100)/100;
 const add=(table,col,def)=>{const cols=db.prepare(`PRAGMA table_info(${table})`).all().map(x=>x.name);if(!cols.includes(col))db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`)};
 export function initOperationV14(){
@@ -13,9 +14,9 @@ export function initOperationV14(){
 }
 function detail(id){const s=db.prepare(`SELECT s.*,u.name operator_name,e.name employee_name FROM sales s LEFT JOIN users u ON u.id=s.user_id LEFT JOIN employees e ON e.id=s.employee_id WHERE s.id=?`).get(id);if(!s)return null;return{...s,items:db.prepare(`SELECT si.*,p.name FROM sale_items si JOIN products p ON p.id=si.product_id WHERE si.sale_id=?`).all(id),payments:db.prepare('SELECT method,amount FROM payment_splits WHERE sale_id=?').all(id),returns:db.prepare('SELECT * FROM sale_returns WHERE sale_id=? ORDER BY id DESC').all(id)}}
 export function registerOperationV14(app,{auth,minRole,audit}){
- app.get('/api/v14/sales/recent',auth,minRole(50),(req,res)=>res.json(db.prepare(`SELECT s.*,u.name operator_name,(SELECT group_concat(method||' '||printf('%.2f',amount),' + ') FROM payment_splits WHERE sale_id=s.id) payments FROM sales s LEFT JOIN users u ON u.id=s.user_id ORDER BY s.id DESC LIMIT 100`).all()));
- app.get('/api/v14/sales/:id',auth,minRole(40),(req,res)=>{const x=detail(n(req.params.id));x?res.json(x):res.status(404).json({error:'VENDA_NAO_ENCONTRADA'})});
- app.post('/api/v14/sales',auth,minRole(50),(req,res)=>{
+ app.get('/api/v14/sales/recent',auth,tenantContext,minRole(50),(req,res)=>res.json(db.prepare(`SELECT s.*,u.name operator_name,(SELECT group_concat(method||' '||printf('%.2f',amount),' + ') FROM payment_splits WHERE sale_id=s.id) payments FROM sales s LEFT JOIN users u ON u.id=s.user_id ORDER BY s.id DESC LIMIT 100`).all()));
+ app.get('/api/v14/sales/:id',auth,tenantContext,minRole(40),(req,res)=>{const x=detail(n(req.params.id));x?res.json(x):res.status(404).json({error:'VENDA_NAO_ENCONTRADA'})});
+ app.post('/api/v14/sales',auth,tenantContext,minRole(50),(req,res)=>{
   try{
     const b=req.body||{};
     const items=b.items||[];
@@ -163,7 +164,7 @@ export function registerOperationV14(app,{auth,minRole,audit}){
     });
   }
 });
- app.post('/api/v14/sales/:id/release',auth,minRole(40),(req,res)=>{
+ app.post('/api/v14/sales/:id/release',auth,tenantContext,minRole(40),(req,res)=>{
   const id=n(req.params.id);
 
   const s=db.prepare(
@@ -252,7 +253,7 @@ export function registerOperationV14(app,{auth,minRole,audit}){
     detail(id)
   );
 });
- app.post('/api/v14/sales/:id/change-correction',auth,minRole(80),(req,res)=>{
+ app.post('/api/v14/sales/:id/change-correction',auth,tenantContext,minRole(80),(req,res)=>{
   const id=n(req.params.id);
   const reason=t(req.body?.reason);
   const received=r(req.body?.received_amount);
@@ -355,12 +356,12 @@ export function registerOperationV14(app,{auth,minRole,audit}){
 
   res.json(detail(id));
 });
- app.post('/api/v14/sales/:id/return',auth,minRole(80),(_req,res)=>{
+ app.post('/api/v14/sales/:id/return',auth,tenantContext,minRole(80),(_req,res)=>{
   return res.status(410).json({
     error:'DEVOLUCAO_LEGADA_DESATIVADA_USE_V16'
   });
 });
- app.post('/api/v14/sales/:id/print',auth,minRole(40),(req,res)=>{
+ app.post('/api/v14/sales/:id/print',auth,tenantContext,minRole(40),(req,res)=>{
   const id=n(req.params.id);
   const type=t(req.body?.type).toUpperCase();
 
@@ -439,5 +440,5 @@ export function registerOperationV14(app,{auth,minRole,audit}){
     sale:detail(id)
   });
 });
- app.get('/api/v14/payment-config',auth,minRole(80),(_req,res)=>res.json({asaas:{configured:Boolean(process.env.ASAAS_API_KEY),webhook_configured:Boolean(process.env.ASAAS_WEBHOOK_TOKEN),base_url:process.env.ASAAS_BASE_URL||'https://api.asaas.com/v3'},methods:['DINHEIRO','PIX','DEBITO','CREDITO','MISTO']}));
+ app.get('/api/v14/payment-config',auth,tenantContext,minRole(80),(_req,res)=>res.json({asaas:{configured:Boolean(process.env.ASAAS_API_KEY),webhook_configured:Boolean(process.env.ASAAS_WEBHOOK_TOKEN),base_url:process.env.ASAAS_BASE_URL||'https://api.asaas.com/v3'},methods:['DINHEIRO','PIX','DEBITO','CREDITO','MISTO']}));
 }

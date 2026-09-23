@@ -1,8 +1,9 @@
-﻿import {
+import {
   asaasPublicConfig,
   asaasRequest,
   saveAsaasSecureConfig
 } from './asaas-config.js';
+import { tenantContext } from './tenant-guard.js';
 
 export function registerPaymentsV15(
   app,
@@ -16,6 +17,7 @@ export function registerPaymentsV15(
   app.get(
     '/api/v15/payments/config',
     auth,
+    tenantContext,
     minRole(80),
     (_req,res)=>{
 
@@ -48,6 +50,7 @@ export function registerPaymentsV15(
   app.put(
     '/api/v15/payments/config',
     auth,
+    tenantContext,
     minRole(100),
     (req,res)=>{
 
@@ -99,6 +102,7 @@ export function registerPaymentsV15(
   app.post(
     '/api/v15/payments/test',
     auth,
+    tenantContext,
     minRole(80),
     async(req,res)=>{
 

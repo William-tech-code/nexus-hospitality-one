@@ -1,0 +1,1371 @@
+NEXUS HOSPITALITY ONE - QR SCANNER DIAGNOSTIC
+Gerado: 2026-09-21T19:36:59.025Z
+Diretorio: C:\Users\rodri\Desktop\NEXUS-HOSPITALITY-ONE\NEXUS-HOSPITALITY-ONE
+
+============================================================
+FILE: src/GateScannerV25.jsx
+============================================================
+STATUS: ENCONTRADO
+LINES: 990
+BYTES: 19058
+
+
+--- CONTEXTO LINHA 53 ---
+00047 |   }
+00048 | 
+00049 |   if(result==="INVALID"){
+00050 |     return "INGRESSO INVÁLIDO";
+00051 |   }
+00052 | 
+00053 |   return "ACESSO NEGADO";
+00054 | }
+00055 | 
+00056 | function beep(result){
+00057 | 
+00058 |   try{
+00059 | 
+00060 |     const AudioContext=
+
+--- CONTEXTO LINHA 104 ---
+00098 |       ctx.currentTime+.21
+00099 |     );
+00100 | 
+00101 |   }catch{}
+00102 | }
+00103 | 
+00104 | export default function GateScannerV25(){
+00105 | 
+00106 |   const[code,setCode]=useState("");
+00107 |   const[result,setResult]=useState(null);
+00108 |   const[busy,setBusy]=useState(false);
+00109 | 
+00110 |   const[camera,setCamera]=useState(false);
+00111 |   const[continuous,setContinuous]=useState(true);
+
+--- CONTEXTO LINHA 110 ---
+00104 | export default function GateScannerV25(){
+00105 | 
+00106 |   const[code,setCode]=useState("");
+00107 |   const[result,setResult]=useState(null);
+00108 |   const[busy,setBusy]=useState(false);
+00109 | 
+00110 |   const[camera,setCamera]=useState(false);
+00111 |   const[continuous,setContinuous]=useState(true);
+00112 | 
+00113 |   const[events,setEvents]=useState([]);
+00114 |   const[eventId,setEventId]=useState("");
+00115 | 
+00116 |   const[query,setQuery]=useState("");
+00117 |   const[search,setSearch]=useState([]);
+
+--- CONTEXTO LINHA 127 ---
+00121 |     allowed:0,
+00122 |     duplicate:0,
+00123 |     denied:0,
+00124 |     total:0
+00125 |   });
+00126 | 
+00127 |   const[lastAccess,setLastAccess]=useState([]);
+00128 | 
+00129 |   const videoRef=useRef(null);
+00130 |   const streamRef=useRef(null);
+00131 |   const scanningRef=useRef(false);
+00132 |   const lastCodeRef=useRef("");
+00133 |   const lastReadRef=useRef(0);
+00134 | 
+
+--- CONTEXTO LINHA 129 ---
+00123 |     denied:0,
+00124 |     total:0
+00125 |   });
+00126 | 
+00127 |   const[lastAccess,setLastAccess]=useState([]);
+00128 | 
+00129 |   const videoRef=useRef(null);
+00130 |   const streamRef=useRef(null);
+00131 |   const scanningRef=useRef(false);
+00132 |   const lastCodeRef=useRef("");
+00133 |   const lastReadRef=useRef(0);
+00134 | 
+00135 |   const state=
+00136 |     result
+
+--- CONTEXTO LINHA 225 ---
+00219 |         ),
+00220 | 
+00221 |       total:
+00222 |         current.total+1
+00223 |     }));
+00224 | 
+00225 |     setLastAccess(current=>[
+00226 |       {
+00227 |         result:r,
+00228 |         code:
+00229 |           response?.ticket?.ticket_code||
+00230 |           code||
+00231 |           "—",
+00232 |         attendee:
+
+--- CONTEXTO LINHA 229 ---
+00223 |     }));
+00224 | 
+00225 |     setLastAccess(current=>[
+00226 |       {
+00227 |         result:r,
+00228 |         code:
+00229 |           response?.ticket?.ticket_code||
+00230 |           code||
+00231 |           "—",
+00232 |         attendee:
+00233 |           response?.ticket?.attendee_name||
+00234 |           "—",
+00235 |         at:new Date().toISOString()
+00236 |       },
+
+--- CONTEXTO LINHA 257 ---
+00251 | 
+00252 |     setBusy(true);
+00253 | 
+00254 |     try{
+00255 | 
+00256 |       const response=
+00257 |         await api.checkinV25(
+00258 |           normalized
+00259 |         );
+00260 | 
+00261 |       setResult(response);
+00262 |       setCode("");
+00263 | 
+00264 |       beep(response?.result);
+
+--- CONTEXTO LINHA 303 ---
+00297 |       ){
+00298 |         scanningRef.current=true;
+00299 |       }
+00300 |     }
+00301 |   }
+00302 | 
+00303 |   function stopCamera(){
+00304 | 
+00305 |     scanningRef.current=false;
+00306 | 
+00307 |     if(streamRef.current){
+00308 | 
+00309 |       streamRef.current
+00310 |         .getTracks()
+
+--- CONTEXTO LINHA 317 ---
+00311 |         .forEach(
+00312 |           track=>track.stop()
+00313 |         );
+00314 |     }
+00315 | 
+00316 |     streamRef.current=null;
+00317 |     setCamera(false);
+00318 |   }
+00319 | 
+00320 |   async function startCamera(){
+00321 | 
+00322 |     if(
+00323 |       !navigator.mediaDevices?.
+00324 |         getUserMedia
+
+--- CONTEXTO LINHA 320 ---
+00314 |     }
+00315 | 
+00316 |     streamRef.current=null;
+00317 |     setCamera(false);
+00318 |   }
+00319 | 
+00320 |   async function startCamera(){
+00321 | 
+00322 |     if(
+00323 |       !navigator.mediaDevices?.
+00324 |         getUserMedia
+00325 |     ){
+00326 | 
+00327 |       setResult({
+
+--- CONTEXTO LINHA 323 ---
+00317 |     setCamera(false);
+00318 |   }
+00319 | 
+00320 |   async function startCamera(){
+00321 | 
+00322 |     if(
+00323 |       !navigator.mediaDevices?.
+00324 |         getUserMedia
+00325 |     ){
+00326 | 
+00327 |       setResult({
+00328 |         ok:false,
+00329 |         result:"ERROR",
+00330 |         message:
+
+--- CONTEXTO LINHA 324 ---
+00318 |   }
+00319 | 
+00320 |   async function startCamera(){
+00321 | 
+00322 |     if(
+00323 |       !navigator.mediaDevices?.
+00324 |         getUserMedia
+00325 |     ){
+00326 | 
+00327 |       setResult({
+00328 |         ok:false,
+00329 |         result:"ERROR",
+00330 |         message:
+00331 |           "Câmera indisponível neste dispositivo."
+
+--- CONTEXTO LINHA 331 ---
+00325 |     ){
+00326 | 
+00327 |       setResult({
+00328 |         ok:false,
+00329 |         result:"ERROR",
+00330 |         message:
+00331 |           "Câmera indisponível neste dispositivo."
+00332 |       });
+00333 | 
+00334 |       return;
+00335 |     }
+00336 | 
+00337 |     if(
+00338 |       typeof window.BarcodeDetector===
+
+--- CONTEXTO LINHA 338 ---
+00332 |       });
+00333 | 
+00334 |       return;
+00335 |     }
+00336 | 
+00337 |     if(
+00338 |       typeof window.BarcodeDetector===
+00339 |       "undefined"
+00340 |     ){
+00341 | 
+00342 |       setResult({
+00343 |         ok:false,
+00344 |         result:"ERROR",
+00345 |         message:
+
+--- CONTEXTO LINHA 346 ---
+00340 |     ){
+00341 | 
+00342 |       setResult({
+00343 |         ok:false,
+00344 |         result:"ERROR",
+00345 |         message:
+00346 |           "Leitor QR automático indisponível. Use a busca ou digite o código."
+00347 |       });
+00348 | 
+00349 |       return;
+00350 |     }
+00351 | 
+00352 |     try{
+00353 | 
+
+--- CONTEXTO LINHA 355 ---
+00349 |       return;
+00350 |     }
+00351 | 
+00352 |     try{
+00353 | 
+00354 |       const stream=
+00355 |         await navigator.mediaDevices
+00356 |           .getUserMedia({
+00357 |             video:{
+00358 |               facingMode:{
+00359 |                 ideal:"environment"
+00360 |               }
+00361 |             },
+00362 |             audio:false
+
+--- CONTEXTO LINHA 356 ---
+00350 |     }
+00351 | 
+00352 |     try{
+00353 | 
+00354 |       const stream=
+00355 |         await navigator.mediaDevices
+00356 |           .getUserMedia({
+00357 |             video:{
+00358 |               facingMode:{
+00359 |                 ideal:"environment"
+00360 |               }
+00361 |             },
+00362 |             audio:false
+00363 |           });
+
+--- CONTEXTO LINHA 357 ---
+00351 | 
+00352 |     try{
+00353 | 
+00354 |       const stream=
+00355 |         await navigator.mediaDevices
+00356 |           .getUserMedia({
+00357 |             video:{
+00358 |               facingMode:{
+00359 |                 ideal:"environment"
+00360 |               }
+00361 |             },
+00362 |             audio:false
+00363 |           });
+00364 | 
+
+--- CONTEXTO LINHA 366 ---
+00360 |               }
+00361 |             },
+00362 |             audio:false
+00363 |           });
+00364 | 
+00365 |       streamRef.current=stream;
+00366 |       setCamera(true);
+00367 | 
+00368 |       await new Promise(
+00369 |         resolve=>
+00370 |           setTimeout(resolve,150)
+00371 |       );
+00372 | 
+00373 |       if(videoRef.current){
+
+--- CONTEXTO LINHA 373 ---
+00367 | 
+00368 |       await new Promise(
+00369 |         resolve=>
+00370 |           setTimeout(resolve,150)
+00371 |       );
+00372 | 
+00373 |       if(videoRef.current){
+00374 | 
+00375 |         videoRef.current.srcObject=
+00376 |           stream;
+00377 | 
+00378 |         await videoRef.current.play();
+00379 |       }
+00380 | 
+
+--- CONTEXTO LINHA 375 ---
+00369 |         resolve=>
+00370 |           setTimeout(resolve,150)
+00371 |       );
+00372 | 
+00373 |       if(videoRef.current){
+00374 | 
+00375 |         videoRef.current.srcObject=
+00376 |           stream;
+00377 | 
+00378 |         await videoRef.current.play();
+00379 |       }
+00380 | 
+00381 |       const detector=
+00382 |         new window.BarcodeDetector({
+
+--- CONTEXTO LINHA 378 ---
+00372 | 
+00373 |       if(videoRef.current){
+00374 | 
+00375 |         videoRef.current.srcObject=
+00376 |           stream;
+00377 | 
+00378 |         await videoRef.current.play();
+00379 |       }
+00380 | 
+00381 |       const detector=
+00382 |         new window.BarcodeDetector({
+00383 |           formats:["qr_code"]
+00384 |         });
+00385 | 
+
+--- CONTEXTO LINHA 382 ---
+00376 |           stream;
+00377 | 
+00378 |         await videoRef.current.play();
+00379 |       }
+00380 | 
+00381 |       const detector=
+00382 |         new window.BarcodeDetector({
+00383 |           formats:["qr_code"]
+00384 |         });
+00385 | 
+00386 |       scanningRef.current=true;
+00387 | 
+00388 |       const scan=async()=>{
+00389 | 
+
+--- CONTEXTO LINHA 383 ---
+00377 | 
+00378 |         await videoRef.current.play();
+00379 |       }
+00380 | 
+00381 |       const detector=
+00382 |         new window.BarcodeDetector({
+00383 |           formats:["qr_code"]
+00384 |         });
+00385 | 
+00386 |       scanningRef.current=true;
+00387 | 
+00388 |       const scan=async()=>{
+00389 | 
+00390 |         if(
+
+--- CONTEXTO LINHA 392 ---
+00386 |       scanningRef.current=true;
+00387 | 
+00388 |       const scan=async()=>{
+00389 | 
+00390 |         if(
+00391 |           !scanningRef.current ||
+00392 |           !videoRef.current
+00393 |         ){
+00394 |           return;
+00395 |         }
+00396 | 
+00397 |         try{
+00398 | 
+00399 |           const codes=
+
+--- CONTEXTO LINHA 401 ---
+00395 |         }
+00396 | 
+00397 |         try{
+00398 | 
+00399 |           const codes=
+00400 |             await detector.detect(
+00401 |               videoRef.current
+00402 |             );
+00403 | 
+00404 |           const raw=
+00405 |             codes?.[0]?.rawValue;
+00406 | 
+00407 |           if(raw){
+00408 | 
+
+--- CONTEXTO LINHA 413 ---
+00407 |           if(raw){
+00408 | 
+00409 |             const now=Date.now();
+00410 | 
+00411 |             /*
+00412 |              * Anti-double-read:
+00413 |              * same QR ignored for 2.5 seconds.
+00414 |              */
+00415 |             if(
+00416 |               raw===lastCodeRef.current &&
+00417 |               now-lastReadRef.current<2500
+00418 |             ){
+00419 | 
+00420 |               requestAnimationFrame(scan);
+
+--- CONTEXTO LINHA 449 ---
+00443 |                 650
+00444 |               );
+00445 | 
+00446 |               return;
+00447 |             }
+00448 | 
+00449 |             stopCamera();
+00450 |             return;
+00451 |           }
+00452 | 
+00453 |         }catch{
+00454 |           // scanner permanece ativo
+00455 |         }
+00456 | 
+
+--- CONTEXTO LINHA 454 ---
+00448 | 
+00449 |             stopCamera();
+00450 |             return;
+00451 |           }
+00452 | 
+00453 |         }catch{
+00454 |           // scanner permanece ativo
+00455 |         }
+00456 | 
+00457 |         if(scanningRef.current){
+00458 |           requestAnimationFrame(scan);
+00459 |         }
+00460 |       };
+00461 | 
+
+--- CONTEXTO LINHA 466 ---
+00460 |       };
+00461 | 
+00462 |       requestAnimationFrame(scan);
+00463 | 
+00464 |     }catch(error){
+00465 | 
+00466 |       stopCamera();
+00467 | 
+00468 |       setResult({
+00469 |         ok:false,
+00470 |         result:"ERROR",
+00471 |         message:
+00472 |           error.message||
+00473 |           "Não foi possível abrir a câmera."
+
+--- CONTEXTO LINHA 521 ---
+00515 |       setSearching(false);
+00516 |     }
+00517 |   }
+00518 | 
+00519 |   async function validateSearchTicket(ticket){
+00520 | 
+00521 |     if(!ticket?.ticket_code){
+00522 |       return;
+00523 |     }
+00524 | 
+00525 |     setQuery("");
+00526 |     setSearch([]);
+00527 | 
+00528 |     await validate(
+
+--- CONTEXTO LINHA 529 ---
+00523 |     }
+00524 | 
+00525 |     setQuery("");
+00526 |     setSearch([]);
+00527 | 
+00528 |     await validate(
+00529 |       ticket.ticket_code
+00530 |     );
+00531 |   }
+00532 | 
+00533 |   useEffect(
+00534 |     ()=>{
+00535 |       return()=>{
+00536 |         stopCamera();
+
+--- CONTEXTO LINHA 536 ---
+00530 |     );
+00531 |   }
+00532 | 
+00533 |   useEffect(
+00534 |     ()=>{
+00535 |       return()=>{
+00536 |         stopCamera();
+00537 |       };
+00538 |     },
+00539 |     []
+00540 |   );
+00541 | 
+00542 |   return(
+00543 |     <section
+
+--- CONTEXTO LINHA 563 ---
+00557 |           <h2>
+00558 |             Gate Intelligence
+00559 |           </h2>
+00560 | 
+00561 |           <p>
+00562 |             Controle inteligente de entrada,
+00563 |             QR individual e proteção contra
+00564 |             reutilização.
+00565 |           </p>
+00566 | 
+00567 |         </div>
+00568 | 
+00569 |         <div className="gate36-live">
+00570 |           <i/>
+
+--- CONTEXTO LINHA 658 ---
+00652 |         </article>
+00653 | 
+00654 |       </div>
+00655 | 
+00656 |       <div className="gate36-workspace">
+00657 | 
+00658 |         <div className="gate36-scanner">
+00659 | 
+00660 |           <div className="gate36-section-title">
+00661 |             <div>
+00662 |               <small>ENTRADA PRINCIPAL</small>
+00663 |               <h3>Leitor de ingresso</h3>
+00664 |             </div>
+00665 | 
+
+--- CONTEXTO LINHA 709 ---
+00703 |             >
+00704 |               {busy
+00705 |                 ?"VALIDANDO..."
+00706 |                 :"VALIDAR"}
+00707 |             </button>
+00708 | 
+00709 |             {!camera
+00710 |               ?(
+00711 |                 <button
+00712 |                   className="secondary"
+00713 |                   onClick={startCamera}
+00714 |                 >
+00715 |                   ABRIR CÂMERA
+00716 |                 </button>
+
+--- CONTEXTO LINHA 713 ---
+00707 |             </button>
+00708 | 
+00709 |             {!camera
+00710 |               ?(
+00711 |                 <button
+00712 |                   className="secondary"
+00713 |                   onClick={startCamera}
+00714 |                 >
+00715 |                   ABRIR CÂMERA
+00716 |                 </button>
+00717 |               )
+00718 |               :(
+00719 |                 <button
+00720 |                   className="secondary"
+
+--- CONTEXTO LINHA 721 ---
+00715 |                   ABRIR CÂMERA
+00716 |                 </button>
+00717 |               )
+00718 |               :(
+00719 |                 <button
+00720 |                   className="secondary"
+00721 |                   onClick={stopCamera}
+00722 |                 >
+00723 |                   FECHAR CÂMERA
+00724 |                 </button>
+00725 |               )
+00726 |             }
+00727 | 
+00728 |           </div>
+
+--- CONTEXTO LINHA 730 ---
+00724 |                 </button>
+00725 |               )
+00726 |             }
+00727 | 
+00728 |           </div>
+00729 | 
+00730 |           {camera&&(
+00731 |             <div className="gate-v25-camera gate36-camera">
+00732 | 
+00733 |               <video
+00734 |                 ref={videoRef}
+00735 |                 playsInline
+00736 |                 muted
+00737 |               />
+
+--- CONTEXTO LINHA 731 ---
+00725 |               )
+00726 |             }
+00727 | 
+00728 |           </div>
+00729 | 
+00730 |           {camera&&(
+00731 |             <div className="gate-v25-camera gate36-camera">
+00732 | 
+00733 |               <video
+00734 |                 ref={videoRef}
+00735 |                 playsInline
+00736 |                 muted
+00737 |               />
+00738 | 
+
+--- CONTEXTO LINHA 733 ---
+00727 | 
+00728 |           </div>
+00729 | 
+00730 |           {camera&&(
+00731 |             <div className="gate-v25-camera gate36-camera">
+00732 | 
+00733 |               <video
+00734 |                 ref={videoRef}
+00735 |                 playsInline
+00736 |                 muted
+00737 |               />
+00738 | 
+00739 |               <div className="gate-v25-frame"/>
+00740 | 
+
+--- CONTEXTO LINHA 734 ---
+00728 |           </div>
+00729 | 
+00730 |           {camera&&(
+00731 |             <div className="gate-v25-camera gate36-camera">
+00732 | 
+00733 |               <video
+00734 |                 ref={videoRef}
+00735 |                 playsInline
+00736 |                 muted
+00737 |               />
+00738 | 
+00739 |               <div className="gate-v25-frame"/>
+00740 | 
+00741 |               <div className="gate36-camera-label">
+
+--- CONTEXTO LINHA 741 ---
+00735 |                 playsInline
+00736 |                 muted
+00737 |               />
+00738 | 
+00739 |               <div className="gate-v25-frame"/>
+00740 | 
+00741 |               <div className="gate36-camera-label">
+00742 |                 POSICIONE O QR CODE
+00743 |               </div>
+00744 | 
+00745 |             </div>
+00746 |           )}
+00747 | 
+00748 |           {result&&(
+
+--- CONTEXTO LINHA 742 ---
+00736 |                 muted
+00737 |               />
+00738 | 
+00739 |               <div className="gate-v25-frame"/>
+00740 | 
+00741 |               <div className="gate36-camera-label">
+00742 |                 POSICIONE O QR CODE
+00743 |               </div>
+00744 | 
+00745 |             </div>
+00746 |           )}
+00747 | 
+00748 |           {result&&(
+00749 |             <div
+
+--- CONTEXTO LINHA 794 ---
+00788 |                     </b>
+00789 |                   </div>
+00790 | 
+00791 |                   <div>
+00792 |                     <span>Código</span>
+00793 |                     <b>
+00794 |                       {result.ticket.ticket_code||
+00795 |                        "—"}
+00796 |                     </b>
+00797 |                   </div>
+00798 | 
+00799 |                   <div>
+00800 |                     <span>Pagamento</span>
+00801 |                     <b>
+
+--- CONTEXTO LINHA 816 ---
+00810 |                       {result.ticket.event_title||
+00811 |                        "—"}
+00812 |                     </b>
+00813 |                   </div>
+00814 | 
+00815 |                   <div>
+00816 |                     <span>Check-in</span>
+00817 |                     <b>
+00818 |                       {dt(
+00819 |                         result.ticket.checkin_at
+00820 |                       )}
+00821 |                     </b>
+00822 |                   </div>
+00823 | 
+
+--- CONTEXTO LINHA 819 ---
+00813 |                   </div>
+00814 | 
+00815 |                   <div>
+00816 |                     <span>Check-in</span>
+00817 |                     <b>
+00818 |                       {dt(
+00819 |                         result.ticket.checkin_at
+00820 |                       )}
+00821 |                     </b>
+00822 |                   </div>
+00823 | 
+00824 |                 </div>
+00825 |               )}
+00826 | 
+
+--- CONTEXTO LINHA 842 ---
+00836 |               <small>CONTINGÊNCIA</small>
+00837 |               <h3>Localizar ingresso</h3>
+00838 |             </div>
+00839 |           </div>
+00840 | 
+00841 |           <p>
+00842 |             Sem QR? Localize o cliente por
+00843 |             nome, telefone, e-mail ou código.
+00844 |           </p>
+00845 | 
+00846 |           <div className="gate36-search">
+00847 | 
+00848 |             <input
+00849 |               value={query}
+
+--- CONTEXTO LINHA 885 ---
+00879 | 
+00880 |               {search.map(ticket=>(
+00881 | 
+00882 |                 <button
+00883 |                   key={
+00884 |                     ticket.id||
+00885 |                     ticket.ticket_code
+00886 |                   }
+00887 |                   onClick={()=>
+00888 |                     validateSearchTicket(
+00889 |                       ticket
+00890 |                     )
+00891 |                   }
+00892 |                 >
+
+--- CONTEXTO LINHA 901 ---
+00895 |                     <strong>
+00896 |                       {ticket.attendee_name||
+00897 |                        "Participante"}
+00898 |                     </strong>
+00899 | 
+00900 |                     <span>
+00901 |                       {ticket.ticket_code}
+00902 |                     </span>
+00903 |                   </div>
+00904 | 
+00905 |                   <em>
+00906 |                     {ticket.checkin_at
+00907 |                       ?"UTILIZADO"
+00908 |                       :"VALIDAR"}
+
+--- CONTEXTO LINHA 906 ---
+00900 |                     <span>
+00901 |                       {ticket.ticket_code}
+00902 |                     </span>
+00903 |                   </div>
+00904 | 
+00905 |                   <em>
+00906 |                     {ticket.checkin_at
+00907 |                       ?"UTILIZADO"
+00908 |                       :"VALIDAR"}
+00909 |                   </em>
+00910 | 
+00911 |                 </button>
+00912 | 
+00913 |               ))}
+
+--- CONTEXTO LINHA 935 ---
+00929 |               <div>
+00930 |                 <small>SESSÃO ATUAL</small>
+00931 |                 <h3>Últimas leituras</h3>
+00932 |               </div>
+00933 |             </div>
+00934 | 
+00935 |             {!lastAccess.length&&(
+00936 |               <span className="gate36-empty">
+00937 |                 Aguardando primeiro ingresso.
+00938 |               </span>
+00939 |             )}
+00940 | 
+00941 |             {lastAccess.map(
+00942 |               (item,index)=>(
+
+--- CONTEXTO LINHA 941 ---
+00935 |             {!lastAccess.length&&(
+00936 |               <span className="gate36-empty">
+00937 |                 Aguardando primeiro ingresso.
+00938 |               </span>
+00939 |             )}
+00940 | 
+00941 |             {lastAccess.map(
+00942 |               (item,index)=>(
+00943 |                 <article
+00944 |                   key={
+00945 |                     `${item.at}-${index}`
+00946 |                   }
+00947 |                   className={
+00948 |                     tone(item.result)
+
+--- CONTEXTO LINHA 983 ---
+00977 |       <footer className="gate36-footer">
+00978 |         <span>
+00979 |           NEXUS GATE INTELLIGENCE V3.6
+00980 |         </span>
+00981 | 
+00982 |         <span>
+00983 |           QR • CHECK-IN • CONTINGÊNCIA • AUDITORIA
+00984 |         </span>
+00985 |       </footer>
+00986 | 
+00987 |     </section>
+00988 |   );
+00989 | }
+00990 | 
+
+============================================================
+FILE: src/GateScannerV25.css
+============================================================
+STATUS: NAO ENCONTRADO
+
+============================================================
+FILE: src/EventCommandCenterV38.jsx
+============================================================
+STATUS: ENCONTRADO
+LINES: 990
+BYTES: 18034
+
+
+--- CONTEXTO LINHA 11 ---
+00005 | } from "react";
+00006 | 
+00007 | import {api} from "./api.js";
+00008 | 
+00009 | import TicketsV15 from "./TicketsV15.jsx";
+00010 | import TicketOrderCenterV25 from "./TicketOrderCenterV25.jsx";
+00011 | import GateScannerV25 from "./GateScannerV25.jsx";
+00012 | import EventIntelligenceV37 from "./EventIntelligenceV37.jsx";
+00013 | 
+00014 | import "./EventCommandCenterV38.css";
+00015 | 
+00016 | const money=value=>
+00017 |   Number(value||0).toLocaleString(
+00018 |     "pt-BR",
+
+--- CONTEXTO LINHA 147 ---
+00141 | 
+00142 |     const refresh=()=>{
+00143 |       loadDashboard();
+00144 |     };
+00145 | 
+00146 |     window.addEventListener(
+00147 |       "nexus:ticket-checkin",
+00148 |       refresh
+00149 |     );
+00150 | 
+00151 |     window.addEventListener(
+00152 |       "nexus:gate-intelligence",
+00153 |       refresh
+00154 |     );
+
+--- CONTEXTO LINHA 167 ---
+00161 | 
+00162 |     return()=>{
+00163 | 
+00164 |       clearInterval(timer);
+00165 | 
+00166 |       window.removeEventListener(
+00167 |         "nexus:ticket-checkin",
+00168 |         refresh
+00169 |       );
+00170 | 
+00171 |       window.removeEventListener(
+00172 |         "nexus:gate-intelligence",
+00173 |         refresh
+00174 |       );
+
+--- CONTEXTO LINHA 202 ---
+00196 |   const issued=
+00197 |     Number(metrics.issued||0);
+00198 | 
+00199 |   const checked=
+00200 |     Number(
+00201 |       metrics.checked_in||
+00202 |       metrics.checkins||
+00203 |       metrics.used||
+00204 |       0
+00205 |     );
+00206 | 
+00207 |   const occupancy=
+00208 |     issued>0
+00209 |       ?Math.min(
+
+--- CONTEXTO LINHA 271 ---
+00265 | 
+00266 |           <h1>
+00267 |             Event Command Center
+00268 |           </h1>
+00269 | 
+00270 |           <p>
+00271 |             Venda, ingressos, lotes, acesso,
+00272 |             experiência do cliente e inteligência
+00273 |             operando como um único ecossistema.
+00274 |           </p>
+00275 | 
+00276 |         </div>
+00277 | 
+00278 |         <div className="ecc38-event-control">
+
+--- CONTEXTO LINHA 499 ---
+00493 | 
+00494 |             </article>
+00495 | 
+00496 |             <article>
+00497 | 
+00498 |               <span>
+00499 |                 CHECK-INS
+00500 |               </span>
+00501 | 
+00502 |               <strong>
+00503 |                 {checked}
+00504 |               </strong>
+00505 | 
+00506 |               <small>
+
+--- CONTEXTO LINHA 573 ---
+00567 |                 <div>
+00568 |                   <strong>
+00569 |                     {occupancy}%
+00570 |                   </strong>
+00571 | 
+00572 |                   <span>
+00573 |                     CHECK-IN
+00574 |                   </span>
+00575 |                 </div>
+00576 | 
+00577 |               </div>
+00578 | 
+00579 |               <p>
+00580 |                 {checked} de {issued} ingresso(s)
+
+--- CONTEXTO LINHA 656 ---
+00650 | 
+00651 |               </div>
+00652 | 
+00653 |               <p>
+00654 |                 O pagamento confirmado alimenta
+00655 |                 automaticamente emissão, carteira
+00656 |                 digital, QR individual e acesso.
+00657 |               </p>
+00658 | 
+00659 |             </article>
+00660 | 
+00661 | 
+00662 |             <article className="ecc38-card">
+00663 | 
+
+--- CONTEXTO LINHA 702 ---
+00696 |                 <button
+00697 |                   onClick={()=>
+00698 |                     setTab("gate")
+00699 |                   }
+00700 |                 >
+00701 |                   <span>PORTARIA</span>
+00702 |                   Validar acesso
+00703 |                 </button>
+00704 | 
+00705 |                 <button
+00706 |                   onClick={()=>
+00707 |                     setTab("intelligence")
+00708 |                   }
+00709 |                 >
+
+--- CONTEXTO LINHA 864 ---
+00858 | 
+00859 |         <div className="ecc38-module ecc38-gate-module">
+00860 | 
+00861 |           <div className="ecc38-module-head">
+00862 | 
+00863 |             <span>
+00864 |               ACCESS OPERATION
+00865 |             </span>
+00866 | 
+00867 |             <h2>
+00868 |               Portaria & Gate Intelligence
+00869 |             </h2>
+00870 | 
+00871 |             <p>
+
+--- CONTEXTO LINHA 872 ---
+00866 | 
+00867 |             <h2>
+00868 |               Portaria & Gate Intelligence
+00869 |             </h2>
+00870 | 
+00871 |             <p>
+00872 |               QR Code, contingência, validação,
+00873 |               bloqueio de duplicidade e leitura
+00874 |               operacional em tempo real.
+00875 |             </p>
+00876 | 
+00877 |           </div>
+00878 | 
+00879 |           <GateScannerV25/>
+
+--- CONTEXTO LINHA 879 ---
+00873 |               bloqueio de duplicidade e leitura
+00874 |               operacional em tempo real.
+00875 |             </p>
+00876 | 
+00877 |           </div>
+00878 | 
+00879 |           <GateScannerV25/>
+00880 | 
+00881 |         </div>
+00882 |       )}
+00883 | 
+00884 | 
+00885 |       {tab==="public"&&(
+00886 | 
+
+--- CONTEXTO LINHA 906 ---
+00900 |           </h2>
+00901 | 
+00902 |           <p>
+00903 |             A página pública conecta divulgação,
+00904 |             compra, PIX, confirmação automática,
+00905 |             emissão do ingresso, carteira digital
+00906 |             e QR Code individual.
+00907 |           </p>
+00908 | 
+00909 |           <div className="ecc38-public-flow">
+00910 | 
+00911 |             <span>EVENTO</span>
+00912 |             <i>→</i>
+00913 |             <span>CHECKOUT</span>
+
+============================================================
+FILE: src/api.js
+============================================================
+STATUS: ENCONTRADO
+LINES: 446
+BYTES: 20605
+
+
+--- CONTEXTO LINHA 4 ---
+00001 | const API=(import.meta.env.VITE_API_URL||'/api').replace(/\/+$/,'');
+00002 | let token=localStorage.getItem('nexus_hospitality_token')||'';
+00003 | export function setAuthToken(v){token=v||'';if(token)localStorage.setItem('nexus_hospitality_token',token);else localStorage.removeItem('nexus_hospitality_token')}
+00004 | async function request(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(token)headers.Authorization=`Bearer ${token}`;let res;try{res=await fetch(`${API}${path}`,{...options,headers})}catch(cause){const e=new Error('API do NEXUS Hospitality indisponível. Confirme que o servidor está ativo na porta 8989.');e.code='API_UNREACHABLE';e.cause=cause;throw e}const data=await res.json().catch(()=>({}));if(!res.ok){const e=new Error(data.message||data.error||`Erro HTTP ${res.status}`);e.code=data.error;e.status=res.status;throw e}return data}
+00005 | export const api={
+00006 |   inventoryV49Summary:()=>request('/v49/inventory/summary'),
+00007 |   inventoryV49Alerts:()=>request('/v49/inventory/alerts'),
+00008 |   inventoryV49Product:id=>request(`/v49/inventory/products/${id}`),
+00009 |   inventoryV49Entry:(id,body)=>request(`/v49/inventory/products/${id}/entry`,{method:'POST',body:JSON.stringify(body)}),
+00010 |   inventoryV49Exit:(id,body)=>request(`/v49/inventory/products/${id}/exit`,{method:'POST',body:JSON.stringify(body)}),
+00011 |   inventoryV49Loss:(id,body)=>request(`/v49/inventory/products/${id}/loss`,{method:'POST',body:JSON.stringify(body)}),
+
+--- CONTEXTO LINHA 29 ---
+00023 |   supplierDispatchesV49D:()=>request('/v49d/dispatches'),
+00024 |   supplierDispatchV49D:id=>request(`/v49d/dispatches/${id}`),
+00025 |   markSupplierDispatchSentV49D:(id,body)=>request(`/v49d/dispatches/${id}/sent`,{method:'POST',body:JSON.stringify(body||{})}),
+00026 | quotesV13:()=>request('/v13/quotes'),createQuoteV13:body=>request('/v13/quotes',{method:'POST',body:JSON.stringify(body)}),quoteAnalysisV13:id=>request(`/v13/quotes/${id}/analysis`),finalizeQuoteV13:(id,supplier_id)=>request(`/v13/quotes/${id}/finalize`,{method:'POST',body:JSON.stringify({supplier_id})}),publicSupplierQuoteV13:token=>request(`/public/supplier-quote/${token}`),submitSupplierQuoteV13:(token,body)=>request(`/public/supplier-quote/${token}`,{method:'POST',body:JSON.stringify(body)}),
+00027 | 
+00028 |   publicStore:()=>request('/public/store'),publicCreateOrder:body=>request('/public/orders',{method:'POST',body:JSON.stringify(body)}),publicOrder:code=>request(`/public/orders/${code}`),publicEvents:()=>request('/public/events'),publicEvent:id=>request(`/public/events/${id}`),publicBuyTicket:(id,body)=>request(`/public/events/${id}/buy`,{method:'POST',body:JSON.stringify(body)}),publicTicketOrder:code=>request(`/public/ticket-orders/${code}`),growthV12:()=>request('/v12/growth'),updateEventV12:(id,body)=>request(`/v12/events/${id}`,{method:'PATCH',body:JSON.stringify(body)}),
+00029 |   ticketDashboardV25:id=>request(`/v25/tickets/dashboard/${id}`),ticketOrdersV25:id=>request(`/v25/tickets/orders/${id}`),ticketAccessV25:id=>request(`/v25/tickets/access/${id}`),ticketSearchV25:(id,q)=>request(`/v25/tickets/search/${id}?q=${encodeURIComponent(q)}`),createPresentialTicketV25:body=>request('/v25/tickets/presential',{method:'POST',body:JSON.stringify(body)}),checkinV25:async code=>{const result=await request('/v25/tickets/checkin',{method:'POST',body:JSON.stringify({code})});window.dispatchEvent(new CustomEvent('nexus:ticket-checkin',{detail:result}));return result},publicMenu:()=>request('/public/menu'),ticketEvents:()=>request('/v11/tickets/events'),ticketLots:id=>request(`/v11/tickets/lots/${id}`),createTicketLot:body=>request('/v11/tickets/lots',{method:'POST',body:JSON.stringify(body)}),tickets:id=>request(`/v11/tickets/${id}`),createTicket:body=>request('/v11/tickets',{method:'POST',body:JSON.stringify(body)}),checkin:code=>request('/v11/access/checkin',{method:'POST',body:JSON.stringify({code})}),menuAdmin:()=>request('/v11/menu'),updateMenuItem:(id,body)=>request(`/v11/menu/${id}`,{method:'PATCH',body:JSON.stringify(body)}),salon:()=>request('/v11/salon'),updateTableV11:(id,body)=>request(`/v11/tables/${id}`,{method:'PATCH',body:JSON.stringify(body)}),deliveryV11:()=>request('/v11/delivery'),deliveryOneV11:id=>request(`/v11/delivery/${id}`),createDeliveryV11:body=>request('/v11/delivery',{method:'POST',body:JSON.stringify(body)}),deliveryStatusV11:(id,status)=>request(`/v11/delivery/${id}/status`,{method:'PATCH',body:JSON.stringify({status})}),
+00030 | 
+00031 | 
+00032 |   smartInventory:()=>request('/inventory/smart'),createSmartProduct:body=>request('/inventory/smart-product',{method:'POST',body:JSON.stringify(body)}),updateInventoryProfile:(id,body)=>request(`/inventory/${id}/profile`,{method:'PATCH',body:JSON.stringify(body)}),cashMovement:body=>request('/cash-movements',{method:'POST',body:JSON.stringify(body)}),cashMovements:()=>request('/cash-movements/current'),
+00033 |   customers:()=>request('/customers'),createCustomer:body=>request('/customers',{method:'POST',body:JSON.stringify(body)}),reservations:()=>request('/reservations'),createReservation:body=>request('/reservations',{method:'POST',body:JSON.stringify(body)}),reservationStatus:(id,status)=>request(`/reservations/${id}/status`,{method:'PATCH',body:JSON.stringify({status})}),
+00034 |   delivery:()=>request('/delivery'),createDelivery:body=>request('/delivery',{method:'POST',body:JSON.stringify(body)}),deliveryStatus:(id,status)=>request(`/delivery/${id}/status`,{method:'PATCH',body:JSON.stringify({status})}),eventsV06:()=>request('/events-v06'),createEventV06:body=>request('/events-v06',{method:'POST',body:JSON.stringify(body)}),addEventCost:(id,body)=>request(`/events-v06/${id}/costs`,{method:'POST',body:JSON.stringify(body)}),
+00035 |   fiscalCaptures:()=>request('/fiscal-captures'),createFiscalCapture:body=>request('/fiscal-captures',{method:'POST',body:JSON.stringify(body)}),executiveReport:()=>request('/reports/executive'),
+00036 |   login:body=>request('/auth/login',{method:'POST',body:JSON.stringify(body)}),logout:()=>request('/auth/logout',{method:'POST'}),me:()=>request('/auth/me'),changePassword:body=>request('/auth/change-password',{method:'POST',body:JSON.stringify(body)}),capabilities:()=>request('/auth/capabilities'),
+
+============================================================
+FILE: package.json
+============================================================
+STATUS: ENCONTRADO
+LINES: 67
+BYTES: 3398
+
+
+--- CONTEXTO LINHA 26 ---
+00020 |                          "cors":  "^2.8.5",
+00021 |                          "express":  "^5.1.0",
+00022 |                          "helmet":  "^8.1.0",
+00023 |                          "react":  "^19.1.1",
+00024 |                          "react-dom":  "^19.1.1",
+00025 |                          "vite":  "^7.1.7",
+00026 |                          "qrcode":  "^1.5.4"
+00027 |                      },
+00028 |     "devDependencies":  {
+00029 |                             "electron":  "^38.1.2",
+00030 |                             "electron-builder":  "^26.0.12"
+00031 |                         },
+00032 |     "build":  {
+00033 |                   "appId":  "com.nexora.nexushospitalityone",
+
+============================================================
+FILE: server/operations-v11.js
+============================================================
+STATUS: ENCONTRADO
+LINES: 37
+BYTES: 11150
+
+
+--- CONTEXTO LINHA 9 ---
+00003 | import {createUnifiedSale} from './transaction-engine.js';
+00004 | const n=v=>Number(v||0);
+00005 | const code=()=>`NX-${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
+00006 | export function initOperationsV11(){
+00007 |  db.exec(`
+00008 |  CREATE TABLE IF NOT EXISTS ticket_lots(id INTEGER PRIMARY KEY AUTOINCREMENT,event_id INTEGER NOT NULL,name TEXT NOT NULL,price REAL NOT NULL DEFAULT 0,quantity INTEGER NOT NULL DEFAULT 0,sold INTEGER NOT NULL DEFAULT 0,starts_at TEXT,ends_at TEXT,status TEXT NOT NULL DEFAULT 'ACTIVE',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,FOREIGN KEY(event_id) REFERENCES events(id) ON DELETE CASCADE);
+00009 |  CREATE TABLE IF NOT EXISTS ticket_access_log(id INTEGER PRIMARY KEY AUTOINCREMENT,ticket_id INTEGER,event_id INTEGER,code TEXT NOT NULL,result TEXT NOT NULL,user_id INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+00010 |  CREATE TABLE IF NOT EXISTS delivery_items(id INTEGER PRIMARY KEY AUTOINCREMENT,delivery_id INTEGER NOT NULL,product_id INTEGER NOT NULL,qty REAL NOT NULL DEFAULT 1,unit_price REAL NOT NULL DEFAULT 0,sale_mode TEXT NOT NULL DEFAULT 'UNIT',notes TEXT,FOREIGN KEY(delivery_id) REFERENCES delivery_orders(id) ON DELETE CASCADE,FOREIGN KEY(product_id) REFERENCES products(id));
+00011 |  `);
+00012 |  const add=(t,c,d)=>{const cols=db.prepare(`PRAGMA table_info(${t})`).all().map(x=>x.name);if(!cols.includes(c))db.exec(`ALTER TABLE ${t} ADD COLUMN ${c} ${d}`)};
+00013 |  add('tickets','lot_id','INTEGER');add('tickets','attendee_phone','TEXT');add('tickets','payment_method','TEXT');add('tickets','checked_in_by','INTEGER');
+00014 |  add('products','menu_visible','INTEGER NOT NULL DEFAULT 1');add('products','menu_featured','INTEGER NOT NULL DEFAULT 0');
+00015 |  add('delivery_orders','delivery_fee','REAL NOT NULL DEFAULT 0');add('delivery_orders','change_for','REAL');add('delivery_orders','courier_name','TEXT');add('delivery_orders','sale_id','INTEGER');
+00016 |  add('dining_tables','position_x','INTEGER NOT NULL DEFAULT 0');add('dining_tables','position_y','INTEGER NOT NULL DEFAULT 0');
+
+--- CONTEXTO LINHA 22 ---
+00016 |  add('dining_tables','position_x','INTEGER NOT NULL DEFAULT 0');add('dining_tables','position_y','INTEGER NOT NULL DEFAULT 0');
+00017 | }
+00018 | export function registerPublicV11(app){
+00019 |  app.get('/api/public/menu',(_req,res)=>{const business=db.prepare("SELECT value FROM settings WHERE key='business_name'").get()?.value||'NEXUS Hospitality';const rows=db.prepare(`SELECT id,name,category,description,image_url,price,stock,menu_featured FROM products WHERE active=1 AND menu_visible=1 ORDER BY menu_featured DESC,category,name`).all();res.json({business,products:rows.map(x=>({...x,available:n(x.stock)>0}))})});
+00020 | }
+00021 | export function registerOperationsV11(app,{minRole,audit}){
+00022 |  app.get('/api/v11/tickets/events',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT e.*,COUNT(DISTINCT t.id) tickets,COALESCE(SUM(CASE WHEN t.payment_status='PAID' THEN t.price ELSE 0 END),0) revenue,SUM(CASE WHEN t.checkin_at IS NOT NULL THEN 1 ELSE 0 END) checked_in FROM events e LEFT JOIN tickets t ON t.event_id=e.id GROUP BY e.id ORDER BY COALESCE(e.starts_at,e.created_at) DESC`).all()));
+00023 |  app.get('/api/v11/tickets/lots/:eventId',minRole(40),(req,res)=>res.json(db.prepare('SELECT * FROM ticket_lots WHERE event_id=? ORDER BY id').all(n(req.params.eventId))));
+00024 |  app.post('/api/v11/tickets/lots',minRole(60),(req,res)=>{const b=req.body||{};if(!b.event_id||!String(b.name||'').trim())return res.status(400).json({error:'LOT_DATA_REQUIRED'});const i=db.prepare('INSERT INTO ticket_lots(event_id,name,price,quantity,starts_at,ends_at,status) VALUES(?,?,?,?,?,?,?)').run(n(b.event_id),String(b.name).trim(),n(b.price),Math.max(0,n(b.quantity)),b.starts_at||null,b.ends_at||null,b.status||'ACTIVE');audit(req.user.id,'CREATE','TICKET_LOT',i.lastInsertRowid,b);res.status(201).json({id:i.lastInsertRowid})});
+00025 |  app.get('/api/v11/tickets/:eventId',minRole(40),(req,res)=>res.json(db.prepare(`SELECT t.*,l.name lot_name,e.title event_title FROM tickets t LEFT JOIN ticket_lots l ON l.id=t.lot_id JOIN events e ON e.id=t.event_id WHERE t.event_id=? ORDER BY t.id DESC`).all(n(req.params.eventId))));
+00026 |  app.post('/api/v11/tickets',minRole(40),(req,res)=>{const b=req.body||{},lot=b.lot_id?db.prepare('SELECT * FROM ticket_lots WHERE id=?').get(n(b.lot_id)):null;if(!b.event_id||!String(b.attendee_name||'').trim())return res.status(400).json({error:'TICKET_DATA_REQUIRED'});if(lot&&lot.quantity>0&&lot.sold>=lot.quantity)return res.status(409).json({error:'LOT_SOLD_OUT'});const ticketCode=code(),price=lot?n(lot.price):n(b.price);const i=db.prepare(`INSERT INTO tickets(event_id,lot_id,attendee_name,attendee_phone,ticket_code,ticket_type,price,payment_status,payment_method) VALUES(?,?,?,?,?,?,?,?,?)`).run(n(b.event_id),b.lot_id?n(b.lot_id):null,String(b.attendee_name).trim(),b.attendee_phone||null,ticketCode,lot?.name||b.ticket_type||'INGRESSO',price,b.payment_status||'PAID',b.payment_method||'PIX');if(lot)db.prepare('UPDATE ticket_lots SET sold=sold+1 WHERE id=?').run(lot.id);audit(req.user.id,'CREATE','TICKET',i.lastInsertRowid,{event_id:b.event_id,code:ticketCode});res.status(201).json(db.prepare('SELECT * FROM tickets WHERE id=?').get(i.lastInsertRowid))});
+00027 |  app.post('/api/v11/access/checkin',minRole(40),(req,res)=>{const c=String(req.body?.code||'').trim().toUpperCase();const t=db.prepare(`SELECT t.*,e.title event_title FROM tickets t JOIN events e ON e.id=t.event_id WHERE upper(t.ticket_code)=?`).get(c);if(!t){db.prepare("INSERT INTO ticket_access_log(code,result,user_id) VALUES(?,'INVALID',?)").run(c,req.user.id);return res.status(404).json({ok:false,result:'INVALID',message:'Ingresso inválido.'})}if(t.payment_status!=='PAID'&&t.payment_status!=='COURTESY'){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'PAYMENT_PENDING',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'PAYMENT_PENDING',message:'Pagamento não confirmado.',ticket:t})}if(t.checkin_at){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'DUPLICATE',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'DUPLICATE',message:'Ingresso já utilizado.',ticket:t})}db.prepare('UPDATE tickets SET checkin_at=CURRENT_TIMESTAMP,checked_in_by=? WHERE id=?').run(req.user.id,t.id);db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'ALLOWED',?)").run(t.id,t.event_id,c,req.user.id);audit(req.user.id,'CHECKIN','TICKET',t.id,{code:c});res.json({ok:true,result:'ALLOWED',message:'Acesso liberado.',ticket:{...t,checkin_at:new Date().toISOString()}})});
+00028 |  app.get('/api/v11/menu',minRole(40),(_req,res)=>res.json(db.prepare('SELECT * FROM products WHERE active=1 ORDER BY category,name').all()));
+00029 |  app.patch('/api/v11/menu/:id',minRole(55),(req,res)=>{const b=req.body||{};db.prepare('UPDATE products SET menu_visible=COALESCE(?,menu_visible),menu_featured=COALESCE(?,menu_featured),description=COALESCE(?,description),price=COALESCE(?,price),image_url=COALESCE(?,image_url) WHERE id=?').run(b.menu_visible==null?null:(b.menu_visible?1:0),b.menu_featured==null?null:(b.menu_featured?1:0),b.description??null,b.price==null?null:n(b.price),b.image_url??null,n(req.params.id));audit(req.user.id,'UPDATE','MENU_PRODUCT',req.params.id,b);res.json({ok:true})});
+
+--- CONTEXTO LINHA 26 ---
+00020 | }
+00021 | export function registerOperationsV11(app,{minRole,audit}){
+00022 |  app.get('/api/v11/tickets/events',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT e.*,COUNT(DISTINCT t.id) tickets,COALESCE(SUM(CASE WHEN t.payment_status='PAID' THEN t.price ELSE 0 END),0) revenue,SUM(CASE WHEN t.checkin_at IS NOT NULL THEN 1 ELSE 0 END) checked_in FROM events e LEFT JOIN tickets t ON t.event_id=e.id GROUP BY e.id ORDER BY COALESCE(e.starts_at,e.created_at) DESC`).all()));
+00023 |  app.get('/api/v11/tickets/lots/:eventId',minRole(40),(req,res)=>res.json(db.prepare('SELECT * FROM ticket_lots WHERE event_id=? ORDER BY id').all(n(req.params.eventId))));
+00024 |  app.post('/api/v11/tickets/lots',minRole(60),(req,res)=>{const b=req.body||{};if(!b.event_id||!String(b.name||'').trim())return res.status(400).json({error:'LOT_DATA_REQUIRED'});const i=db.prepare('INSERT INTO ticket_lots(event_id,name,price,quantity,starts_at,ends_at,status) VALUES(?,?,?,?,?,?,?)').run(n(b.event_id),String(b.name).trim(),n(b.price),Math.max(0,n(b.quantity)),b.starts_at||null,b.ends_at||null,b.status||'ACTIVE');audit(req.user.id,'CREATE','TICKET_LOT',i.lastInsertRowid,b);res.status(201).json({id:i.lastInsertRowid})});
+00025 |  app.get('/api/v11/tickets/:eventId',minRole(40),(req,res)=>res.json(db.prepare(`SELECT t.*,l.name lot_name,e.title event_title FROM tickets t LEFT JOIN ticket_lots l ON l.id=t.lot_id JOIN events e ON e.id=t.event_id WHERE t.event_id=? ORDER BY t.id DESC`).all(n(req.params.eventId))));
+00026 |  app.post('/api/v11/tickets',minRole(40),(req,res)=>{const b=req.body||{},lot=b.lot_id?db.prepare('SELECT * FROM ticket_lots WHERE id=?').get(n(b.lot_id)):null;if(!b.event_id||!String(b.attendee_name||'').trim())return res.status(400).json({error:'TICKET_DATA_REQUIRED'});if(lot&&lot.quantity>0&&lot.sold>=lot.quantity)return res.status(409).json({error:'LOT_SOLD_OUT'});const ticketCode=code(),price=lot?n(lot.price):n(b.price);const i=db.prepare(`INSERT INTO tickets(event_id,lot_id,attendee_name,attendee_phone,ticket_code,ticket_type,price,payment_status,payment_method) VALUES(?,?,?,?,?,?,?,?,?)`).run(n(b.event_id),b.lot_id?n(b.lot_id):null,String(b.attendee_name).trim(),b.attendee_phone||null,ticketCode,lot?.name||b.ticket_type||'INGRESSO',price,b.payment_status||'PAID',b.payment_method||'PIX');if(lot)db.prepare('UPDATE ticket_lots SET sold=sold+1 WHERE id=?').run(lot.id);audit(req.user.id,'CREATE','TICKET',i.lastInsertRowid,{event_id:b.event_id,code:ticketCode});res.status(201).json(db.prepare('SELECT * FROM tickets WHERE id=?').get(i.lastInsertRowid))});
+00027 |  app.post('/api/v11/access/checkin',minRole(40),(req,res)=>{const c=String(req.body?.code||'').trim().toUpperCase();const t=db.prepare(`SELECT t.*,e.title event_title FROM tickets t JOIN events e ON e.id=t.event_id WHERE upper(t.ticket_code)=?`).get(c);if(!t){db.prepare("INSERT INTO ticket_access_log(code,result,user_id) VALUES(?,'INVALID',?)").run(c,req.user.id);return res.status(404).json({ok:false,result:'INVALID',message:'Ingresso inválido.'})}if(t.payment_status!=='PAID'&&t.payment_status!=='COURTESY'){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'PAYMENT_PENDING',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'PAYMENT_PENDING',message:'Pagamento não confirmado.',ticket:t})}if(t.checkin_at){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'DUPLICATE',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'DUPLICATE',message:'Ingresso já utilizado.',ticket:t})}db.prepare('UPDATE tickets SET checkin_at=CURRENT_TIMESTAMP,checked_in_by=? WHERE id=?').run(req.user.id,t.id);db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'ALLOWED',?)").run(t.id,t.event_id,c,req.user.id);audit(req.user.id,'CHECKIN','TICKET',t.id,{code:c});res.json({ok:true,result:'ALLOWED',message:'Acesso liberado.',ticket:{...t,checkin_at:new Date().toISOString()}})});
+00028 |  app.get('/api/v11/menu',minRole(40),(_req,res)=>res.json(db.prepare('SELECT * FROM products WHERE active=1 ORDER BY category,name').all()));
+00029 |  app.patch('/api/v11/menu/:id',minRole(55),(req,res)=>{const b=req.body||{};db.prepare('UPDATE products SET menu_visible=COALESCE(?,menu_visible),menu_featured=COALESCE(?,menu_featured),description=COALESCE(?,description),price=COALESCE(?,price),image_url=COALESCE(?,image_url) WHERE id=?').run(b.menu_visible==null?null:(b.menu_visible?1:0),b.menu_featured==null?null:(b.menu_featured?1:0),b.description??null,b.price==null?null:n(b.price),b.image_url??null,n(req.params.id));audit(req.user.id,'UPDATE','MENU_PRODUCT',req.params.id,b);res.json({ok:true})});
+00030 |  app.get('/api/v11/salon',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT dt.*,o.id order_id,o.customer_name,o.subtotal,o.employee_id,o.created_at order_opened_at,e.name employee_name,(SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=o.id AND oi.status<>'CANCELLED') item_count FROM dining_tables dt LEFT JOIN orders o ON o.table_id=dt.id AND o.status='OPEN' LEFT JOIN employees e ON e.id=o.employee_id WHERE dt.active=1 ORDER BY dt.area,dt.id`).all()));
+00031 |  app.patch('/api/v11/tables/:id',minRole(80),(req,res)=>{const b=req.body||{};db.prepare('UPDATE dining_tables SET label=COALESCE(?,label),area=COALESCE(?,area),capacity=COALESCE(?,capacity),status=COALESCE(?,status) WHERE id=?').run(b.label??null,b.area??null,b.capacity==null?null:n(b.capacity),b.status??null,n(req.params.id));audit(req.user.id,'UPDATE','TABLE',req.params.id,b);res.json({ok:true})});
+00032 |  app.get('/api/v11/delivery',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT d.*,COALESCE((SELECT SUM(di.qty*di.unit_price) FROM delivery_items di WHERE di.delivery_id=d.id),0) items_total FROM delivery_orders d ORDER BY d.id DESC LIMIT 200`).all()));
+00033 |  app.get('/api/v11/delivery/:id',minRole(40),(req,res)=>{const d=db.prepare('SELECT * FROM delivery_orders WHERE id=?').get(n(req.params.id));if(!d)return res.status(404).json({error:'DELIVERY_NOT_FOUND'});res.json({...d,items:db.prepare(`SELECT di.*,p.name product_name FROM delivery_items di JOIN products p ON p.id=di.product_id WHERE di.delivery_id=? ORDER BY di.id`).all(d.id)})});
+
+--- CONTEXTO LINHA 27 ---
+00021 | export function registerOperationsV11(app,{minRole,audit}){
+00022 |  app.get('/api/v11/tickets/events',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT e.*,COUNT(DISTINCT t.id) tickets,COALESCE(SUM(CASE WHEN t.payment_status='PAID' THEN t.price ELSE 0 END),0) revenue,SUM(CASE WHEN t.checkin_at IS NOT NULL THEN 1 ELSE 0 END) checked_in FROM events e LEFT JOIN tickets t ON t.event_id=e.id GROUP BY e.id ORDER BY COALESCE(e.starts_at,e.created_at) DESC`).all()));
+00023 |  app.get('/api/v11/tickets/lots/:eventId',minRole(40),(req,res)=>res.json(db.prepare('SELECT * FROM ticket_lots WHERE event_id=? ORDER BY id').all(n(req.params.eventId))));
+00024 |  app.post('/api/v11/tickets/lots',minRole(60),(req,res)=>{const b=req.body||{};if(!b.event_id||!String(b.name||'').trim())return res.status(400).json({error:'LOT_DATA_REQUIRED'});const i=db.prepare('INSERT INTO ticket_lots(event_id,name,price,quantity,starts_at,ends_at,status) VALUES(?,?,?,?,?,?,?)').run(n(b.event_id),String(b.name).trim(),n(b.price),Math.max(0,n(b.quantity)),b.starts_at||null,b.ends_at||null,b.status||'ACTIVE');audit(req.user.id,'CREATE','TICKET_LOT',i.lastInsertRowid,b);res.status(201).json({id:i.lastInsertRowid})});
+00025 |  app.get('/api/v11/tickets/:eventId',minRole(40),(req,res)=>res.json(db.prepare(`SELECT t.*,l.name lot_name,e.title event_title FROM tickets t LEFT JOIN ticket_lots l ON l.id=t.lot_id JOIN events e ON e.id=t.event_id WHERE t.event_id=? ORDER BY t.id DESC`).all(n(req.params.eventId))));
+00026 |  app.post('/api/v11/tickets',minRole(40),(req,res)=>{const b=req.body||{},lot=b.lot_id?db.prepare('SELECT * FROM ticket_lots WHERE id=?').get(n(b.lot_id)):null;if(!b.event_id||!String(b.attendee_name||'').trim())return res.status(400).json({error:'TICKET_DATA_REQUIRED'});if(lot&&lot.quantity>0&&lot.sold>=lot.quantity)return res.status(409).json({error:'LOT_SOLD_OUT'});const ticketCode=code(),price=lot?n(lot.price):n(b.price);const i=db.prepare(`INSERT INTO tickets(event_id,lot_id,attendee_name,attendee_phone,ticket_code,ticket_type,price,payment_status,payment_method) VALUES(?,?,?,?,?,?,?,?,?)`).run(n(b.event_id),b.lot_id?n(b.lot_id):null,String(b.attendee_name).trim(),b.attendee_phone||null,ticketCode,lot?.name||b.ticket_type||'INGRESSO',price,b.payment_status||'PAID',b.payment_method||'PIX');if(lot)db.prepare('UPDATE ticket_lots SET sold=sold+1 WHERE id=?').run(lot.id);audit(req.user.id,'CREATE','TICKET',i.lastInsertRowid,{event_id:b.event_id,code:ticketCode});res.status(201).json(db.prepare('SELECT * FROM tickets WHERE id=?').get(i.lastInsertRowid))});
+00027 |  app.post('/api/v11/access/checkin',minRole(40),(req,res)=>{const c=String(req.body?.code||'').trim().toUpperCase();const t=db.prepare(`SELECT t.*,e.title event_title FROM tickets t JOIN events e ON e.id=t.event_id WHERE upper(t.ticket_code)=?`).get(c);if(!t){db.prepare("INSERT INTO ticket_access_log(code,result,user_id) VALUES(?,'INVALID',?)").run(c,req.user.id);return res.status(404).json({ok:false,result:'INVALID',message:'Ingresso inválido.'})}if(t.payment_status!=='PAID'&&t.payment_status!=='COURTESY'){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'PAYMENT_PENDING',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'PAYMENT_PENDING',message:'Pagamento não confirmado.',ticket:t})}if(t.checkin_at){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'DUPLICATE',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'DUPLICATE',message:'Ingresso já utilizado.',ticket:t})}db.prepare('UPDATE tickets SET checkin_at=CURRENT_TIMESTAMP,checked_in_by=? WHERE id=?').run(req.user.id,t.id);db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'ALLOWED',?)").run(t.id,t.event_id,c,req.user.id);audit(req.user.id,'CHECKIN','TICKET',t.id,{code:c});res.json({ok:true,result:'ALLOWED',message:'Acesso liberado.',ticket:{...t,checkin_at:new Date().toISOString()}})});
+00028 |  app.get('/api/v11/menu',minRole(40),(_req,res)=>res.json(db.prepare('SELECT * FROM products WHERE active=1 ORDER BY category,name').all()));
+00029 |  app.patch('/api/v11/menu/:id',minRole(55),(req,res)=>{const b=req.body||{};db.prepare('UPDATE products SET menu_visible=COALESCE(?,menu_visible),menu_featured=COALESCE(?,menu_featured),description=COALESCE(?,description),price=COALESCE(?,price),image_url=COALESCE(?,image_url) WHERE id=?').run(b.menu_visible==null?null:(b.menu_visible?1:0),b.menu_featured==null?null:(b.menu_featured?1:0),b.description??null,b.price==null?null:n(b.price),b.image_url??null,n(req.params.id));audit(req.user.id,'UPDATE','MENU_PRODUCT',req.params.id,b);res.json({ok:true})});
+00030 |  app.get('/api/v11/salon',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT dt.*,o.id order_id,o.customer_name,o.subtotal,o.employee_id,o.created_at order_opened_at,e.name employee_name,(SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=o.id AND oi.status<>'CANCELLED') item_count FROM dining_tables dt LEFT JOIN orders o ON o.table_id=dt.id AND o.status='OPEN' LEFT JOIN employees e ON e.id=o.employee_id WHERE dt.active=1 ORDER BY dt.area,dt.id`).all()));
+00031 |  app.patch('/api/v11/tables/:id',minRole(80),(req,res)=>{const b=req.body||{};db.prepare('UPDATE dining_tables SET label=COALESCE(?,label),area=COALESCE(?,area),capacity=COALESCE(?,capacity),status=COALESCE(?,status) WHERE id=?').run(b.label??null,b.area??null,b.capacity==null?null:n(b.capacity),b.status??null,n(req.params.id));audit(req.user.id,'UPDATE','TABLE',req.params.id,b);res.json({ok:true})});
+00032 |  app.get('/api/v11/delivery',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT d.*,COALESCE((SELECT SUM(di.qty*di.unit_price) FROM delivery_items di WHERE di.delivery_id=d.id),0) items_total FROM delivery_orders d ORDER BY d.id DESC LIMIT 200`).all()));
+00033 |  app.get('/api/v11/delivery/:id',minRole(40),(req,res)=>{const d=db.prepare('SELECT * FROM delivery_orders WHERE id=?').get(n(req.params.id));if(!d)return res.status(404).json({error:'DELIVERY_NOT_FOUND'});res.json({...d,items:db.prepare(`SELECT di.*,p.name product_name FROM delivery_items di JOIN products p ON p.id=di.product_id WHERE di.delivery_id=? ORDER BY di.id`).all(d.id)})});
+00034 |  app.post('/api/v11/delivery',minRole(40),(req,res)=>{const b=req.body||{},items=Array.isArray(b.items)?b.items:[];if(!String(b.customer_name||'').trim()||!items.length)return res.status(400).json({error:'DELIVERY_DATA_REQUIRED'});const out=db.transaction(()=>{const resolved=items.map(x=>{const p=db.prepare('SELECT * FROM products WHERE id=? AND active=1').get(n(x.product_id));if(!p)throw new Error('Produto inválido');return{...x,p,qty:Math.max(.01,n(x.qty)),price:n(x.unit_price||p.price)}});const itemsTotal=resolved.reduce((s,x)=>s+x.qty*x.price,0),fee=n(b.delivery_fee),total=itemsTotal+fee;const i=db.prepare(`INSERT INTO delivery_orders(customer_name,phone,order_type,address,status,total,payment_method,notes,delivery_fee,change_for,courier_name) VALUES(?,?,?,?,?,?,?,?,?,?,?)`).run(String(b.customer_name).trim(),b.phone||null,b.order_type||'DELIVERY',b.address||null,'NEW',total,b.payment_method||'PIX',b.notes||null,fee,b.change_for ? n(b.change_for) : null,b.courier_name||null);for(const x of resolved)db.prepare('INSERT INTO delivery_items(delivery_id,product_id,qty,unit_price,sale_mode,notes) VALUES(?,?,?,?,?,?)').run(i.lastInsertRowid,x.p.id,x.qty,x.price,x.mode||'UNIT',x.notes||null);return{id:i.lastInsertRowid,total}})();audit(req.user.id,'CREATE','DELIVERY_V11',out.id,out);res.status(201).json(out)});
+
+============================================================
+FILE: server/index.js
+============================================================
+STATUS: ENCONTRADO
+LINES: 6141
+BYTES: 151248
+
+
+--- CONTEXTO LINHA 5 ---
+00001 | import { createHospitalityFinalIntelligence } from "./v50c-final-intelligence.js";
+00002 | import {registerTicketDeliveryV39} from "./ticket-delivery-v39.js";
+00003 | import registerEventIntelligenceV37 from "./event-intelligence-v37.js";
+00004 | import registerEventPaymentTrackerV35 from "./event-payment-tracker-v35.js";
+00005 | import {registerEventAccessV31} from "./event-access-routes-v31.js";
+00006 | import { registerCustomerWallet } from "./customer-wallet-v26.js";
+00007 | import {initializeAsaasSecureRuntime} from './asaas-config.js';
+00008 | import express from 'express';import cors from 'cors';import helmet from 'helmet';import path from 'node:path';import fs from 'node:fs';
+00009 | import {db,initDb,setting} from './db.js';import {dashboardSnapshot,closingPlan,growthBrief,performanceSnapshot} from './intelligence.js';import {verifyPassword,hashPassword,sessionToken,tokenHash} from './security.js';import {registerOperations} from './operations.js';import {registerRecipeEngine,consumeProduct} from './recipe-engine.js';import {registerPremiumV05} from './premium-v05.js';import {initSuiteV06,registerSuiteV06,smartSalePrice,smartUnitCost} from './suite-v06.js';import {registerOperationalV1} from './operational-v1.js';import {initOperationsV11,registerPublicV11,registerOperationsV11} from './operations-v11.js';
+00010 | import {registerTicketsV25} from './tickets-v25.js';
+00011 | import {initGrowthV12,registerGrowthV12} from './growth-v12.js';
+00012 | import {initBusinessV13,registerBusinessV13} from './business-v13.js';
+
+--- CONTEXTO LINHA 426 ---
+00420 | app.get('/api/auth/capabilities',auth,(_req,res)=>res.json({passkeys:{prepared:true,registration_enabled:false,message:'Base preparada. Registro WebAuthn será habilitado em camada dedicada.'}}));
+00421 | 
+00422 | /* NEXUS_CUSTOMER_WALLET_V26_PUBLIC_BEFORE_GLOBAL_AUTH */
+00423 | registerCustomerWallet(app);
+00424 | registerEventPaymentTrackerV35(app);
+00425 | registerTicketDeliveryV39(app,{auth,minRole,audit});
+00426 | registerEventAccessV31(app);
+00427 | 
+00428 | app.use('/api',auth);
+00429 | app.get('/api/dashboard',(_req,res)=>res.json({businessName:setting('business_name','Meu Bar & Restaurante'),snapshot:dashboardSnapshot(),growth:growthBrief(),performance:performanceSnapshot()}));
+00430 | app.get('/api/products',(_req,res)=>res.json(db.prepare(`SELECT p.*,ip.base_unit smart_base_unit,ip.content_base smart_content_base,ip.closed_units smart_closed_units,ip.open_base smart_open_base,ip.dose_size smart_dose_size,ip.sale_dose_price smart_dose_price,ip.sale_package_price smart_package_price,ip.sell_dose smart_sell_dose,ip.sell_package smart_sell_package FROM products p LEFT JOIN inventory_profiles ip ON ip.product_id=p.id WHERE p.active=1 ORDER BY p.category,p.name`).all()));
+00431 | app.post('/api/products',minRole(55),(req,res)=>{const {name,category='Outros',barcode=null,image_url=null,description='',unit_type='UNIT',package_ml=null,dose_ml=null,price=0,cost=0,stock=0,minimum_stock=0}=req.body||{};if(!String(name||'').trim())return res.status(400).json({error:'NAME_REQUIRED'});const info=db.prepare('INSERT INTO products(name,category,barcode,image_url,description,unit_type,package_ml,dose_ml,price,cost,stock,minimum_stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(String(name).trim(),category,barcode,image_url,description,unit_type,package_ml?Number(package_ml):null,dose_ml?Number(dose_ml):null,Number(price),Number(cost),Number(stock),Number(minimum_stock));audit(req.user.id,'CREATE','PRODUCT',info.lastInsertRowid,{name});res.status(201).json(db.prepare('SELECT * FROM products WHERE id=?').get(info.lastInsertRowid))});
+00432 | 
+00433 | app.get('/api/cash-sessions/current',(req,res)=>res.json(db.prepare("SELECT cs.*,u.name user_name FROM cash_sessions cs JOIN users u ON u.id=cs.user_id WHERE cs.status='OPEN' ORDER BY cs.id DESC LIMIT 1").get()||null));
+
+--- CONTEXTO LINHA 431 ---
+00425 | registerTicketDeliveryV39(app,{auth,minRole,audit});
+00426 | registerEventAccessV31(app);
+00427 | 
+00428 | app.use('/api',auth);
+00429 | app.get('/api/dashboard',(_req,res)=>res.json({businessName:setting('business_name','Meu Bar & Restaurante'),snapshot:dashboardSnapshot(),growth:growthBrief(),performance:performanceSnapshot()}));
+00430 | app.get('/api/products',(_req,res)=>res.json(db.prepare(`SELECT p.*,ip.base_unit smart_base_unit,ip.content_base smart_content_base,ip.closed_units smart_closed_units,ip.open_base smart_open_base,ip.dose_size smart_dose_size,ip.sale_dose_price smart_dose_price,ip.sale_package_price smart_package_price,ip.sell_dose smart_sell_dose,ip.sell_package smart_sell_package FROM products p LEFT JOIN inventory_profiles ip ON ip.product_id=p.id WHERE p.active=1 ORDER BY p.category,p.name`).all()));
+00431 | app.post('/api/products',minRole(55),(req,res)=>{const {name,category='Outros',barcode=null,image_url=null,description='',unit_type='UNIT',package_ml=null,dose_ml=null,price=0,cost=0,stock=0,minimum_stock=0}=req.body||{};if(!String(name||'').trim())return res.status(400).json({error:'NAME_REQUIRED'});const info=db.prepare('INSERT INTO products(name,category,barcode,image_url,description,unit_type,package_ml,dose_ml,price,cost,stock,minimum_stock) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)').run(String(name).trim(),category,barcode,image_url,description,unit_type,package_ml?Number(package_ml):null,dose_ml?Number(dose_ml):null,Number(price),Number(cost),Number(stock),Number(minimum_stock));audit(req.user.id,'CREATE','PRODUCT',info.lastInsertRowid,{name});res.status(201).json(db.prepare('SELECT * FROM products WHERE id=?').get(info.lastInsertRowid))});
+00432 | 
+00433 | app.get('/api/cash-sessions/current',(req,res)=>res.json(db.prepare("SELECT cs.*,u.name user_name FROM cash_sessions cs JOIN users u ON u.id=cs.user_id WHERE cs.status='OPEN' ORDER BY cs.id DESC LIMIT 1").get()||null));
+00434 | app.post('/api/cash-sessions/open',minRole(50),(req,res)=>{const existing=db.prepare("SELECT id FROM cash_sessions WHERE status='OPEN'").get();if(existing)return res.status(409).json({error:'CASH_ALREADY_OPEN'});const info=db.prepare("INSERT INTO cash_sessions(user_id,opening_amount,status,notes) VALUES(?,?,'OPEN',?)").run(req.user.id,Number(req.body?.opening_amount||0),String(req.body?.notes||''));audit(req.user.id,'OPEN','CASH_SESSION',info.lastInsertRowid,{opening_amount:req.body?.opening_amount||0});res.status(201).json(db.prepare('SELECT * FROM cash_sessions WHERE id=?').get(info.lastInsertRowid))});
+00435 | app.post('/api/cash-sessions/:id/close',minRole(50),(req,res)=>{const id=Number(req.params.id);const cs=db.prepare("SELECT * FROM cash_sessions WHERE id=? AND status='OPEN'").get(id);if(!cs)return res.status(404).json({error:'CASH_NOT_OPEN'});const sales=db.prepare("SELECT COALESCE(SUM(total+tip_amount),0) total FROM sales WHERE cash_session_id=? AND status='PAID'").get(id).total;const expected=Number(cs.opening_amount)+Number(sales);const closing=Number(req.body?.closing_amount||0);db.prepare("UPDATE cash_sessions SET status='CLOSED',closing_amount=?,expected_amount=?,closed_at=CURRENT_TIMESTAMP,notes=COALESCE(?,notes) WHERE id=?").run(closing,expected,String(req.body?.notes||''),id);audit(req.user.id,'CLOSE','CASH_SESSION',id,{expected,closing,difference:closing-expected});res.json({...db.prepare('SELECT * FROM cash_sessions WHERE id=?').get(id),difference:closing-expected})});
+00436 | 
+00437 | app.post('/api/sales',minRole(40),(req,res)=>{
+00438 |   const {items=[],payment_method='DINHEIRO',table_label=null,customer_name=null,employee_id=null,tip_amount=0}=req.body||{};
+
+
+============================================================
+DEPENDENCIAS RELACIONADAS A QR / CAMERA
+============================================================
+qrcode = ^1.5.4
+
+============================================================
+ANALISE AUTOMATICA DO GATE SCANNER
+============================================================
+YES = BarcodeDetector
+YES = navigator.mediaDevices
+YES = getUserMedia
+YES = video element
+NO = canvas
+YES = manual checkin
+YES = QR text
+
+============================================================
+ROTAS DE CHECK-IN
+============================================================
+
+server/operations-v11.js | CONTEXTO LINHA 22
+00017 | }
+00018 | export function registerPublicV11(app){
+00019 |  app.get('/api/public/menu',(_req,res)=>{const business=db.prepare("SELECT value FROM settings WHERE key='business_name'").get()?.value||'NEXUS Hospitality';const rows=db.prepare(`SELECT id,name,category,description,image_url,price,stock,menu_featured FROM products WHERE active=1 AND menu_visible=1 ORDER BY menu_featured DESC,category,name`).all();res.json({business,products:rows.map(x=>({...x,available:n(x.stock)>0}))})});
+00020 | }
+00021 | export function registerOperationsV11(app,{minRole,audit}){
+00022 |  app.get('/api/v11/tickets/events',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT e.*,COUNT(DISTINCT t.id) tickets,COALESCE(SUM(CASE WHEN t.payment_status='PAID' THEN t.price ELSE 0 END),0) revenue,SUM(CASE WHEN t.checkin_at IS NOT NULL THEN 1 ELSE 0 END) checked_in FROM events e LEFT JOIN tickets t ON t.event_id=e.id GROUP BY e.id ORDER BY COALESCE(e.starts_at,e.created_at) DESC`).all()));
+00023 |  app.get('/api/v11/tickets/lots/:eventId',minRole(40),(req,res)=>res.json(db.prepare('SELECT * FROM ticket_lots WHERE event_id=? ORDER BY id').all(n(req.params.eventId))));
+00024 |  app.post('/api/v11/tickets/lots',minRole(60),(req,res)=>{const b=req.body||{};if(!b.event_id||!String(b.name||'').trim())return res.status(400).json({error:'LOT_DATA_REQUIRED'});const i=db.prepare('INSERT INTO ticket_lots(event_id,name,price,quantity,starts_at,ends_at,status) VALUES(?,?,?,?,?,?,?)').run(n(b.event_id),String(b.name).trim(),n(b.price),Math.max(0,n(b.quantity)),b.starts_at||null,b.ends_at||null,b.status||'ACTIVE');audit(req.user.id,'CREATE','TICKET_LOT',i.lastInsertRowid,b);res.status(201).json({id:i.lastInsertRowid})});
+00025 |  app.get('/api/v11/tickets/:eventId',minRole(40),(req,res)=>res.json(db.prepare(`SELECT t.*,l.name lot_name,e.title event_title FROM tickets t LEFT JOIN ticket_lots l ON l.id=t.lot_id JOIN events e ON e.id=t.event_id WHERE t.event_id=? ORDER BY t.id DESC`).all(n(req.params.eventId))));
+00026 |  app.post('/api/v11/tickets',minRole(40),(req,res)=>{const b=req.body||{},lot=b.lot_id?db.prepare('SELECT * FROM ticket_lots WHERE id=?').get(n(b.lot_id)):null;if(!b.event_id||!String(b.attendee_name||'').trim())return res.status(400).json({error:'TICKET_DATA_REQUIRED'});if(lot&&lot.quantity>0&&lot.sold>=lot.quantity)return res.status(409).json({error:'LOT_SOLD_OUT'});const ticketCode=code(),price=lot?n(lot.price):n(b.price);const i=db.prepare(`INSERT INTO tickets(event_id,lot_id,attendee_name,attendee_phone,ticket_code,ticket_type,price,payment_status,payment_method) VALUES(?,?,?,?,?,?,?,?,?)`).run(n(b.event_id),b.lot_id?n(b.lot_id):null,String(b.attendee_name).trim(),b.attendee_phone||null,ticketCode,lot?.name||b.ticket_type||'INGRESSO',price,b.payment_status||'PAID',b.payment_method||'PIX');if(lot)db.prepare('UPDATE ticket_lots SET sold=sold+1 WHERE id=?').run(lot.id);audit(req.user.id,'CREATE','TICKET',i.lastInsertRowid,{event_id:b.event_id,code:ticketCode});res.status(201).json(db.prepare('SELECT * FROM tickets WHERE id=?').get(i.lastInsertRowid))});
+00027 |  app.post('/api/v11/access/checkin',minRole(40),(req,res)=>{const c=String(req.body?.code||'').trim().toUpperCase();const t=db.prepare(`SELECT t.*,e.title event_title FROM tickets t JOIN events e ON e.id=t.event_id WHERE upper(t.ticket_code)=?`).get(c);if(!t){db.prepare("INSERT INTO ticket_access_log(code,result,user_id) VALUES(?,'INVALID',?)").run(c,req.user.id);return res.status(404).json({ok:false,result:'INVALID',message:'Ingresso inválido.'})}if(t.payment_status!=='PAID'&&t.payment_status!=='COURTESY'){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'PAYMENT_PENDING',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'PAYMENT_PENDING',message:'Pagamento não confirmado.',ticket:t})}if(t.checkin_at){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'DUPLICATE',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'DUPLICATE',message:'Ingresso já utilizado.',ticket:t})}db.prepare('UPDATE tickets SET checkin_at=CURRENT_TIMESTAMP,checked_in_by=? WHERE id=?').run(req.user.id,t.id);db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'ALLOWED',?)").run(t.id,t.event_id,c,req.user.id);audit(req.user.id,'CHECKIN','TICKET',t.id,{code:c});res.json({ok:true,result:'ALLOWED',message:'Acesso liberado.',ticket:{...t,checkin_at:new Date().toISOString()}})});
+00028 |  app.get('/api/v11/menu',minRole(40),(_req,res)=>res.json(db.prepare('SELECT * FROM products WHERE active=1 ORDER BY category,name').all()));
+00029 |  app.patch('/api/v11/menu/:id',minRole(55),(req,res)=>{const b=req.body||{};db.prepare('UPDATE products SET menu_visible=COALESCE(?,menu_visible),menu_featured=COALESCE(?,menu_featured),description=COALESCE(?,description),price=COALESCE(?,price),image_url=COALESCE(?,image_url) WHERE id=?').run(b.menu_visible==null?null:(b.menu_visible?1:0),b.menu_featured==null?null:(b.menu_featured?1:0),b.description??null,b.price==null?null:n(b.price),b.image_url??null,n(req.params.id));audit(req.user.id,'UPDATE','MENU_PRODUCT',req.params.id,b);res.json({ok:true})});
+00030 |  app.get('/api/v11/salon',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT dt.*,o.id order_id,o.customer_name,o.subtotal,o.employee_id,o.created_at order_opened_at,e.name employee_name,(SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=o.id AND oi.status<>'CANCELLED') item_count FROM dining_tables dt LEFT JOIN orders o ON o.table_id=dt.id AND o.status='OPEN' LEFT JOIN employees e ON e.id=o.employee_id WHERE dt.active=1 ORDER BY dt.area,dt.id`).all()));
+00031 |  app.patch('/api/v11/tables/:id',minRole(80),(req,res)=>{const b=req.body||{};db.prepare('UPDATE dining_tables SET label=COALESCE(?,label),area=COALESCE(?,area),capacity=COALESCE(?,capacity),status=COALESCE(?,status) WHERE id=?').run(b.label??null,b.area??null,b.capacity==null?null:n(b.capacity),b.status??null,n(req.params.id));audit(req.user.id,'UPDATE','TABLE',req.params.id,b);res.json({ok:true})});
+
+server/operations-v11.js | CONTEXTO LINHA 26
+00021 | export function registerOperationsV11(app,{minRole,audit}){
+00022 |  app.get('/api/v11/tickets/events',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT e.*,COUNT(DISTINCT t.id) tickets,COALESCE(SUM(CASE WHEN t.payment_status='PAID' THEN t.price ELSE 0 END),0) revenue,SUM(CASE WHEN t.checkin_at IS NOT NULL THEN 1 ELSE 0 END) checked_in FROM events e LEFT JOIN tickets t ON t.event_id=e.id GROUP BY e.id ORDER BY COALESCE(e.starts_at,e.created_at) DESC`).all()));
+00023 |  app.get('/api/v11/tickets/lots/:eventId',minRole(40),(req,res)=>res.json(db.prepare('SELECT * FROM ticket_lots WHERE event_id=? ORDER BY id').all(n(req.params.eventId))));
+00024 |  app.post('/api/v11/tickets/lots',minRole(60),(req,res)=>{const b=req.body||{};if(!b.event_id||!String(b.name||'').trim())return res.status(400).json({error:'LOT_DATA_REQUIRED'});const i=db.prepare('INSERT INTO ticket_lots(event_id,name,price,quantity,starts_at,ends_at,status) VALUES(?,?,?,?,?,?,?)').run(n(b.event_id),String(b.name).trim(),n(b.price),Math.max(0,n(b.quantity)),b.starts_at||null,b.ends_at||null,b.status||'ACTIVE');audit(req.user.id,'CREATE','TICKET_LOT',i.lastInsertRowid,b);res.status(201).json({id:i.lastInsertRowid})});
+00025 |  app.get('/api/v11/tickets/:eventId',minRole(40),(req,res)=>res.json(db.prepare(`SELECT t.*,l.name lot_name,e.title event_title FROM tickets t LEFT JOIN ticket_lots l ON l.id=t.lot_id JOIN events e ON e.id=t.event_id WHERE t.event_id=? ORDER BY t.id DESC`).all(n(req.params.eventId))));
+00026 |  app.post('/api/v11/tickets',minRole(40),(req,res)=>{const b=req.body||{},lot=b.lot_id?db.prepare('SELECT * FROM ticket_lots WHERE id=?').get(n(b.lot_id)):null;if(!b.event_id||!String(b.attendee_name||'').trim())return res.status(400).json({error:'TICKET_DATA_REQUIRED'});if(lot&&lot.quantity>0&&lot.sold>=lot.quantity)return res.status(409).json({error:'LOT_SOLD_OUT'});const ticketCode=code(),price=lot?n(lot.price):n(b.price);const i=db.prepare(`INSERT INTO tickets(event_id,lot_id,attendee_name,attendee_phone,ticket_code,ticket_type,price,payment_status,payment_method) VALUES(?,?,?,?,?,?,?,?,?)`).run(n(b.event_id),b.lot_id?n(b.lot_id):null,String(b.attendee_name).trim(),b.attendee_phone||null,ticketCode,lot?.name||b.ticket_type||'INGRESSO',price,b.payment_status||'PAID',b.payment_method||'PIX');if(lot)db.prepare('UPDATE ticket_lots SET sold=sold+1 WHERE id=?').run(lot.id);audit(req.user.id,'CREATE','TICKET',i.lastInsertRowid,{event_id:b.event_id,code:ticketCode});res.status(201).json(db.prepare('SELECT * FROM tickets WHERE id=?').get(i.lastInsertRowid))});
+00027 |  app.post('/api/v11/access/checkin',minRole(40),(req,res)=>{const c=String(req.body?.code||'').trim().toUpperCase();const t=db.prepare(`SELECT t.*,e.title event_title FROM tickets t JOIN events e ON e.id=t.event_id WHERE upper(t.ticket_code)=?`).get(c);if(!t){db.prepare("INSERT INTO ticket_access_log(code,result,user_id) VALUES(?,'INVALID',?)").run(c,req.user.id);return res.status(404).json({ok:false,result:'INVALID',message:'Ingresso inválido.'})}if(t.payment_status!=='PAID'&&t.payment_status!=='COURTESY'){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'PAYMENT_PENDING',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'PAYMENT_PENDING',message:'Pagamento não confirmado.',ticket:t})}if(t.checkin_at){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'DUPLICATE',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'DUPLICATE',message:'Ingresso já utilizado.',ticket:t})}db.prepare('UPDATE tickets SET checkin_at=CURRENT_TIMESTAMP,checked_in_by=? WHERE id=?').run(req.user.id,t.id);db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'ALLOWED',?)").run(t.id,t.event_id,c,req.user.id);audit(req.user.id,'CHECKIN','TICKET',t.id,{code:c});res.json({ok:true,result:'ALLOWED',message:'Acesso liberado.',ticket:{...t,checkin_at:new Date().toISOString()}})});
+00028 |  app.get('/api/v11/menu',minRole(40),(_req,res)=>res.json(db.prepare('SELECT * FROM products WHERE active=1 ORDER BY category,name').all()));
+00029 |  app.patch('/api/v11/menu/:id',minRole(55),(req,res)=>{const b=req.body||{};db.prepare('UPDATE products SET menu_visible=COALESCE(?,menu_visible),menu_featured=COALESCE(?,menu_featured),description=COALESCE(?,description),price=COALESCE(?,price),image_url=COALESCE(?,image_url) WHERE id=?').run(b.menu_visible==null?null:(b.menu_visible?1:0),b.menu_featured==null?null:(b.menu_featured?1:0),b.description??null,b.price==null?null:n(b.price),b.image_url??null,n(req.params.id));audit(req.user.id,'UPDATE','MENU_PRODUCT',req.params.id,b);res.json({ok:true})});
+00030 |  app.get('/api/v11/salon',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT dt.*,o.id order_id,o.customer_name,o.subtotal,o.employee_id,o.created_at order_opened_at,e.name employee_name,(SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=o.id AND oi.status<>'CANCELLED') item_count FROM dining_tables dt LEFT JOIN orders o ON o.table_id=dt.id AND o.status='OPEN' LEFT JOIN employees e ON e.id=o.employee_id WHERE dt.active=1 ORDER BY dt.area,dt.id`).all()));
+00031 |  app.patch('/api/v11/tables/:id',minRole(80),(req,res)=>{const b=req.body||{};db.prepare('UPDATE dining_tables SET label=COALESCE(?,label),area=COALESCE(?,area),capacity=COALESCE(?,capacity),status=COALESCE(?,status) WHERE id=?').run(b.label??null,b.area??null,b.capacity==null?null:n(b.capacity),b.status??null,n(req.params.id));audit(req.user.id,'UPDATE','TABLE',req.params.id,b);res.json({ok:true})});
+00032 |  app.get('/api/v11/delivery',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT d.*,COALESCE((SELECT SUM(di.qty*di.unit_price) FROM delivery_items di WHERE di.delivery_id=d.id),0) items_total FROM delivery_orders d ORDER BY d.id DESC LIMIT 200`).all()));
+00033 |  app.get('/api/v11/delivery/:id',minRole(40),(req,res)=>{const d=db.prepare('SELECT * FROM delivery_orders WHERE id=?').get(n(req.params.id));if(!d)return res.status(404).json({error:'DELIVERY_NOT_FOUND'});res.json({...d,items:db.prepare(`SELECT di.*,p.name product_name FROM delivery_items di JOIN products p ON p.id=di.product_id WHERE di.delivery_id=? ORDER BY di.id`).all(d.id)})});
+00034 |  app.post('/api/v11/delivery',minRole(40),(req,res)=>{const b=req.body||{},items=Array.isArray(b.items)?b.items:[];if(!String(b.customer_name||'').trim()||!items.length)return res.status(400).json({error:'DELIVERY_DATA_REQUIRED'});const out=db.transaction(()=>{const resolved=items.map(x=>{const p=db.prepare('SELECT * FROM products WHERE id=? AND active=1').get(n(x.product_id));if(!p)throw new Error('Produto inválido');return{...x,p,qty:Math.max(.01,n(x.qty)),price:n(x.unit_price||p.price)}});const itemsTotal=resolved.reduce((s,x)=>s+x.qty*x.price,0),fee=n(b.delivery_fee),total=itemsTotal+fee;const i=db.prepare(`INSERT INTO delivery_orders(customer_name,phone,order_type,address,status,total,payment_method,notes,delivery_fee,change_for,courier_name) VALUES(?,?,?,?,?,?,?,?,?,?,?)`).run(String(b.customer_name).trim(),b.phone||null,b.order_type||'DELIVERY',b.address||null,'NEW',total,b.payment_method||'PIX',b.notes||null,fee,b.change_for ? n(b.change_for) : null,b.courier_name||null);for(const x of resolved)db.prepare('INSERT INTO delivery_items(delivery_id,product_id,qty,unit_price,sale_mode,notes) VALUES(?,?,?,?,?,?)').run(i.lastInsertRowid,x.p.id,x.qty,x.price,x.mode||'UNIT',x.notes||null);return{id:i.lastInsertRowid,total}})();audit(req.user.id,'CREATE','DELIVERY_V11',out.id,out);res.status(201).json(out)});
+00035 |  app.patch('/api/v11/delivery/:id/status',minRole(40),(req,res)=>{const id=n(req.params.id),status=String(req.body?.status||'NEW').toUpperCase(),d=db.prepare('SELECT * FROM delivery_orders WHERE id=?').get(id);if(!d)return res.status(404).json({error:'DELIVERY_NOT_FOUND'});if(status==='DELIVERED'&&!d.sale_id){const items=db.prepare('SELECT product_id,qty,sale_mode mode FROM delivery_items WHERE delivery_id=?').all(id);try{const sale=createUnifiedSale({items,payment_method:d.payment_method||'PIX',customer_name:d.customer_name,user_id:req.user.id,source:'DELIVERY',source_id:id});db.prepare("UPDATE delivery_orders SET status='DELIVERED',sale_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").run(sale.id,id);audit(req.user.id,'DELIVER','DELIVERY',id,{sale_id:sale.id});return res.json({ok:true,sale_id:sale.id})}catch(e){return res.status(409).json({error:'DELIVERY_CLOSE_ERROR',message:e.message})}}db.prepare('UPDATE delivery_orders SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(status,id);audit(req.user.id,'UPDATE_STATUS','DELIVERY',id,{status});res.json({ok:true})});
+
+server/operations-v11.js | CONTEXTO LINHA 27
+00022 |  app.get('/api/v11/tickets/events',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT e.*,COUNT(DISTINCT t.id) tickets,COALESCE(SUM(CASE WHEN t.payment_status='PAID' THEN t.price ELSE 0 END),0) revenue,SUM(CASE WHEN t.checkin_at IS NOT NULL THEN 1 ELSE 0 END) checked_in FROM events e LEFT JOIN tickets t ON t.event_id=e.id GROUP BY e.id ORDER BY COALESCE(e.starts_at,e.created_at) DESC`).all()));
+00023 |  app.get('/api/v11/tickets/lots/:eventId',minRole(40),(req,res)=>res.json(db.prepare('SELECT * FROM ticket_lots WHERE event_id=? ORDER BY id').all(n(req.params.eventId))));
+00024 |  app.post('/api/v11/tickets/lots',minRole(60),(req,res)=>{const b=req.body||{};if(!b.event_id||!String(b.name||'').trim())return res.status(400).json({error:'LOT_DATA_REQUIRED'});const i=db.prepare('INSERT INTO ticket_lots(event_id,name,price,quantity,starts_at,ends_at,status) VALUES(?,?,?,?,?,?,?)').run(n(b.event_id),String(b.name).trim(),n(b.price),Math.max(0,n(b.quantity)),b.starts_at||null,b.ends_at||null,b.status||'ACTIVE');audit(req.user.id,'CREATE','TICKET_LOT',i.lastInsertRowid,b);res.status(201).json({id:i.lastInsertRowid})});
+00025 |  app.get('/api/v11/tickets/:eventId',minRole(40),(req,res)=>res.json(db.prepare(`SELECT t.*,l.name lot_name,e.title event_title FROM tickets t LEFT JOIN ticket_lots l ON l.id=t.lot_id JOIN events e ON e.id=t.event_id WHERE t.event_id=? ORDER BY t.id DESC`).all(n(req.params.eventId))));
+00026 |  app.post('/api/v11/tickets',minRole(40),(req,res)=>{const b=req.body||{},lot=b.lot_id?db.prepare('SELECT * FROM ticket_lots WHERE id=?').get(n(b.lot_id)):null;if(!b.event_id||!String(b.attendee_name||'').trim())return res.status(400).json({error:'TICKET_DATA_REQUIRED'});if(lot&&lot.quantity>0&&lot.sold>=lot.quantity)return res.status(409).json({error:'LOT_SOLD_OUT'});const ticketCode=code(),price=lot?n(lot.price):n(b.price);const i=db.prepare(`INSERT INTO tickets(event_id,lot_id,attendee_name,attendee_phone,ticket_code,ticket_type,price,payment_status,payment_method) VALUES(?,?,?,?,?,?,?,?,?)`).run(n(b.event_id),b.lot_id?n(b.lot_id):null,String(b.attendee_name).trim(),b.attendee_phone||null,ticketCode,lot?.name||b.ticket_type||'INGRESSO',price,b.payment_status||'PAID',b.payment_method||'PIX');if(lot)db.prepare('UPDATE ticket_lots SET sold=sold+1 WHERE id=?').run(lot.id);audit(req.user.id,'CREATE','TICKET',i.lastInsertRowid,{event_id:b.event_id,code:ticketCode});res.status(201).json(db.prepare('SELECT * FROM tickets WHERE id=?').get(i.lastInsertRowid))});
+00027 |  app.post('/api/v11/access/checkin',minRole(40),(req,res)=>{const c=String(req.body?.code||'').trim().toUpperCase();const t=db.prepare(`SELECT t.*,e.title event_title FROM tickets t JOIN events e ON e.id=t.event_id WHERE upper(t.ticket_code)=?`).get(c);if(!t){db.prepare("INSERT INTO ticket_access_log(code,result,user_id) VALUES(?,'INVALID',?)").run(c,req.user.id);return res.status(404).json({ok:false,result:'INVALID',message:'Ingresso inválido.'})}if(t.payment_status!=='PAID'&&t.payment_status!=='COURTESY'){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'PAYMENT_PENDING',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'PAYMENT_PENDING',message:'Pagamento não confirmado.',ticket:t})}if(t.checkin_at){db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'DUPLICATE',?)").run(t.id,t.event_id,c,req.user.id);return res.status(409).json({ok:false,result:'DUPLICATE',message:'Ingresso já utilizado.',ticket:t})}db.prepare('UPDATE tickets SET checkin_at=CURRENT_TIMESTAMP,checked_in_by=? WHERE id=?').run(req.user.id,t.id);db.prepare("INSERT INTO ticket_access_log(ticket_id,event_id,code,result,user_id) VALUES(?,?,?,'ALLOWED',?)").run(t.id,t.event_id,c,req.user.id);audit(req.user.id,'CHECKIN','TICKET',t.id,{code:c});res.json({ok:true,result:'ALLOWED',message:'Acesso liberado.',ticket:{...t,checkin_at:new Date().toISOString()}})});
+00028 |  app.get('/api/v11/menu',minRole(40),(_req,res)=>res.json(db.prepare('SELECT * FROM products WHERE active=1 ORDER BY category,name').all()));
+00029 |  app.patch('/api/v11/menu/:id',minRole(55),(req,res)=>{const b=req.body||{};db.prepare('UPDATE products SET menu_visible=COALESCE(?,menu_visible),menu_featured=COALESCE(?,menu_featured),description=COALESCE(?,description),price=COALESCE(?,price),image_url=COALESCE(?,image_url) WHERE id=?').run(b.menu_visible==null?null:(b.menu_visible?1:0),b.menu_featured==null?null:(b.menu_featured?1:0),b.description??null,b.price==null?null:n(b.price),b.image_url??null,n(req.params.id));audit(req.user.id,'UPDATE','MENU_PRODUCT',req.params.id,b);res.json({ok:true})});
+00030 |  app.get('/api/v11/salon',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT dt.*,o.id order_id,o.customer_name,o.subtotal,o.employee_id,o.created_at order_opened_at,e.name employee_name,(SELECT COUNT(*) FROM order_items oi WHERE oi.order_id=o.id AND oi.status<>'CANCELLED') item_count FROM dining_tables dt LEFT JOIN orders o ON o.table_id=dt.id AND o.status='OPEN' LEFT JOIN employees e ON e.id=o.employee_id WHERE dt.active=1 ORDER BY dt.area,dt.id`).all()));
+00031 |  app.patch('/api/v11/tables/:id',minRole(80),(req,res)=>{const b=req.body||{};db.prepare('UPDATE dining_tables SET label=COALESCE(?,label),area=COALESCE(?,area),capacity=COALESCE(?,capacity),status=COALESCE(?,status) WHERE id=?').run(b.label??null,b.area??null,b.capacity==null?null:n(b.capacity),b.status??null,n(req.params.id));audit(req.user.id,'UPDATE','TABLE',req.params.id,b);res.json({ok:true})});
+00032 |  app.get('/api/v11/delivery',minRole(40),(_req,res)=>res.json(db.prepare(`SELECT d.*,COALESCE((SELECT SUM(di.qty*di.unit_price) FROM delivery_items di WHERE di.delivery_id=d.id),0) items_total FROM delivery_orders d ORDER BY d.id DESC LIMIT 200`).all()));
+00033 |  app.get('/api/v11/delivery/:id',minRole(40),(req,res)=>{const d=db.prepare('SELECT * FROM delivery_orders WHERE id=?').get(n(req.params.id));if(!d)return res.status(404).json({error:'DELIVERY_NOT_FOUND'});res.json({...d,items:db.prepare(`SELECT di.*,p.name product_name FROM delivery_items di JOIN products p ON p.id=di.product_id WHERE di.delivery_id=? ORDER BY di.id`).all(d.id)})});
+00034 |  app.post('/api/v11/delivery',minRole(40),(req,res)=>{const b=req.body||{},items=Array.isArray(b.items)?b.items:[];if(!String(b.customer_name||'').trim()||!items.length)return res.status(400).json({error:'DELIVERY_DATA_REQUIRED'});const out=db.transaction(()=>{const resolved=items.map(x=>{const p=db.prepare('SELECT * FROM products WHERE id=? AND active=1').get(n(x.product_id));if(!p)throw new Error('Produto inválido');return{...x,p,qty:Math.max(.01,n(x.qty)),price:n(x.unit_price||p.price)}});const itemsTotal=resolved.reduce((s,x)=>s+x.qty*x.price,0),fee=n(b.delivery_fee),total=itemsTotal+fee;const i=db.prepare(`INSERT INTO delivery_orders(customer_name,phone,order_type,address,status,total,payment_method,notes,delivery_fee,change_for,courier_name) VALUES(?,?,?,?,?,?,?,?,?,?,?)`).run(String(b.customer_name).trim(),b.phone||null,b.order_type||'DELIVERY',b.address||null,'NEW',total,b.payment_method||'PIX',b.notes||null,fee,b.change_for ? n(b.change_for) : null,b.courier_name||null);for(const x of resolved)db.prepare('INSERT INTO delivery_items(delivery_id,product_id,qty,unit_price,sale_mode,notes) VALUES(?,?,?,?,?,?)').run(i.lastInsertRowid,x.p.id,x.qty,x.price,x.mode||'UNIT',x.notes||null);return{id:i.lastInsertRowid,total}})();audit(req.user.id,'CREATE','DELIVERY_V11',out.id,out);res.status(201).json(out)});
+00035 |  app.patch('/api/v11/delivery/:id/status',minRole(40),(req,res)=>{const id=n(req.params.id),status=String(req.body?.status||'NEW').toUpperCase(),d=db.prepare('SELECT * FROM delivery_orders WHERE id=?').get(id);if(!d)return res.status(404).json({error:'DELIVERY_NOT_FOUND'});if(status==='DELIVERED'&&!d.sale_id){const items=db.prepare('SELECT product_id,qty,sale_mode mode FROM delivery_items WHERE delivery_id=?').all(id);try{const sale=createUnifiedSale({items,payment_method:d.payment_method||'PIX',customer_name:d.customer_name,user_id:req.user.id,source:'DELIVERY',source_id:id});db.prepare("UPDATE delivery_orders SET status='DELIVERED',sale_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").run(sale.id,id);audit(req.user.id,'DELIVER','DELIVERY',id,{sale_id:sale.id});return res.json({ok:true,sale_id:sale.id})}catch(e){return res.status(409).json({error:'DELIVERY_CLOSE_ERROR',message:e.message})}}db.prepare('UPDATE delivery_orders SET status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').run(status,id);audit(req.user.id,'UPDATE_STATUS','DELIVERY',id,{status});res.json({ok:true})});
+00036 | }

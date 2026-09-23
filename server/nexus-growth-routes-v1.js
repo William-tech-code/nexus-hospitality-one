@@ -1,0 +1,959 @@
+import { db } from "./db.js";
+import { analyzeGrowth } from "./nexus-growth-engine-v1.js";
+
+function n(value, fallback = 0) {
+  const x = Number(value);
+  return Number.isFinite(x) ? x : fallback;
+}
+
+function text(value, fallback = null) {
+  const v = String(value ?? "").trim();
+  return v || fallback;
+}
+
+function json(value) {
+  return JSON.stringify(value ?? {});
+}
+
+function auditGrowth(
+  tenantId,
+  userId,
+  action,
+  entityType = null,
+  entityId = null,
+  metadata = {}
+) {
+  db.prepare(`
+    INSERT INTO nexus_growth_audit(
+      tenant_id,
+      user_id,
+      action,
+      entity_type,
+      entity_id,
+      metadata_json
+    )
+    VALUES(?,?,?,?,?,?)
+  `).run(
+    tenantId,
+    userId || null,
+    action,
+    entityType,
+    entityId,
+    json(metadata)
+  );
+}
+
+function onboarding(tenantId) {
+  return db.prepare(`
+    SELECT *
+    FROM nexus_business_onboarding
+    WHERE tenant_id=?
+  `).get(tenantId) || null;
+}
+
+function activeBaseline(tenantId) {
+  return db.prepare(`
+    SELECT *
+    FROM nexus_growth_baselines
+    WHERE tenant_id=?
+      AND active=1
+    ORDER BY baseline_date DESC,id DESC
+    LIMIT 1
+  `).get(tenantId) || null;
+}
+
+function activeTarget(tenantId) {
+  return db.prepare(`
+    SELECT *
+    FROM nexus_growth_targets
+    WHERE tenant_id=?
+      AND status='ACTIVE'
+    ORDER BY id DESC
+    LIMIT 1
+  `).get(tenantId) || null;
+}
+
+function latestAssessment(tenantId) {
+  return db.prepare(`
+    SELECT *
+    FROM nexus_growth_assessments
+    WHERE tenant_id=?
+    ORDER BY id DESC
+    LIMIT 1
+  `).get(tenantId) || null;
+}
+
+function dashboard(tenantId) {
+  const base = activeBaseline(tenantId);
+  const target = activeTarget(tenantId);
+  const assessment = latestAssessment(tenantId);
+
+  const scenarios = assessment
+    ? db.prepare(`
+        SELECT *
+        FROM nexus_growth_scenarios
+        WHERE tenant_id=?
+          AND assessment_id=?
+        ORDER BY id
+      `).all(
+        tenantId,
+        assessment.id
+      )
+    : [];
+
+  const recommendations = assessment
+    ? db.prepare(`
+        SELECT *
+        FROM nexus_growth_recommendations
+        WHERE tenant_id=?
+          AND assessment_id=?
+        ORDER BY
+          CASE priority
+            WHEN 'CRITICAL' THEN 1
+            WHEN 'HIGH' THEN 2
+            WHEN 'MEDIUM' THEN 3
+            ELSE 4
+          END,
+          id
+      `).all(
+        tenantId,
+        assessment.id
+      )
+    : [];
+
+  const snapshots = db.prepare(`
+    SELECT *
+    FROM nexus_growth_snapshots
+    WHERE tenant_id=?
+    ORDER BY snapshot_date DESC,id DESC
+    LIMIT 12
+  `).all(tenantId);
+
+  return {
+    onboarding:
+      onboarding(tenantId),
+
+    baseline: base,
+    target,
+    assessment,
+    scenarios,
+    recommendations,
+    snapshots
+  };
+}
+
+export function registerNexusGrowthV1(
+  app,
+  {
+    minRole,
+    audit
+  } = {}
+) {
+
+  app.get(
+    "/api/growth-v1/status",
+    (req,res) => {
+      res.json(
+        dashboard(req.tenantId)
+      );
+    }
+  );
+
+
+  app.put(
+    "/api/growth-v1/onboarding",
+    minRole(80),
+    (req,res) => {
+      try {
+        const b = req.body || {};
+
+        db.prepare(`
+          INSERT INTO nexus_business_onboarding(
+            tenant_id,
+            business_segment,
+            operation_model,
+            opening_date,
+            seats_capacity,
+            operating_days_per_month,
+            operating_hours_per_day,
+            employees_count,
+            onboarding_status,
+            current_step,
+            updated_at
+          )
+          VALUES(
+            ?,?,?,?,?,?,?,?,
+            ?,?,
+            CURRENT_TIMESTAMP
+          )
+          ON CONFLICT(tenant_id)
+          DO UPDATE SET
+            business_segment=excluded.business_segment,
+            operation_model=excluded.operation_model,
+            opening_date=excluded.opening_date,
+            seats_capacity=excluded.seats_capacity,
+            operating_days_per_month=excluded.operating_days_per_month,
+            operating_hours_per_day=excluded.operating_hours_per_day,
+            employees_count=excluded.employees_count,
+            onboarding_status=excluded.onboarding_status,
+            current_step=excluded.current_step,
+            updated_at=CURRENT_TIMESTAMP
+        `).run(
+          req.tenantId,
+          text(b.business_segment),
+          text(b.operation_model),
+          text(b.opening_date),
+          n(b.seats_capacity),
+          n(b.operating_days_per_month),
+          n(b.operating_hours_per_day),
+          n(b.employees_count),
+          text(
+            b.onboarding_status,
+            "IN_PROGRESS"
+          ),
+          Math.max(
+            1,
+            n(b.current_step,1)
+          )
+        );
+
+        auditGrowth(
+          req.tenantId,
+          req.user.id,
+          "ONBOARDING_UPDATED",
+          "ONBOARDING",
+          req.tenantId
+        );
+
+        if (audit) {
+          audit(
+            req.user.id,
+            "UPDATE",
+            "GROWTH_ONBOARDING",
+            req.tenantId,
+            {tenant_id:req.tenantId}
+          );
+        }
+
+        res.json(
+          onboarding(req.tenantId)
+        );
+      }
+      catch(error) {
+        res.status(400).json({
+          error:
+            "GROWTH_ONBOARDING_ERROR",
+          message:
+            error.message
+        });
+      }
+    }
+  );
+
+
+  app.post(
+    "/api/growth-v1/analyze",
+    minRole(80),
+    (req,res) => {
+      try {
+        const body = req.body || {};
+        const baseline =
+          body.baseline || {};
+        const target =
+          body.target || {};
+
+        if (
+          n(
+            baseline.current_monthly_revenue
+          ) <= 0
+        ) {
+          return res.status(400).json({
+            error:
+              "MONTHLY_REVENUE_REQUIRED"
+          });
+        }
+
+        const result =
+          analyzeGrowth(
+            {
+              ...baseline,
+              seats_capacity:
+                n(
+                  baseline.seats_capacity ??
+                  onboarding(
+                    req.tenantId
+                  )?.seats_capacity
+                ),
+
+              operating_days_per_month:
+                n(
+                  baseline.operating_days_per_month ??
+                  onboarding(
+                    req.tenantId
+                  )?.operating_days_per_month
+                ),
+
+              employees_count:
+                n(
+                  baseline.employees_count ??
+                  onboarding(
+                    req.tenantId
+                  )?.employees_count
+                )
+            },
+            target
+          );
+
+        res.json(result);
+      }
+      catch(error) {
+        res.status(400).json({
+          error:
+            "GROWTH_ANALYSIS_ERROR",
+          message:
+            error.message
+        });
+      }
+    }
+  );
+
+
+  app.post(
+    "/api/growth-v1/activate",
+    minRole(80),
+    (req,res) => {
+      try {
+        const body = req.body || {};
+        const baseline =
+          body.baseline || {};
+        const targetInput =
+          body.target || {};
+
+        /*
+         * NEXUS GROWTH V1
+         * Idempotent activation guard.
+         *
+         * A completed tenant with an active Growth assessment
+         * must never create a second Marco Zero accidentally.
+         */
+        const completedOnboarding =
+          db.prepare(`
+            SELECT
+              tenant_id
+            FROM nexus_business_onboarding
+            WHERE tenant_id=?
+              AND onboarding_status='COMPLETED'
+            LIMIT 1
+          `).get(req.tenantId);
+
+        const existingAssessment =
+          db.prepare(`
+            SELECT
+              a.id
+            FROM nexus_growth_assessments a
+            JOIN nexus_growth_baselines b
+              ON b.id=a.baseline_id
+             AND b.tenant_id=a.tenant_id
+            WHERE a.tenant_id=?
+              AND b.active=1
+            ORDER BY a.id DESC
+            LIMIT 1
+          `).get(req.tenantId);
+
+        if (
+          completedOnboarding &&
+          existingAssessment
+        ) {
+          return res.status(200).json({
+            ok:true,
+            already_activated:true,
+            ...dashboard(req.tenantId)
+          });
+        }
+
+        if (
+          n(
+            baseline.current_monthly_revenue
+          ) <= 0
+        ) {
+          return res.status(400).json({
+            error:
+              "MONTHLY_REVENUE_REQUIRED"
+          });
+        }
+
+        const operation =
+          onboarding(req.tenantId);
+
+        const analysis =
+          analyzeGrowth(
+            {
+              ...baseline,
+              seats_capacity:
+                n(
+                  baseline.seats_capacity ??
+                  operation?.seats_capacity
+                ),
+
+              operating_days_per_month:
+                n(
+                  baseline.operating_days_per_month ??
+                  operation?.operating_days_per_month
+                ),
+
+              employees_count:
+                n(
+                  baseline.employees_count ??
+                  operation?.employees_count
+                )
+            },
+            targetInput
+          );
+
+        const save =
+          db.transaction(() => {
+
+            db.prepare(`
+              UPDATE nexus_growth_baselines
+              SET active=0,
+                  updated_at=CURRENT_TIMESTAMP
+              WHERE tenant_id=?
+                AND active=1
+            `).run(req.tenantId);
+
+            db.prepare(`
+              UPDATE nexus_growth_targets
+              SET status='REPLACED',
+                  updated_at=CURRENT_TIMESTAMP
+              WHERE tenant_id=?
+                AND status='ACTIVE'
+            `).run(req.tenantId);
+
+            const baseInfo =
+              db.prepare(`
+                INSERT INTO nexus_growth_baselines(
+                  tenant_id,
+                  baseline_date,
+                  initial_investment,
+                  renovation_investment,
+                  equipment_investment,
+                  initial_inventory_investment,
+                  other_initial_investment,
+                  working_capital,
+                  available_cash,
+                  receivables,
+                  total_debt,
+                  monthly_debt_service,
+                  monthly_rent,
+                  monthly_payroll,
+                  monthly_utilities,
+                  monthly_marketing,
+                  monthly_other_fixed_costs,
+                  monthly_variable_costs,
+                  current_monthly_revenue,
+                  average_ticket,
+                  customers_per_month,
+                  gross_margin_percent,
+                  cmv_percent,
+                  owner_notes,
+                  source,
+                  active,
+                  created_by
+                )
+                VALUES(
+                  ?,date('now'),
+                  ?,?,?,?,?,?,?,?,?,?,
+                  ?,?,?,?,?,?,?,?,?,?,
+                  ?,?,?,1,?
+                )
+              `).run(
+                req.tenantId,
+
+                n(baseline.initial_investment),
+                n(baseline.renovation_investment),
+                n(baseline.equipment_investment),
+                n(baseline.initial_inventory_investment),
+                n(baseline.other_initial_investment),
+
+                n(baseline.working_capital),
+                n(baseline.available_cash),
+                n(baseline.receivables),
+                n(baseline.total_debt),
+                n(baseline.monthly_debt_service),
+
+                n(baseline.monthly_rent),
+                n(baseline.monthly_payroll),
+                n(baseline.monthly_utilities),
+                n(baseline.monthly_marketing),
+                n(baseline.monthly_other_fixed_costs),
+                n(baseline.monthly_variable_costs),
+
+                n(
+                  baseline.current_monthly_revenue
+                ),
+                n(baseline.average_ticket),
+                n(baseline.customers_per_month),
+
+                baseline.gross_margin_percent == null
+                  ? null
+                  : n(
+                      baseline.gross_margin_percent
+                    ),
+
+                baseline.cmv_percent == null
+                  ? null
+                  : n(
+                      baseline.cmv_percent
+                    ),
+
+                text(baseline.owner_notes),
+                "ONBOARDING",
+                req.user.id
+              );
+
+            const baselineId =
+              Number(baseInfo.lastInsertRowid);
+
+            const targetInfo =
+              db.prepare(`
+                INSERT INTO nexus_growth_targets(
+                  tenant_id,
+                  baseline_id,
+                  target_type,
+                  baseline_revenue,
+                  target_revenue,
+                  multiplier,
+                  target_date,
+                  status,
+                  created_by
+                )
+                VALUES(
+                  ?,?,?,?,?,?,?,
+                  'ACTIVE',?
+                )
+              `).run(
+                req.tenantId,
+                baselineId,
+                analysis.target.target_type,
+                analysis.target.baseline_revenue,
+                analysis.target.target_revenue,
+                analysis.target.multiplier,
+                text(
+                  targetInput.target_date
+                ),
+                req.user.id
+              );
+
+            const targetId =
+              Number(
+                targetInfo.lastInsertRowid
+              );
+
+            const a =
+              analysis.assessment;
+
+            const assessmentInfo =
+              db.prepare(`
+                INSERT INTO nexus_growth_assessments(
+                  tenant_id,
+                  baseline_id,
+                  target_id,
+                  growth_score,
+                  liquidity_score,
+                  debt_score,
+                  margin_score,
+                  break_even_score,
+                  working_capital_score,
+                  revenue_score,
+                  operational_score,
+                  inventory_score,
+                  viability_level,
+                  break_even_revenue,
+                  working_capital_months,
+                  revenue_gap,
+                  required_growth_percent,
+                  assumptions_json,
+                  explanation_json
+                )
+                VALUES(
+                  ?,?,?,?,?,?,?,?,?,?,
+                  ?,?,?,?,?,?,?,?,?
+                )
+              `).run(
+                req.tenantId,
+                baselineId,
+                targetId,
+
+                a.growth_score,
+                a.liquidity_score,
+                a.debt_score,
+                a.margin_score,
+                a.break_even_score,
+                a.working_capital_score,
+                a.revenue_score,
+                a.operational_score,
+                a.inventory_score,
+
+                a.viability_level,
+                a.break_even_revenue,
+                a.working_capital_months,
+                a.revenue_gap,
+                a.required_growth_percent,
+
+                json(a.assumptions),
+
+                json({
+                  total_investment:
+                    a.total_investment,
+
+                  monthly_fixed_costs:
+                    a.monthly_fixed_costs,
+
+                  estimated_operating_result:
+                    a.estimated_operating_result,
+
+                  components:
+                    a.components
+                })
+              );
+
+            const assessmentId =
+              Number(
+                assessmentInfo.lastInsertRowid
+              );
+
+            const insertScenario =
+              db.prepare(`
+                INSERT INTO nexus_growth_scenarios(
+                  tenant_id,
+                  assessment_id,
+                  scenario_type,
+                  projected_revenue,
+                  projected_ticket,
+                  projected_customers,
+                  projected_margin_percent,
+                  projected_monthly_profit,
+                  assumptions_json
+                )
+                VALUES(
+                  ?,?,?,?,?,?,?,?,?
+                )
+              `);
+
+            for (
+              const scenario
+              of analysis.scenarios
+            ) {
+              insertScenario.run(
+                req.tenantId,
+                assessmentId,
+                scenario.scenario_type,
+                scenario.projected_revenue,
+                scenario.projected_ticket,
+                scenario.projected_customers,
+                scenario.projected_margin_percent,
+                scenario.projected_monthly_profit,
+                json(
+                  scenario.assumptions
+                )
+              );
+            }
+
+            const insertRecommendation =
+              db.prepare(`
+                INSERT INTO nexus_growth_recommendations(
+                  tenant_id,
+                  assessment_id,
+                  category,
+                  priority,
+                  title,
+                  description,
+                  rationale,
+                  expected_impact,
+                  metric_key,
+                  target_value,
+                  status
+                )
+                VALUES(
+                  ?,?,?,?,?,?,?,?,?,?,
+                  'OPEN'
+                )
+              `);
+
+            for (
+              const item
+              of analysis.recommendations
+            ) {
+              insertRecommendation.run(
+                req.tenantId,
+                assessmentId,
+                item.category,
+                item.priority,
+                item.title,
+                item.description,
+                item.rationale,
+                item.expected_impact,
+                item.metric_key,
+                item.target_value
+              );
+            }
+
+            db.prepare(`
+              INSERT INTO nexus_growth_snapshots(
+                tenant_id,
+                snapshot_date,
+                period_label,
+                revenue,
+                average_ticket,
+                customers,
+                gross_margin_percent,
+                available_cash,
+                working_capital,
+                total_debt,
+                inventory_value,
+                expenses,
+                growth_score,
+                source,
+                metrics_json
+              )
+              VALUES(
+                ?,date('now'),
+                'MARCO_ZERO',
+                ?,?,?,?,?,?,?,?,?,?,
+                'ONBOARDING',
+                ?
+              )
+            `).run(
+              req.tenantId,
+              n(
+                baseline.current_monthly_revenue
+              ),
+              n(baseline.average_ticket),
+              n(baseline.customers_per_month),
+
+              baseline.gross_margin_percent == null
+                ? null
+                : n(
+                    baseline.gross_margin_percent
+                  ),
+
+              n(baseline.available_cash),
+              n(baseline.working_capital),
+              n(baseline.total_debt),
+              n(
+                baseline.initial_inventory_investment
+              ),
+
+              n(
+                baseline.monthly_rent
+              ) +
+              n(
+                baseline.monthly_payroll
+              ) +
+              n(
+                baseline.monthly_utilities
+              ) +
+              n(
+                baseline.monthly_marketing
+              ) +
+              n(
+                baseline.monthly_other_fixed_costs
+              ) +
+              n(
+                baseline.monthly_variable_costs
+              ) +
+              n(
+                baseline.monthly_debt_service
+              ),
+
+              a.growth_score,
+
+              json({
+                target:
+                  analysis.target,
+
+                break_even_revenue:
+                  a.break_even_revenue,
+
+                working_capital_months:
+                  a.working_capital_months
+              })
+            );
+
+            db.prepare(`
+              INSERT INTO nexus_business_onboarding(
+                tenant_id,
+                onboarding_status,
+                current_step,
+                completed_at,
+                updated_at
+              )
+              VALUES(
+                ?,
+                'COMPLETED',
+                100,
+                CURRENT_TIMESTAMP,
+                CURRENT_TIMESTAMP
+              )
+              ON CONFLICT(tenant_id)
+              DO UPDATE SET
+                onboarding_status='COMPLETED',
+                current_step=100,
+                completed_at=CURRENT_TIMESTAMP,
+                updated_at=CURRENT_TIMESTAMP
+            `).run(req.tenantId);
+
+            auditGrowth(
+              req.tenantId,
+              req.user.id,
+              "GROWTH_PLAN_ACTIVATED",
+              "ASSESSMENT",
+              assessmentId,
+              {
+                baseline_id:
+                  baselineId,
+
+                target_id:
+                  targetId,
+
+                growth_score:
+                  a.growth_score,
+
+                target_revenue:
+                  analysis.target
+                    .target_revenue
+              }
+            );
+
+            return {
+              baselineId,
+              targetId,
+              assessmentId
+            };
+          });
+
+        const ids = save();
+
+        if (audit) {
+          audit(
+            req.user.id,
+            "CREATE",
+            "GROWTH_PLAN",
+            ids.assessmentId,
+            {
+              tenant_id:
+                req.tenantId,
+
+              target_revenue:
+                analysis.target
+                  .target_revenue
+            }
+          );
+        }
+
+        res.status(201).json({
+          ok:true,
+          ids,
+          ...dashboard(req.tenantId)
+        });
+      }
+      catch(error) {
+        res.status(400).json({
+          error:
+            "GROWTH_ACTIVATION_ERROR",
+          message:
+            error.message
+        });
+      }
+    }
+  );
+
+
+  app.patch(
+    "/api/growth-v1/recommendations/:id",
+    minRole(80),
+    (req,res) => {
+      const id =
+        Number(req.params.id);
+
+      const row =
+        db.prepare(`
+          SELECT *
+          FROM nexus_growth_recommendations
+          WHERE id=?
+            AND tenant_id=?
+        `).get(
+          id,
+          req.tenantId
+        );
+
+      if (!row) {
+        return res.status(404).json({
+          error:
+            "RECOMMENDATION_NOT_FOUND"
+        });
+      }
+
+      const status =
+        String(
+          req.body?.status ||
+          row.status
+        ).toUpperCase();
+
+      const allowed =
+        new Set([
+          "OPEN",
+          "IN_PROGRESS",
+          "COMPLETED",
+          "DISMISSED"
+        ]);
+
+      if (!allowed.has(status)) {
+        return res.status(400).json({
+          error:
+            "INVALID_STATUS"
+        });
+      }
+
+      db.prepare(`
+        UPDATE nexus_growth_recommendations
+        SET status=?,
+            completed_at=
+              CASE
+                WHEN ?='COMPLETED'
+                THEN CURRENT_TIMESTAMP
+                ELSE completed_at
+              END,
+            updated_at=CURRENT_TIMESTAMP
+        WHERE id=?
+          AND tenant_id=?
+      `).run(
+        status,
+        status,
+        id,
+        req.tenantId
+      );
+
+      auditGrowth(
+        req.tenantId,
+        req.user.id,
+        "RECOMMENDATION_STATUS_CHANGED",
+        "RECOMMENDATION",
+        id,
+        {status}
+      );
+
+      res.json(
+        db.prepare(`
+          SELECT *
+          FROM nexus_growth_recommendations
+          WHERE id=?
+            AND tenant_id=?
+        `).get(
+          id,
+          req.tenantId
+        )
+      );
+    }
+  );
+}

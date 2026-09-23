@@ -1,4 +1,5 @@
-﻿import {db} from "./db.js";
+import {db} from "./db.js";
+import { tenantContext } from './tenant-guard.js';
 
 const n=v=>Number(v||0);
 const round=v=>Math.round((n(v)+Number.EPSILON)*100)/100;
@@ -901,6 +902,7 @@ export function registerFinancialIntelligence(
  app.get(
   "/api/v25/intelligence/dashboard",
   auth,
+  tenantContext,
   minRole(70),
   (_req,res)=>{
    try{
@@ -924,6 +926,7 @@ export function registerFinancialIntelligence(
  app.get(
   "/api/v25/intelligence/reserve-plan",
   auth,
+  tenantContext,
   minRole(70),
   (_req,res)=>{
    try{
@@ -943,6 +946,7 @@ export function registerFinancialIntelligence(
  app.post(
   "/api/v25/intelligence/purchase-simulation",
   auth,
+  tenantContext,
   minRole(70),
   (req,res)=>{
    try{
@@ -980,6 +984,7 @@ export function registerFinancialIntelligence(
  app.post(
   "/api/v25/intelligence/reserve",
   auth,
+  tenantContext,
   minRole(70),
   (req,res)=>{
    try{
@@ -1656,6 +1661,7 @@ export function registerGrowthIntelligenceV25(
  app.get(
   "/api/v25/intelligence/executive-growth",
   auth,
+  tenantContext,
   minRole(70),
   (_req,res)=>{
    try{
@@ -1680,6 +1686,7 @@ export function registerGrowthIntelligenceV25(
  app.get(
   "/api/v25/intelligence/goal",
   auth,
+  tenantContext,
   minRole(70),
   (_req,res)=>{
    res.json(
@@ -1691,6 +1698,7 @@ export function registerGrowthIntelligenceV25(
  app.put(
   "/api/v25/intelligence/goal",
   auth,
+  tenantContext,
   minRole(70),
   (req,res)=>{
    try{
