@@ -484,7 +484,7 @@ async function createCheckout(
   const nextDue=
     addDays(
       new Date(),
-      1
+      0
     );
 
   const subscriptionResult=

@@ -239,6 +239,35 @@ export async function createAsaasCustomer(
     };
   }
 
+  /*
+   * NEXUS_ASAAS_CUSTOMER_IDEMPOTENCY_V2
+   * Recupera cliente existente antes de criar outro.
+   */
+  if(payload.externalReference){
+    const existing=
+      await asaasRequest(
+        `/customers?externalReference=${encodeURIComponent(payload.externalReference)}&limit=1`,
+        {
+          method:'GET'
+        }
+      );
+
+    const found=
+      Array.isArray(existing?.data)
+        ? existing.data[0]
+        : null;
+
+    if(found?.id){
+      return {
+        dry_run:false,
+        provider:'ASAAS',
+        operation:'REUSE_CUSTOMER',
+        reused:true,
+        result:found
+      };
+    }
+  }
+
   const result=
     await asaasRequest(
       '/customers',
@@ -277,6 +306,35 @@ export async function createAsaasSubscription(
       endpoint:'/subscriptions',
       payload
     };
+  }
+
+  /*
+   * NEXUS_ASAAS_SUBSCRIPTION_IDEMPOTENCY_V2
+   * A refer?ncia local da assinatura ? est?vel.
+   */
+  if(payload.externalReference){
+    const existing=
+      await asaasRequest(
+        `/subscriptions?externalReference=${encodeURIComponent(payload.externalReference)}&limit=1`,
+        {
+          method:'GET'
+        }
+      );
+
+    const found=
+      Array.isArray(existing?.data)
+        ? existing.data[0]
+        : null;
+
+    if(found?.id){
+      return {
+        dry_run:false,
+        provider:'ASAAS',
+        operation:'REUSE_SUBSCRIPTION',
+        reused:true,
+        result:found
+      };
+    }
   }
 
   const result=
