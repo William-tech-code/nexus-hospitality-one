@@ -374,7 +374,7 @@ function createEvent({
   );
 }
 
-const createContractTransaction=db.transaction((input)=>{
+const createContractTransaction=db.transaction((input,atomicHook=null)=>{
 
   const legalName=String(input.legal_name || '').trim();
   const tradeName=String(input.trade_name || '').trim();
@@ -617,7 +617,7 @@ const createContractTransaction=db.transaction((input)=>{
    */
 
 
-  return {
+  const result={
     tenant_id:tenantId,
     tenant_public_id:tenantPublicId,
     subscription_id:subscriptionId,
@@ -626,10 +626,44 @@ const createContractTransaction=db.transaction((input)=>{
     contracted_price:contractedPrice,
     promotion_code:promotion?.code || null
   };
+
+  /*
+   * NEXUS_SAAS_ATOMIC_CONTRACT_HOOK_V1
+   *
+   * Somente operacoes SQLite sincronas.
+   * Se o hook falhar, better-sqlite3 reverte
+   * a mesma transacao que criou tenant/subscription.
+   *
+   * Nunca executar chamadas externas aqui.
+   */
+  if(typeof atomicHook === 'function'){
+    atomicHook(result);
+  }
+
+  return result;
 });
 
 function createContract(input){
-  return createContractTransaction(input || {});
+  return createContractTransaction(
+    input || {},
+    null
+  );
+}
+
+function createContractWithAtomicHook(
+  input,
+  atomicHook
+){
+  if(typeof atomicHook !== 'function'){
+    throw new Error(
+      'ATOMIC_CONTRACT_HOOK_REQUIRED'
+    );
+  }
+
+  return createContractTransaction(
+    input || {},
+    atomicHook
+  );
 }
 
 function activateSubscription({
@@ -1131,6 +1165,7 @@ export function registerSaasSubscriptionCore(app,auth){
 export {
   ensureSchema as ensureSaasSubscriptionSchema,
   createContract as createSaasContract,
+  createContractWithAtomicHook as createSaasContractWithAtomicHook,
   activateSubscription as activateSaasSubscription,
   recordPayment as recordSaasSubscriptionPayment
 };

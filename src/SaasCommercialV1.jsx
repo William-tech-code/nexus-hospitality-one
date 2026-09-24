@@ -569,6 +569,114 @@ export function SaasPlansPage(){
     </main>
   );
 }
+/*
+ * NEXUS_CHECKOUT_IDEMPOTENCY_CLIENT_V3
+ *
+ * A chave identifica uma tentativa de checkout.
+ * Ela nao contem dados do cliente e nao e derivada
+ * de e-mail, documento, plano ou senha.
+ */
+
+const NEXUS_CHECKOUT_ATTEMPT_KEY=
+  'nexus:saas:checkout:idempotency:v3';
+
+function createCheckoutAttemptKey(){
+
+  if(
+    typeof crypto!=='undefined' &&
+    typeof crypto.randomUUID==='function'
+  ){
+    return crypto.randomUUID();
+  }
+
+  if(
+    typeof crypto!=='undefined' &&
+    typeof crypto.getRandomValues==='function'
+  ){
+    const bytes=
+      new Uint8Array(16);
+
+    crypto.getRandomValues(bytes);
+
+    /*
+     * UUID v4.
+     */
+
+    bytes[6]=
+      (bytes[6]&0x0f)|0x40;
+
+    bytes[8]=
+      (bytes[8]&0x3f)|0x80;
+
+    const hex=
+      Array.from(
+        bytes,
+        byte=>byte
+          .toString(16)
+          .padStart(2,'0')
+      );
+
+    return [
+      hex.slice(0,4).join(''),
+      hex.slice(4,6).join(''),
+      hex.slice(6,8).join(''),
+      hex.slice(8,10).join(''),
+      hex.slice(10,16).join('')
+    ].join('-');
+  }
+
+  throw new Error(
+    'SECURE_RANDOM_UNAVAILABLE'
+  );
+}
+
+function getOrCreateCheckoutAttemptKey(planCode){
+  const normalizedPlan=
+    String(planCode||'')
+      .trim()
+      .toUpperCase();
+
+  const stored=
+    sessionStorage.getItem(
+      NEXUS_CHECKOUT_ATTEMPT_KEY
+    );
+
+  if(stored){
+    try{
+      const parsed=JSON.parse(stored);
+
+      if(
+        parsed?.key &&
+        parsed?.plan_code===normalizedPlan
+      ){
+        return parsed.key;
+      }
+    }catch{
+      // Formato anterior ou invalido.
+      // Uma nova tentativa sera criada abaixo.
+    }
+  }
+
+  const created=createCheckoutAttemptKey();
+
+  sessionStorage.setItem(
+    NEXUS_CHECKOUT_ATTEMPT_KEY,
+    JSON.stringify({
+      key:created,
+      plan_code:normalizedPlan
+    })
+  );
+
+  return created;
+}
+
+function resetCheckoutAttemptKey(){
+
+  sessionStorage.removeItem(
+    NEXUS_CHECKOUT_ATTEMPT_KEY
+  );
+}
+
 export function SaasCheckoutPage(){
   const params=useMemo(
     ()=>new URLSearchParams(window.location.search),
@@ -622,6 +730,14 @@ export function SaasCheckoutPage(){
   },[planCode]);
 
   function change(field,value){
+
+    /*
+     * Qualquer alteracao cria uma nova tentativa
+     * no proximo submit. Isso inclui senha.
+     */
+
+    resetCheckoutAttemptKey();
+
     setForm(prev=>({
       ...prev,
       [field]:value
@@ -725,6 +841,15 @@ export function SaasCheckoutPage(){
     setSubmitting(true);
 
     try{
+
+      /*
+       * Retry sem edicao reutiliza exatamente
+       * a mesma chave da tentativa anterior.
+       */
+
+      const idempotencyKey=
+        getOrCreateCheckoutAttemptKey(planCode);
+
       const data=await saasPublicApi.createCheckout({
         plan_code:planCode,
         legal_name:String(form.legal_name).trim(),
@@ -734,7 +859,14 @@ export function SaasCheckoutPage(){
         email:String(form.owner_email).trim().toLowerCase(),
         phone:String(form.phone).replace(/\D/g,''),
         password:String(form.password)
-      });
+      },idempotencyKey);
+
+      /*
+       * Checkout confirmado pelo backend:
+       * a tentativa terminou.
+       */
+
+      resetCheckoutAttemptKey();
 
       setResult(data);
 

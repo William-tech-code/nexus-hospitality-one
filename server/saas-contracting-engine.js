@@ -4,7 +4,7 @@ import { db } from './db.js';
 import {asaasWebhookToken} from './asaas-config.js';
 import {hashPassword} from './security.js';
 import {
-  createSaasContract,
+  createSaasContractWithAtomicHook,
   activateSaasSubscription,
   recordSaasSubscriptionPayment
 } from './saas-subscription-core.js';
@@ -301,6 +301,77 @@ function ensureContractingSchema(){
     `);
   }}
 
+/*
+ * IDEMPOTENCY_SCHEMA_V3
+ *
+ * Executada durante ensureContractingSchema.
+ * Nunca persiste checkout_token em texto puro.
+ */
+function ensureCheckoutIdempotencySchema(){
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS saas_checkout_idempotency (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      idempotency_key TEXT NOT NULL UNIQUE,
+      request_fingerprint TEXT,
+      status TEXT NOT NULL DEFAULT 'PROCESSING',
+      lease_token TEXT,
+      processing_started_at TEXT,
+      checkout_public_id TEXT,
+      tenant_id INTEGER,
+      subscription_id INTEGER,
+      last_error_code TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY(tenant_id) REFERENCES saas_tenants(id),
+      FOREIGN KEY(subscription_id) REFERENCES saas_subscriptions(id)
+    );
+  `);
+
+  const columns=
+    db.prepare(`
+      PRAGMA table_info(saas_checkout_idempotency)
+    `).all();
+
+  const names=
+    new Set(
+      columns.map(
+        column=>String(column.name)
+      )
+    );
+
+  const migrations=[
+    ['request_fingerprint','TEXT'],
+    ['lease_token','TEXT'],
+    ['processing_started_at','TEXT'],
+    ['checkout_public_id','TEXT'],
+    ['tenant_id','INTEGER'],
+    ['subscription_id','INTEGER'],
+    ['last_error_code','TEXT'],
+    ['created_at','TEXT'],
+    ['updated_at','TEXT']
+  ];
+
+  for(const [name,type] of migrations){
+    if(!names.has(name)){
+      db.exec(
+        `ALTER TABLE saas_checkout_idempotency `+
+        `ADD COLUMN ${name} ${type}`
+      );
+    }
+  }
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS
+      idx_saas_checkout_idempotency_status
+      ON saas_checkout_idempotency(status);
+
+    CREATE INDEX IF NOT EXISTS
+      idx_saas_checkout_idempotency_subscription
+      ON saas_checkout_idempotency(subscription_id);
+  `);
+}
+
 function validateCheckout(body={}){
 
   const legalName=
@@ -404,220 +475,643 @@ function validateCheckout(body={}){
   };
 }
 
-async function createCheckout(
+/* NEXUS_CHECKOUT_IDEMPOTENCY_RUNTIME_V3 */
+
+const CHECKOUT_PROCESSING_LEASE_MS=
+  5*60*1000;
+
+function validateCheckoutIdempotencyKey(
+  value
+){
+
+  const key=
+    txt(value);
+
+  if(!key){
+    throw new Error(
+      'IDEMPOTENCY_KEY_REQUIRED'
+    );
+  }
+
+  /*
+   * UUID e tokens criptograficamente aleatorios
+   * ficam dentro deste conjunto.
+   *
+   * Nenhuma chave e criada pelo servidor.
+   */
+  if(
+    key.length < 16 ||
+    key.length > 128 ||
+    !/^[A-Za-z0-9._:-]+$/.test(key)
+  ){
+    throw new Error(
+      'IDEMPOTENCY_KEY_INVALID'
+    );
+  }
+
+  return key;
+}
+
+function normalizeCheckoutFingerprintInput(
   body={}
 ){
 
-  const input=
-    validateCheckout(body);
-
   /*
-   * A criação local ocorre primeiro como PENDING.
-   * Nenhum acesso é liberado aqui.
+   * A senha NAO participa do fingerprint
+   * persistido.
+   *
+   * O frontend devera trocar a chave da
+   * tentativa sempre que qualquer campo,
+   * inclusive senha, for alterado.
    */
 
-  const contract=
-    createSaasContract({
-      ...input,
-      metadata:{
-        source:'PUBLIC_CHECKOUT'
-      }
-    });
+  return {
+    legal_name:
+      txt(body.legal_name),
 
-  const subscription=
-    db.prepare(`
-      SELECT *
-      FROM saas_subscriptions
-      WHERE id=?
-  `).get(
-    contract.subscription_id
+    trade_name:
+      txt(body.trade_name),
+
+    email:
+      normalizeEmail(body.email),
+
+    owner_name:
+      txt(body.owner_name),
+
+    document:
+      digits(body.document),
+
+    phone:
+      digits(body.phone),
+
+    plan_code:
+      txt(body.plan_code)
+        .toUpperCase(),
+
+    promotion_code:
+      txt(body.promotion_code)
+        .toUpperCase()
+  };
+}
+
+function checkoutRequestFingerprint(
+  body={}
+){
+
+  const normalized=
+    normalizeCheckoutFingerprintInput(
+      body
+    );
+
+  const canonical=
+    JSON.stringify([
+      normalized.legal_name,
+      normalized.trade_name,
+      normalized.email,
+      normalized.owner_name,
+      normalized.document,
+      normalized.phone,
+      normalized.plan_code,
+      normalized.promotion_code
+    ]);
+
+  return crypto
+    .createHash('sha256')
+    .update(canonical)
+    .digest('hex');
+}
+
+function checkoutIdempotencyRecord(
+  key
+){
+
+  return db.prepare(`
+    SELECT *
+    FROM saas_checkout_idempotency
+    WHERE idempotency_key=?
+    LIMIT 1
+  `).get(key);
+}
+
+function checkoutProcessingIsStale(
+  row,
+  now=Date.now()
+){
+
+  if(
+    !row ||
+    row.status !== 'PROCESSING' ||
+    !row.processing_started_at
+  ){
+    return false;
+  }
+
+  const started=
+    new Date(
+      row.processing_started_at
+    ).getTime();
+
+  if(!Number.isFinite(started)){
+    return true;
+  }
+
+  return (
+    now-started >=
+    CHECKOUT_PROCESSING_LEASE_MS
   );
+}
+
+function assertCheckoutFingerprint(
+  row,
+  fingerprint
+){
+
+  if(!row){
+    return;
+  }
+
+  /*
+   * Registro legado sem fingerprint nunca
+   * e reutilizado silenciosamente.
+   */
+  if(
+    !row.request_fingerprint ||
+    row.request_fingerprint !== fingerprint
+  ){
+    throw new Error(
+      'IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD'
+    );
+  }
+}
+
+function checkoutLeaseToken(){
+  return crypto
+    .randomBytes(24)
+    .toString('hex');
+}
+
+function checkoutPublicId(){
+  return `CHK_${crypto
+    .randomBytes(12)
+    .toString('hex')
+    .toUpperCase()}`;
+}
+
+function checkoutTokenHash(
+  token
+){
+
+  return crypto
+    .createHash('sha256')
+    .update(token)
+    .digest('hex');
+}
+
+/* NEXUS_CHECKOUT_LOCAL_STATE_V3 */
+
+function loadCheckoutLocalState(
+  row
+){
+
+  if(
+    !row?.tenant_id ||
+    !row?.subscription_id ||
+    !row?.checkout_public_id
+  ){
+    throw new Error(
+      'CHECKOUT_LOCAL_STATE_INVALID'
+    );
+  }
 
   const tenant=
     db.prepare(`
       SELECT *
       FROM saas_tenants
       WHERE id=?
-  `).get(
-    contract.tenant_id
-  );
+    `).get(row.tenant_id);
 
-  if(!subscription || !tenant){
+  const subscription=
+    db.prepare(`
+      SELECT *
+      FROM saas_subscriptions
+      WHERE id=?
+    `).get(row.subscription_id);
+
+  const session=
+    db.prepare(`
+      SELECT *
+      FROM saas_contracting_sessions
+      WHERE public_id=?
+        AND tenant_id=?
+        AND subscription_id=?
+      LIMIT 1
+    `).get(
+      row.checkout_public_id,
+      row.tenant_id,
+      row.subscription_id
+    );
+
+  if(
+    !tenant ||
+    !subscription ||
+    !session
+  ){
     throw new Error(
-      'CONTRACT_PERSISTENCE_FAILED'
+      'CHECKOUT_LOCAL_STATE_INVALID'
     );
   }
 
-  const customerResult=
-    await createAsaasCustomer(
-      {
-        name:
-          tenant.trade_name ||
-          tenant.legal_name,
+  return {
+    tenant,
+    subscription,
+    session
+  };
+}
 
-        email:
-          tenant.email,
+function createNewCheckoutLocalState(
+  input,
+  idempotencyKey,
+  fingerprint
+){
 
-        cpfCnpj:
-          tenant.document,
+  const leaseToken=
+    checkoutLeaseToken();
 
-        mobilePhone:
-          tenant.phone,
-
-        externalReference:
-          `NEXUS_TENANT:${tenant.id}`
-      },
-      {
-        dryRun:ASAAS_DRY_RUN
-      }
-    );
-
-  /*
-   * Em DRY RUN precisamos de um ID fictício
-   * apenas para validar o segundo payload.
-   */
-
-  const customerId=
-    customerResult?.result?.id ||
-    `dry_customer_${tenant.id}`;
-
-  const nextDue=
-    addDays(
-      new Date(),
-      0
-    );
-
-  const subscriptionResult=
-    await createAsaasSubscription(
-      {
-        customerId,
-
-        subscriptionId:
-          subscription.id,
-
-        value:
-          subscription.contracted_price,
-
-        nextDueDate:
-          nextDue,
-
-        cycle:'MONTHLY',
-
-        description:
-          `NEXUS Hospitality One - ${input.plan_code}`
-      },
-      {
-        dryRun:ASAAS_DRY_RUN
-      }
-    );
-
-  /*
-   * ASAAS_PROVIDER_IDS_PRELIVE_V3
-   *
-   * DRY RUN:
-   *   no real provider identifiers are persisted.
-   *
-   * LIVE:
-   *   persist identifiers returned directly by Asaas
-   *   before waiting for the webhook.
-   */
-  const providerCustomerIdFromCheckout=
-    ASAAS_DRY_RUN
-      ? null
-      : customerResult?.result?.id || null;
-
-  const providerSubscriptionIdFromCheckout=
-    ASAAS_DRY_RUN
-      ? null
-      : subscriptionResult?.result?.id || null;
+  const publicId=
+    checkoutPublicId();
 
   const token=
     randomToken();
 
   const tokenHash=
-    crypto
-      .createHash('sha256')
-      .update(token)
-      .digest('hex');
+    checkoutTokenHash(token);
 
-  const publicId=
-    `CHK_${crypto
-      .randomBytes(12)
-      .toString('hex')
-      .toUpperCase()}`;
+  const startedAt=
+    new Date().toISOString();
 
-  const expires=
+  const expiresAt=
     addDays(
       new Date(),
       1
     ).toISOString();
 
-  /*
-   * OWNER_PENDING_STORAGE_V4
-   * Apenas o hash é persistido.
-   */
-  db.prepare(`
-    INSERT INTO saas_contracting_sessions (
-      public_id,
-      token_hash,
-      tenant_id,
-      subscription_id,
-      owner_name,
-      owner_email,
-      owner_password_hash,
-      status,
-      customer_dry_run_json,
-      subscription_dry_run_json,
-      expires_at
-    )
-    VALUES (
-      ?,?,?,?,?,?,?,
-      'PENDING_PAYMENT',
-      ?,?,?
-    )
-  `).run(
-    publicId,
-    tokenHash,
-    tenant.id,
-    subscription.id,
-    input.owner_name,
-    input.email,
-    input.owner_password_hash,
-    JSON.stringify(
-      customerResult
-    ),
-    JSON.stringify(
-      subscriptionResult
-    ),
-    expires
+  let contract;
+
+  try{
+
+    contract=
+      createSaasContractWithAtomicHook(
+        {
+          ...input,
+          metadata:{
+            source:'PUBLIC_CHECKOUT'
+          }
+        },
+        created=>{
+
+          /*
+           * Este callback roda dentro da mesma
+           * transaction do contrato.
+           *
+           * Somente SQLite sincrono aqui.
+           */
+
+          db.prepare(`
+            INSERT INTO saas_contracting_sessions (
+              public_id,
+              token_hash,
+              tenant_id,
+              subscription_id,
+              owner_name,
+              owner_email,
+              owner_password_hash,
+              status,
+              customer_dry_run_json,
+              subscription_dry_run_json,
+              expires_at
+            )
+            VALUES (
+              ?,?,?,?,?,?,?,
+              'PENDING_PAYMENT',
+              NULL,NULL,?
+            )
+          `).run(
+            publicId,
+            tokenHash,
+            created.tenant_id,
+            created.subscription_id,
+            input.owner_name,
+            input.email,
+            input.owner_password_hash,
+            expiresAt
+          );
+
+          db.prepare(`
+            INSERT INTO saas_checkout_idempotency (
+              idempotency_key,
+              request_fingerprint,
+              status,
+              lease_token,
+              processing_started_at,
+              checkout_public_id,
+              tenant_id,
+              subscription_id,
+              last_error_code,
+              created_at,
+              updated_at
+            )
+            VALUES (
+              ?,?,
+              'PROCESSING',
+              ?,?,
+              ?,?,?,
+              NULL,
+              CURRENT_TIMESTAMP,
+              CURRENT_TIMESTAMP
+            )
+          `).run(
+            idempotencyKey,
+            fingerprint,
+            leaseToken,
+            startedAt,
+            publicId,
+            created.tenant_id,
+            created.subscription_id
+          );
+        }
+      );
+
+  }catch(error){
+
+    /*
+     * A UNIQUE da idempotency key e a trava
+     * concorrente. Se outra requisicao venceu,
+     * toda a criacao do contrato desta tentativa
+     * foi revertida pelo Atomic Hook.
+     */
+
+    const existing=
+      checkoutIdempotencyRecord(
+        idempotencyKey
+      );
+
+    if(existing){
+      return {
+        race_lost:true,
+        row:existing
+      };
+    }
+
+    throw error;
+  }
+
+  const row=
+    checkoutIdempotencyRecord(
+      idempotencyKey
+    );
+
+  if(
+    !row ||
+    Number(row.tenant_id) !==
+      Number(contract.tenant_id) ||
+    Number(row.subscription_id) !==
+      Number(contract.subscription_id)
+  ){
+    throw new Error(
+      'CHECKOUT_LOCAL_STATE_INVALID'
+    );
+  }
+
+  return {
+    race_lost:false,
+    row,
+    lease_token:leaseToken,
+    checkout_token:token,
+    new_attempt:true
+  };
+}
+
+function claimExistingCheckout(
+  row,
+  fingerprint
+){
+
+  assertCheckoutFingerprint(
+    row,
+    fingerprint
   );
 
-  db.prepare(`
-    UPDATE saas_subscriptions
-    SET
-      provider='ASAAS',
-      provider_customer_id=?,
-      provider_subscription_id=?,
-      next_due_date=?,
-      updated_at=CURRENT_TIMESTAMP
-    WHERE id=?
-  `).run(
-    providerCustomerIdFromCheckout,
-    providerSubscriptionIdFromCheckout,
-    nextDue
-      .toISOString()
-      .slice(0,10),
-    subscription.id
-  );
+  if(row.status === 'COMPLETED'){
+
+    const state=
+      loadCheckoutLocalState(row);
+
+    /*
+     * Replay concluido:
+     * nenhum provider sera chamado.
+     *
+     * Rotacionamos apenas o token da mesma
+     * sessao existente.
+     */
+
+    const token=
+      randomToken();
+
+    const tokenHash=
+      checkoutTokenHash(token);
+
+    const expiresAt=
+      addDays(
+        new Date(),
+        1
+      ).toISOString();
+
+    db.prepare(`
+      UPDATE saas_contracting_sessions
+      SET
+        token_hash=?,
+        expires_at=?,
+        updated_at=CURRENT_TIMESTAMP
+      WHERE public_id=?
+        AND tenant_id=?
+        AND subscription_id=?
+    `).run(
+      tokenHash,
+      expiresAt,
+      row.checkout_public_id,
+      row.tenant_id,
+      row.subscription_id
+    );
+
+    return {
+      completed:true,
+      row,
+      state,
+      checkout_token:token
+    };
+  }
+
+  if(
+    row.status === 'PROCESSING' &&
+    !checkoutProcessingIsStale(row)
+  ){
+    throw new Error(
+      'CHECKOUT_ALREADY_PROCESSING'
+    );
+  }
+
+  if(
+    row.status !== 'FAILED' &&
+    row.status !== 'PROCESSING'
+  ){
+    throw new Error(
+      'CHECKOUT_IDEMPOTENCY_STATE_INVALID'
+    );
+  }
+
+  /*
+   * FAILED ou PROCESSING stale.
+   * CAS garante um unico novo dono do lease.
+   */
+
+  const newLease=
+    checkoutLeaseToken();
+
+  const startedAt=
+    new Date().toISOString();
+
+  const previousLease=
+    row.lease_token ?? null;
+
+  let result;
+
+  if(previousLease === null){
+
+    result=
+      db.prepare(`
+        UPDATE saas_checkout_idempotency
+        SET
+          status='PROCESSING',
+          lease_token=?,
+          processing_started_at=?,
+          last_error_code=NULL,
+          updated_at=CURRENT_TIMESTAMP
+        WHERE idempotency_key=?
+          AND request_fingerprint=?
+          AND status=?
+          AND lease_token IS NULL
+      `).run(
+        newLease,
+        startedAt,
+        row.idempotency_key,
+        fingerprint,
+        row.status
+      );
+
+  }else{
+
+    result=
+      db.prepare(`
+        UPDATE saas_checkout_idempotency
+        SET
+          status='PROCESSING',
+          lease_token=?,
+          processing_started_at=?,
+          last_error_code=NULL,
+          updated_at=CURRENT_TIMESTAMP
+        WHERE idempotency_key=?
+          AND request_fingerprint=?
+          AND status=?
+          AND lease_token=?
+      `).run(
+        newLease,
+        startedAt,
+        row.idempotency_key,
+        fingerprint,
+        row.status,
+        previousLease
+      );
+  }
+
+  if(result.changes !== 1){
+    throw new Error(
+      'CHECKOUT_ALREADY_PROCESSING'
+    );
+  }
+
+  const claimed=
+    checkoutIdempotencyRecord(
+      row.idempotency_key
+    );
+
+  const state=
+    loadCheckoutLocalState(
+      claimed
+    );
+
+  /*
+   * Retry usa as credenciais originais
+   * persistidas na sessao. Nenhuma nova
+   * senha do request substitui o hash.
+   */
+
+  return {
+    completed:false,
+    row:claimed,
+    state,
+    lease_token:newLease,
+    checkout_token:null,
+    retry:true
+  };
+}
+
+function markCheckoutFailed(
+  idempotencyKey,
+  leaseToken,
+  errorCode
+){
+
+  if(
+    !idempotencyKey ||
+    !leaseToken
+  ){
+    return false;
+  }
+
+  const result=
+    db.prepare(`
+      UPDATE saas_checkout_idempotency
+      SET
+        status='FAILED',
+        last_error_code=?,
+        updated_at=CURRENT_TIMESTAMP
+      WHERE idempotency_key=?
+        AND status='PROCESSING'
+        AND lease_token=?
+    `).run(
+      txt(errorCode) ||
+        'CHECKOUT_FAILED',
+      idempotencyKey,
+      leaseToken
+    );
+
+  return result.changes === 1;
+}
+
+function completedCheckoutResponse(
+  row,
+  checkoutToken
+){
 
   return {
     ok:true,
+    idempotent_replay:true,
 
     checkout_id:
-      publicId,
+      row.checkout_public_id,
 
     checkout_token:
-      token,
+      checkoutToken,
 
     mode:
       ASAAS_DRY_RUN
@@ -626,7 +1120,7 @@ async function createCheckout(
 
     contract:
       publicContractView(
-        subscription.id
+        row.subscription_id
       ),
 
     payment:{
@@ -637,20 +1131,417 @@ async function createCheckout(
         ASAAS_DRY_RUN,
 
       message:
-        ASAAS_DRY_RUN
-          ? 'Cobrança externa não criada nesta versão.'
-          : 'Cobrança criada.'
-    },
-
-    asaas_preview:{
-      customer:
-        customerResult,
-
-      subscription:
-        subscriptionResult
+        'Checkout j? conclu?do.'
     }
   };
 }
+
+async function createCheckout(
+  body={},
+  rawIdempotencyKey
+){
+
+  const idempotencyKey=
+    validateCheckoutIdempotencyKey(
+      rawIdempotencyKey
+    );
+
+  const fingerprint=
+    checkoutRequestFingerprint(body);
+
+  /*
+   * A consulta da idempotencia ocorre ANTES
+   * de validateCheckout().
+   *
+   * Isso permite replay de um checkout ja
+   * concluido mesmo depois que o OWNER foi
+   * criado na tabela users.
+   */
+
+  let row=
+    checkoutIdempotencyRecord(
+      idempotencyKey
+    );
+
+  let local;
+  let input=null;
+
+  if(row){
+
+    local=
+      claimExistingCheckout(
+        row,
+        fingerprint
+      );
+
+    if(local.completed){
+
+      return completedCheckoutResponse(
+        local.row,
+        local.checkout_token
+      );
+    }
+
+  }else{
+
+    /*
+     * Somente uma tentativa realmente nova
+     * executa a validacao completa e cria
+     * contrato local.
+     */
+
+    input=
+      validateCheckout(body);
+
+    local=
+      createNewCheckoutLocalState(
+        input,
+        idempotencyKey,
+        fingerprint
+      );
+
+    /*
+     * Outra requisicao pode ter vencido a
+     * UNIQUE enquanto criavamos o contrato.
+     * O Atomic Hook reverteu nossa criacao.
+     */
+
+    if(local.race_lost){
+
+      local=
+        claimExistingCheckout(
+          local.row,
+          fingerprint
+        );
+
+      if(local.completed){
+
+        return completedCheckoutResponse(
+          local.row,
+          local.checkout_token
+        );
+      }
+    }
+  }
+
+  row=
+    local.row;
+
+  const leaseToken=
+    local.lease_token;
+
+  if(
+    !row ||
+    !leaseToken
+  ){
+    throw new Error(
+      'CHECKOUT_LOCAL_STATE_INVALID'
+    );
+  }
+
+  const state=
+    local.state ||
+    loadCheckoutLocalState(row);
+
+  const tenant=
+    state.tenant;
+
+  const subscription=
+    state.subscription;
+
+  /*
+   * Para retry FAILED/stale usamos o plano
+   * persistido no contrato, e nao recriamos
+   * tenant/subscription.
+   */
+
+  const effectivePlanCode=
+    input?.plan_code ||
+    subscription.plan_code;
+
+  try{
+
+    /*
+     * IMPORTANTE:
+     * nenhuma transaction SQLite permanece
+     * aberta durante chamadas externas.
+     */
+
+    const customerResult=
+      await createAsaasCustomer(
+        {
+          name:
+            tenant.trade_name ||
+            tenant.legal_name,
+
+          email:
+            tenant.email,
+
+          cpfCnpj:
+            tenant.document,
+
+          mobilePhone:
+            tenant.phone,
+
+          externalReference:
+            `NEXUS_TENANT:${tenant.id}`
+        },
+        {
+          dryRun:ASAAS_DRY_RUN
+        }
+      );
+
+    const customerId=
+      customerResult?.result?.id ||
+      `dry_customer_${tenant.id}`;
+
+    const nextDue=
+      addDays(
+        new Date(),
+        0
+      );
+
+    const subscriptionResult=
+      await createAsaasSubscription(
+        {
+          customerId,
+
+          subscriptionId:
+            subscription.id,
+
+          value:
+            subscription.contracted_price,
+
+          nextDueDate:
+            nextDue,
+
+          cycle:'MONTHLY',
+
+          description:
+            `NEXUS Hospitality One - ${effectivePlanCode}`
+        },
+        {
+          dryRun:ASAAS_DRY_RUN
+        }
+      );
+
+    const providerCustomerId=
+      ASAAS_DRY_RUN
+        ? null
+        : customerResult?.result?.id || null;
+
+    const providerSubscriptionId=
+      ASAAS_DRY_RUN
+        ? null
+        : subscriptionResult?.result?.id || null;
+
+    /*
+     * Se for retry, o token bruto anterior nao
+     * existe mais no servidor. Geramos um novo
+     * token somente para a resposta atual e
+     * persistimos apenas seu hash.
+     */
+
+    const responseToken=
+      local.checkout_token ||
+      randomToken();
+
+    const responseTokenHash=
+      checkoutTokenHash(
+        responseToken
+      );
+
+    const expiresAt=
+      addDays(
+        new Date(),
+        1
+      ).toISOString();
+
+    /*
+     * FINALIZACAO ATOMICA:
+     *
+     * - dados retornados pelo provider
+     * - provider IDs
+     * - novo hash do checkout token
+     * - estado COMPLETED
+     *
+     * ou tudo confirma, ou tudo reverte.
+     */
+
+    const finalize=
+      db.transaction(()=>{
+
+        const ownership=
+          db.prepare(`
+            SELECT
+              status,
+              lease_token
+            FROM saas_checkout_idempotency
+            WHERE idempotency_key=?
+          `).get(
+            idempotencyKey
+          );
+
+        if(
+          !ownership ||
+          ownership.status !== 'PROCESSING' ||
+          ownership.lease_token !== leaseToken
+        ){
+          throw new Error(
+            'CHECKOUT_LEASE_LOST'
+          );
+        }
+
+        const sessionUpdate=
+          db.prepare(`
+            UPDATE saas_contracting_sessions
+            SET
+              token_hash=?,
+              customer_dry_run_json=?,
+              subscription_dry_run_json=?,
+              expires_at=?,
+              updated_at=CURRENT_TIMESTAMP
+            WHERE public_id=?
+              AND tenant_id=?
+              AND subscription_id=?
+          `).run(
+            responseTokenHash,
+            JSON.stringify(
+              customerResult
+            ),
+            JSON.stringify(
+              subscriptionResult
+            ),
+            expiresAt,
+            row.checkout_public_id,
+            row.tenant_id,
+            row.subscription_id
+          );
+
+        if(sessionUpdate.changes !== 1){
+          throw new Error(
+            'CHECKOUT_SESSION_FINALIZATION_FAILED'
+          );
+        }
+
+        const subscriptionUpdate=
+          db.prepare(`
+            UPDATE saas_subscriptions
+            SET
+              provider='ASAAS',
+              provider_customer_id=?,
+              provider_subscription_id=?,
+              next_due_date=?,
+              updated_at=CURRENT_TIMESTAMP
+            WHERE id=?
+              AND tenant_id=?
+          `).run(
+            providerCustomerId,
+            providerSubscriptionId,
+            nextDue
+              .toISOString()
+              .slice(0,10),
+            row.subscription_id,
+            row.tenant_id
+          );
+
+        if(subscriptionUpdate.changes !== 1){
+          throw new Error(
+            'CHECKOUT_SUBSCRIPTION_FINALIZATION_FAILED'
+          );
+        }
+
+        const completed=
+          db.prepare(`
+            UPDATE saas_checkout_idempotency
+            SET
+              status='COMPLETED',
+              last_error_code=NULL,
+              updated_at=CURRENT_TIMESTAMP
+            WHERE idempotency_key=?
+              AND status='PROCESSING'
+              AND lease_token=?
+          `).run(
+            idempotencyKey,
+            leaseToken
+          );
+
+        if(completed.changes !== 1){
+          throw new Error(
+            'CHECKOUT_LEASE_LOST'
+          );
+        }
+
+        return true;
+      });
+
+    finalize();
+
+    return {
+      ok:true,
+      idempotent_replay:false,
+
+      checkout_id:
+        row.checkout_public_id,
+
+      checkout_token:
+        responseToken,
+
+      mode:
+        ASAAS_DRY_RUN
+          ? 'DRY_RUN'
+          : 'LIVE',
+
+      contract:
+        publicContractView(
+          row.subscription_id
+        ),
+
+      payment:{
+        provider:'ASAAS',
+
+        created:
+          !ASAAS_DRY_RUN,
+
+        dry_run:
+          ASAAS_DRY_RUN,
+
+        message:
+          ASAAS_DRY_RUN
+            ? 'Cobran?a externa n?o criada nesta vers?o.'
+            : 'Cobran?a criada.'
+      },
+
+      asaas_preview:{
+        customer:
+          customerResult,
+
+        subscription:
+          subscriptionResult
+      }
+    };
+
+  }catch(error){
+
+    /*
+     * Somente o dono atual do lease pode
+     * converter PROCESSING em FAILED.
+     *
+     * Se o lease ja mudou, este UPDATE nao
+     * toca no registro da nova tentativa.
+     */
+
+    markCheckoutFailed(
+      idempotencyKey,
+      leaseToken,
+      error?.message ||
+        'CHECKOUT_FAILED'
+    );
+
+    throw error;
+  }
+}
+
 
 function getCheckout(
   publicId,
@@ -1241,6 +2132,7 @@ export function registerSaasContractingEngine(
 ){
 
   ensureContractingSchema();
+  ensureCheckoutIdempotencySchema();
 
   /*
    * PUBLIC:
@@ -1252,17 +2144,25 @@ export function registerSaasContractingEngine(
   app.post(
     '/api/public/saas/checkout',
     async (req,res)=>{
-
       try{
+
+        /*
+         * A chave pertence ao protocolo HTTP
+         * da tentativa, nao ao objeto comercial.
+         */
+
+        const idempotencyKey=
+          req.get(
+            'x-idempotency-key'
+          );
 
         const result=
           await createCheckout(
-            req.body || {}
+            req.body || {},
+            idempotencyKey
           );
 
-        res.status(201).json(
-          result
-        );
+        res.status(201).json(result);
 
       }catch(error){
 
@@ -1270,7 +2170,9 @@ export function registerSaasContractingEngine(
           error?.message ||
           'CHECKOUT_FAILED';
 
-        const safeErrors=[
+        const badRequestErrors=[
+          'IDEMPOTENCY_KEY_REQUIRED',
+          'IDEMPOTENCY_KEY_INVALID',
           'LEGAL_NAME_REQUIRED',
           'VALID_EMAIL_REQUIRED',
           'INVALID_DOCUMENT',
@@ -1279,11 +2181,20 @@ export function registerSaasContractingEngine(
           'PROMOTION_NOT_AVAILABLE'
         ];
 
-        res.status(
-          safeErrors.includes(message)
+        const conflictErrors=[
+          'IDEMPOTENCY_KEY_REUSED_WITH_DIFFERENT_PAYLOAD',
+          'CHECKOUT_ALREADY_PROCESSING',
+          'EMAIL_ALREADY_REGISTERED'
+        ];
+
+        const status=
+          badRequestErrors.includes(message)
             ? 400
-            : 500
-        ).json({
+            : conflictErrors.includes(message)
+              ? 409
+              : 500;
+
+        res.status(status).json({
           error:message
         });
       }

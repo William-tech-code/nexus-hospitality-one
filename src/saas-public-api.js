@@ -39,9 +39,12 @@ export const saasPublicApi={
       `/public/saas/promotions/${encodeURIComponent(code)}`
     ),
 
-  createCheckout:body=>
+  createCheckout:(body,idempotencyKey)=>
     publicRequest('/public/saas/checkout',{
       method:'POST',
+      headers:{
+        'x-idempotency-key':idempotencyKey
+      },
       body:JSON.stringify(body)
     }),
 
