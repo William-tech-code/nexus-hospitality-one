@@ -1,4 +1,4 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 import {execFileSync} from 'node:child_process';
 
@@ -245,7 +245,7 @@ export function asaasPublicConfig(){
         : 'ENV_ONLY',
 
     webhook_url_hint:
-      '/api/webhooks/asaas'
+      '/api/webhooks/asaas/saas'
   };
 }
 

@@ -511,6 +511,26 @@ async function createCheckout(
       }
     );
 
+  /*
+   * ASAAS_PROVIDER_IDS_PRELIVE_V3
+   *
+   * DRY RUN:
+   *   no real provider identifiers are persisted.
+   *
+   * LIVE:
+   *   persist identifiers returned directly by Asaas
+   *   before waiting for the webhook.
+   */
+  const providerCustomerIdFromCheckout=
+    ASAAS_DRY_RUN
+      ? null
+      : customerResult?.result?.id || null;
+
+  const providerSubscriptionIdFromCheckout=
+    ASAAS_DRY_RUN
+      ? null
+      : subscriptionResult?.result?.id || null;
+
   const token=
     randomToken();
 
@@ -576,10 +596,14 @@ async function createCheckout(
     UPDATE saas_subscriptions
     SET
       provider='ASAAS',
+      provider_customer_id=?,
+      provider_subscription_id=?,
       next_due_date=?,
       updated_at=CURRENT_TIMESTAMP
     WHERE id=?
   `).run(
+    providerCustomerIdFromCheckout,
+    providerSubscriptionIdFromCheckout,
     nextDue
       .toISOString()
       .slice(0,10),
@@ -607,7 +631,8 @@ async function createCheckout(
 
     payment:{
       provider:'ASAAS',
-      created:false,
+      created:
+        !ASAAS_DRY_RUN,
       dry_run:
         ASAAS_DRY_RUN,
 
@@ -1371,7 +1396,11 @@ export function registerSaasContractingEngine(
   );
 
   console.log(
-    'NEXUS SAAS CONTRACTING ENGINE V1 ONLINE | ASAAS DRY RUN'
+    `NEXUS SAAS CONTRACTING ENGINE V1 ONLINE | ASAAS ${
+      ASAAS_DRY_RUN
+        ? 'DRY RUN'
+        : 'LIVE'
+    }`
   );
 }
 
