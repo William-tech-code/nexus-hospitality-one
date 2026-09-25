@@ -370,22 +370,76 @@ export async function asaasRequest(
     throw error;
   }
 
-  const response=
-    await fetch(
-      asaasBaseUrl()+requestPath,
-      {
-        method,
-        headers:{
-          accept:'application/json',
-          'content-type':'application/json',
-          access_token:key
-        },
-        body:
-          body===undefined
-            ? undefined
-            : JSON.stringify(body)
-      }
-    );
+  /*
+   * NEXUS_ASAAS_TRANSPORT_V31
+   *
+   * Timeout explicito para impedir requests externos
+   * indefinidamente pendentes.
+   *
+   * IMPORTANTE:
+   * nao fazemos retry automatico aqui, especialmente
+   * para POST. Em falha ambigua, a camada SaaS deve
+   * reconciliar pelo externalReference antes de uma
+   * nova tentativa de criacao.
+   */
+  const timeoutMs=30000;
+  const controller=new AbortController();
+  const timeout=setTimeout(
+    ()=>controller.abort(),
+    timeoutMs
+  );
+
+  let response;
+
+  try{
+
+    response=
+      await fetch(
+        asaasBaseUrl()+requestPath,
+        {
+          method,
+          headers:{
+            accept:'application/json',
+            'content-type':'application/json',
+            access_token:key
+          },
+          body:
+            body===undefined
+              ? undefined
+              : JSON.stringify(body),
+          signal:controller.signal
+        }
+      );
+
+  }catch(cause){
+
+    const timedOut=
+      cause?.name === 'AbortError';
+
+    const error=
+      new Error(
+        timedOut
+          ? 'ASAAS_REQUEST_TIMEOUT'
+          : 'ASAAS_TRANSPORT_ERROR'
+      );
+
+    error.code=
+      timedOut
+        ? 'ASAAS_REQUEST_TIMEOUT'
+        : 'ASAAS_TRANSPORT_ERROR';
+
+    error.transport_error=true;
+    error.ambiguous=
+      String(method).toUpperCase() !== 'GET';
+
+    error.cause=cause;
+
+    throw error;
+
+  }finally{
+
+    clearTimeout(timeout);
+  }
 
   const data=
     await response

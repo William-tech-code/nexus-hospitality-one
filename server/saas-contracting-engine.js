@@ -844,27 +844,47 @@ function createNewCheckoutLocalState(
   }catch(error){
 
     /*
-     * A UNIQUE da idempotency key e a trava
-     * concorrente. Se outra requisicao venceu,
-     * toda a criacao do contrato desta tentativa
-     * foi revertida pelo Atomic Hook.
+     * NEXUS_CHECKOUT_UNIQUE_RACE_V31
+     *
+     * Somente a violacao UNIQUE da chave de
+     * idempotencia representa uma corrida valida.
+     *
+     * Qualquer outro erro deve continuar subindo,
+     * mesmo que ja exista um registro para a chave.
      */
+    const errorCode=
+      String(error?.code || '');
+
+    const errorMessage=
+      String(error?.message || '');
+
+    const isIdempotencyKeyConflict=
+      (
+        errorCode === 'SQLITE_CONSTRAINT_UNIQUE' ||
+        errorCode === 'SQLITE_CONSTRAINT'
+      ) &&
+      /UNIQUE constraint failed:\s*saas_checkout_idempotency\.idempotency_key/i.test(
+        errorMessage
+      );
+
+    if(!isIdempotencyKeyConflict){
+      throw error;
+    }
 
     const existing=
       checkoutIdempotencyRecord(
         idempotencyKey
       );
 
-    if(existing){
-      return {
-        race_lost:true,
-        row:existing
-      };
+    if(!existing){
+      throw error;
     }
 
-    throw error;
+    return {
+      race_lost:true,
+      row:existing
+    };
   }
-
   const row=
     checkoutIdempotencyRecord(
       idempotencyKey
@@ -1126,7 +1146,13 @@ function completedCheckoutResponse(
     payment:{
       provider:'ASAAS',
       created:
-        !ASAAS_DRY_RUN,
+        false,
+
+      /*
+       * NEXUS_COMPLETED_REPLAY_SEMANTICS_V31
+       * Esta requisicao e replay e nao cria
+       * uma nova cobranca no provider.
+       */
       dry_run:
         ASAAS_DRY_RUN,
 
@@ -1501,7 +1527,20 @@ async function createCheckout(
         provider:'ASAAS',
 
         created:
-          !ASAAS_DRY_RUN,
+          !ASAAS_DRY_RUN &&
+          subscriptionResult?.operation ===
+            'CREATE_SUBSCRIPTION',
+
+        /*
+         * NEXUS_PAYMENT_SEMANTICS_V31
+         *
+         * Uma assinatura recuperada pelo
+         * externalReference nao e uma nova criacao.
+         */
+        reused:
+          !ASAAS_DRY_RUN &&
+          subscriptionResult?.operation ===
+            'REUSE_SUBSCRIPTION',
 
         dry_run:
           ASAAS_DRY_RUN,
