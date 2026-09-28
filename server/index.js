@@ -521,7 +521,42 @@ app.get('/api/users',minRole(80),(req,res)=>res.json(db.prepare('SELECT id,name,
 app.post('/api/users',minRole(100),(req,res)=>{const {name,email,password,role='CASHIER'}=req.body||{};if(!name||!email||String(password||'').length<10)return res.status(400).json({error:'INVALID_USER_DATA'});try{const info=db.prepare('INSERT INTO users(name,email,password_hash,role,force_password_change) VALUES(?,?,?,?,1)').run(name,String(email).toLowerCase(),hashPassword(password),role);db.prepare('INSERT INTO employees(user_id,name,role_label) VALUES(?,?,?)').run(info.lastInsertRowid,name,role);audit(req.user.id,'CREATE','USER',info.lastInsertRowid,{email,role});res.status(201).json({id:info.lastInsertRowid,name,email,role})}catch(e){res.status(400).json({error:'USER_CREATE_ERROR',message:e.message})}});
 app.get('/api/audit',minRole(80),(_req,res)=>res.json(db.prepare(`SELECT a.*,u.name user_name FROM audit_log a LEFT JOIN users u ON u.id=a.user_id ORDER BY a.id DESC LIMIT 150`).all()));
 
-app.get('/api/performance',(_req,res)=>res.json({employees:performanceSnapshot(),rules:db.prepare('SELECT * FROM incentive_rules WHERE active=1 ORDER BY id DESC').all(),pendingTips:db.prepare("SELECT COALESCE(SUM(amount),0) total FROM tips WHERE status='PENDING'").get().total,pendingRewards:db.prepare("SELECT COALESCE(SUM(amount),0) total FROM employee_rewards WHERE status='PENDING'").get().total}));
+app.get('/api/performance',(req,res)=>{
+
+  try{
+    const employees=performanceSnapshot(req.tenantId);
+
+    const rules=db.prepare(
+      'SELECT * FROM incentive_rules WHERE active=1 ORDER BY id DESC'
+    ).all();
+
+    const pendingTips=db.prepare(
+      "SELECT COALESCE(SUM(amount),0) total FROM tips WHERE status='PENDING'"
+    ).get().total;
+
+    const pendingRewards=db.prepare(
+      "SELECT COALESCE(SUM(amount),0) total FROM employee_rewards WHERE status='PENDING'"
+    ).get().total;
+
+    return res.json({
+      employees,
+      rules,
+      pendingTips,
+      pendingRewards
+    });
+
+  }catch(error){
+
+    console.error(
+      '[PERFORMANCE_ERROR]',
+      error?.message || error
+    );
+
+    return res.status(500).json({
+      error:'PERFORMANCE_ROUTE_FAILED'
+    });
+  }
+});
 app.post('/api/incentive-rules',minRole(80),(req,res)=>{const {title,scope='ANY',scope_value=null,reward_type='FIXED_PER_UNIT',reward_value=0,start_date=null,end_date=null}=req.body||{};if(!String(title||'').trim())return res.status(400).json({error:'TITLE_REQUIRED'});const info=db.prepare('INSERT INTO incentive_rules(title,scope,scope_value,reward_type,reward_value,start_date,end_date) VALUES(?,?,?,?,?,?,?)').run(title,scope,scope_value,reward_type,Number(reward_value),start_date,end_date);audit(req.user.id,'CREATE','INCENTIVE_RULE',info.lastInsertRowid,{title});res.status(201).json(db.prepare('SELECT * FROM incentive_rules WHERE id=?').get(info.lastInsertRowid))});
 app.post('/api/tips',minRole(50),(req,res)=>{const {employee_id,amount,method='MANUAL'}=req.body||{};if(!employee_id||Number(amount)<=0)return res.status(400).json({error:'INVALID_TIP'});const info=db.prepare("INSERT INTO tips(employee_id,amount,method,status) VALUES(?,?,?,'PENDING')").run(Number(employee_id),Number(amount),method);audit(req.user.id,'CREATE','TIP',info.lastInsertRowid,{employee_id,amount});res.status(201).json({id:info.lastInsertRowid})});
 
